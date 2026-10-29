@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local data and experiment tracking
+*.sqlite
+*.db
+mlruns/
+
+# Word / Office lock and temp files
+~$*
+*.tmp
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Plagiarism / AI-detection reports from the library (kept local, not published)
+docs/srs/palagairism report/

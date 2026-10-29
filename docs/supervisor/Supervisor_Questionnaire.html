@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plasma Digital Twin - Supervisor Questionnaire</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #ffffff; --ink: #1b2430; --muted: #5d6877; --line: #d9dee5;
+    --accent: #1f5fbf; --accent-soft: #e8f0fc; --key: #b4540a; --key-soft: #fff2e6; --ok: #1d7a46;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 16px 80px; }
+
+  header.top { background: #14284b; color: #fff; padding: 28px 0 22px; }
+  header.top .wrap { padding-bottom: 0; }
+  header.top h1 { margin: 0 0 4px; font-size: 24px; letter-spacing: .2px; }
+  header.top p { margin: 0; color: #c8d4ea; font-size: 14px; }
+  .meta { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 18px; }
+  .meta label { font-size: 12px; color: #c8d4ea; display: block; margin-bottom: 3px; }
+  .meta input { width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid #3a5183;
+                background: #1c3763; color: #fff; font: inherit; }
+  .meta input::placeholder { color: #8fa3c7; }
+
+  .toolbar { position: sticky; top: 0; z-index: 10; background: rgba(255,255,255,.96);
+             backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+  .toolbar .wrap { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 16px; }
+  .progress { flex: 1 1 200px; min-width: 160px; }
+  .progress .bar { height: 8px; background: #e3e8ef; border-radius: 4px; overflow: hidden; }
+  .progress .bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .25s; }
+  .progress small { color: var(--muted); font-size: 12px; }
+  button, .btn { font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 6px; cursor: pointer;
+                 border: 1px solid var(--line); background: #fff; color: var(--ink); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button:hover { filter: brightness(.96); }
+
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+           padding: 18px 20px; margin-top: 18px; }
+  .panel h2 { margin: 0 0 8px; font-size: 17px; }
+  .panel h3 { margin: 14px 0 4px; font-size: 14px; color: var(--accent); }
+  .panel p, .panel li { color: #2f3a49; }
+  .panel ul { margin: 4px 0 0; padding-left: 20px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .stage { display: flex; gap: 10px; margin: 6px 0; }
+  .stage > b { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--accent);
+             color: #fff; text-align: center; line-height: 26px; font-size: 13px; }
+  .assume { background: var(--accent-soft); border-left: 3px solid var(--accent); padding: 10px 12px;
+            border-radius: 4px; margin-top: 10px; font-size: 14px; }
+
+  section.sec { margin-top: 30px; }
+  section.sec > h2 { margin: 0; font-size: 19px; padding: 10px 14px; background: var(--accent);
+                     color: #fff; border-radius: 8px 8px 0 0; }
+  section.sec > .intro { margin: 0; padding: 10px 14px; background: var(--accent-soft);
+                         color: #2b3f63; font-size: 14px; border: 1px solid var(--line); border-top: 0; }
+
+  fieldset.q { margin: 0; border: 1px solid var(--line); border-top: 0; background: var(--card);
+               padding: 14px 16px 14px; }
+  fieldset.q:last-child { border-radius: 0 0 8px 8px; }
+  fieldset.q legend { padding: 0; float: left; width: 100%; font-weight: 600; margin-bottom: 8px; }
+  fieldset.q legend + * { clear: both; }
+  .qid { display: inline-block; min-width: 34px; color: var(--accent); font-weight: 700; }
+  .tag { font-size: 11px; font-weight: 700; color: var(--key); background: var(--key-soft);
+         border: 1px solid #f0c9a4; padding: 1px 7px; border-radius: 10px; margin-left: 6px;
+         vertical-align: 1px; letter-spacing: .3px; }
+  .hint { color: var(--muted); font-size: 13px; margin: -2px 0 8px 34px; }
+  .opts { margin-left: 34px; display: grid; gap: 4px; }
+  .opt { display: flex; gap: 8px; align-items: flex-start; padding: 5px 8px; border-radius: 6px;
+         border: 1px solid transparent; cursor: pointer; font-weight: 400; }
+  .opt:hover { background: #f2f5f9; }
+  .opt.sel { background: var(--accent-soft); border-color: #b9cff0; }
+  .opt input { margin-top: 4px; flex: none; }
+  .fields { margin-left: 34px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+  .fields label { font-size: 12.5px; color: var(--muted); display: block; font-weight: 400; }
+  .fields input { width: 100%; padding: 7px 9px; border: 1px solid var(--line); border-radius: 6px; font: inherit; }
+  textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px;
+             font: inherit; resize: vertical; min-height: 38px; overflow: hidden; }
+  .note { margin: 8px 0 0 34px; }
+  .note textarea { background: #fafbfc; min-height: 34px; }
+  .main-text { margin-left: 34px; }
+  .main-text textarea { min-height: 70px; }
+  input:focus, textarea:focus { outline: 2px solid #9dbbea; border-color: var(--accent); }
+
+  .final .panel { margin-top: 24px; }
+  .thanks { text-align: center; color: var(--muted); font-size: 13px; margin-top: 24px; }
+
+  @media (max-width: 680px) {
+    .meta, .two, .fields { grid-template-columns: 1fr; }
+    .hint, .opts, .fields, .note, .main-text { margin-left: 0; }
+  }
+
+  /* ---------- Print / Save as PDF ---------- */
+  @page { size: A4; margin: 14mm 12mm; }
+  @media print {
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { background: #fff; font-size: 10.5pt; }
+    .toolbar, .noprint { display: none !important; }
+    header.top { padding: 14px 0; }
+    .wrap { max-width: none; padding: 0; }
+    .panel { break-inside: avoid; }
+    section.sec { margin-top: 16px; }
+    section.sec > h2 { break-after: avoid; }
+    fieldset.q { break-inside: avoid; padding: 8px 10px; }
+    .note.empty { display: none; }
+    .opt { padding: 2px 6px; }
+    textarea { border: 1px solid #b8c0cc; background: #fff; resize: none; overflow: visible; }
+    .fields input { border: 1px solid #b8c0cc; }
+    .meta input { border-color: #888; background: #fff; color: #000; }
+    .meta label { color: #fff; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <h1>Plasma Digital Twin - Revised Project Direction</h1>
+    <p>Questionnaire for the supervisor &middot; AI-Assisted Plasma Process Experimentation &amp; Digital Twin Analytics Platform &middot; COMSATS University Islamabad</p>
+    <div class="meta">
+      <div><label for="m_name">Respondent</label><input id="m_name" data-meta="name" placeholder="e.g. Dr. Majid Iqbal"></div>
+      <div><label for="m_date">Date</label><input id="m_date" data-meta="date" type="date"></div>
+      <div><label for="m_from">Prepared by</label><input id="m_from" data-meta="from" value="Muhammad Rayyan Taimoor Khan (FA23-BCS-072)"></div>
+    </div>
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="wrap">
+    <div class="progress">
+      <div class="bar"><i id="pbar"></i></div>
+      <small id="ptext">0 of 0 answered</small>
+    </div>
+    <button class="primary" id="btnPdf" title="Opens the print dialog - choose 'Save as PDF'">Save as PDF</button>
+    <button id="btnJson" title="Downloads your answers as a small file that can be re-loaded later">Download answers (.json)</button>
+    <button id="btnLoad">Load answers</button>
+    <button id="btnClear">Clear all</button>
+    <input type="file" id="fileIn" accept=".json,application/json" hidden>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="panel">
+    <h2>Purpose of this form</h2>
+    <p>The project is changing direction. Before we rebuild the digital twin we want to make sure the physics is set up the way you intend, since the original idea was yours. The questions are grouped by stage. Items marked <span class="tag" style="margin-left:0">KEY</span> are the ones that most affect the architecture; please answer those first. Anything you leave blank we will treat as "your call - use a sensible default and tell you".</p>
+    <h3>How to fill it in</h3>
+    <ul>
+      <li>Tick an option (or several where it says "select all that apply") and add details in the comment box under any question.</li>
+      <li>Your answers are saved automatically in this browser while you work.</li>
+      <li>When finished, click <b>Save as PDF</b> (in the print dialog choose <i>Save as PDF</i>) and email the PDF back. You can also use <b>Download answers</b> to send the small .json file.</li>
+    </ul>
+  </div>
+
+  <div class="panel">
+    <h2>Where the project stands today (for context)</h2>
+    <div class="two">
+      <div>
+        <h3>Current digital twin</h3>
+        <ul>
+          <li>0D (volume-averaged) global model of a low-pressure RF capacitively coupled <b>argon</b> discharge, following Lieberman &amp; Lichtenberg, Ch. 10.</li>
+          <li>Inputs: RF power 50-300 W, pressure 1-20 mTorr (optionally an RF voltage for the Child-Langmuir sheath).</li>
+          <li>Particle balance (root-find) gives T<sub>e</sub> from pressure and geometry; power balance gives n<sub>e</sub>.</li>
+          <li>Gas temperature is fixed at 300 K; gas flow is recorded but has <b>no effect</b>.</li>
+          <li>Validated against Turner (2014) and others; 6 of 9 checks pass. The ionization rate coefficient K<sub>iz</sub> is a "representative" fit, not from a cited cross-section set.</li>
+          <li>On top sits a machine-learning layer (classification, anomaly detection, uncertainty, recommendations) framed around semiconductor processing.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Proposed new structure</h3>
+        <div class="stage"><b>1</b><div><b>OES stage.</b> Control RF power, pressure, gas (argon for now, other gases later) and flow rate (100 / 200 / 300 sccm). Outputs gas temperature, densities, etc.; graphs including the Boltzmann distribution / plot.</div></div>
+        <div class="stage"><b>2</b><div><b>Underwater plasma</b> using oxygen, for disinfection of waste.</div></div>
+        <div class="stage"><b>3</b><div><b>Langmuir probe</b> stage.</div></div>
+        <div class="assume"><b>Our working assumptions (please correct):</b> OES means optical emission spectroscopy; "Boltzmann distribution" means the Boltzmann plot of level populations; the existing 0D global model is the starting point for Stage 1 and will be extended rather than thrown away.</div>
+      </div>
+    </div>
+  </div>
+
+  <main id="q"></main>
+
+  <div class="thanks noprint">Thank you. Please send the PDF (or the .json file) back to the student.</div>
+</div>
+
+<script>
+/* ======================================================================
+   Question bank. type: 'single' | 'multi' | 'text' | 'fields'
+   key: true marks the architecture-critical questions.
+   ====================================================================== */
+const SECTIONS = [
+{ id: 'A', title: 'A. Overall scope and priorities',
+  intro: 'How the three stages relate, what the project must demonstrate, and what happens to the existing work.',
+  qs: [
+  { id:'A1', key:true, type:'single', text:'How are the three stages (OES, underwater plasma, Langmuir probe) related?',
+    opts:['Three independent experiments sharing one dashboard',
+          'A pipeline: the plasma state from one stage feeds the next',
+          'Stages 1 and 3 share the same low-pressure chamber; Stage 2 is a separate system',
+          'Other (describe below)'] },
+  { id:'A2', type:'multi', text:'What should the finished project primarily demonstrate to the examiners?', hint:'Select all that apply.',
+    opts:['A physically consistent simulation (outputs derived from solved physics)',
+          'Agreement with published or experimental data',
+          'An interactive virtual laboratory for teaching',
+          'Plasma diagnostics analysis tools (OES / probe)',
+          'A working AI-assisted analysis of plasma data',
+          'Other (describe below)'] },
+  { id:'A3', key:true, type:'single', text:'Is the project simulation-only, or should it also take in real measured data?',
+    opts:['Simulation only',
+          'Simulation, plus import of measured data (OES spectra, probe I-V curves) for comparison',
+          'Mainly analysis of measured data from your laboratory'] },
+  { id:'A3b', type:'text', text:'If real data exists: what is available (instrument, gas, conditions, file format), and can we use it?' },
+  { id:'A4', key:true, type:'single', text:'What should happen to the semiconductor-processing framing (etch rate, uniformity, defect probability, application suitability)?',
+    opts:['Remove it entirely',
+          'Keep it as a secondary feature',
+          'Replace it with new targets (describe below)'] },
+  { id:'A5', type:'text', text:'Which papers, textbooks or experimental set-ups should the twin be benchmarked against?', hint:'References you trust for each stage are especially helpful.' },
+  { id:'A6', type:'multi', text:'Which gases are likely to be added after argon?', hint:'So the architecture can anticipate them.',
+    opts:['Helium','Nitrogen','Air','Oxygen (needed for Stage 2 in any case)','Argon/oxygen mixtures','Hydrogen-containing gases','Other (describe below)'] },
+  { id:'A7', type:'text', text:'Which stages are mandatory for this project and which are optional? Is there a deadline we should plan around?' }
+]},
+
+{ id:'B', title: 'B. Stage 1 - OES (argon discharge with flow control)',
+  intro: 'Inputs: RF power, pressure, gas (argon), flow rate. Outputs: gas temperature, densities, spectra and the Boltzmann distribution.',
+  qs: [
+  { id:'B1', key:true, type:'fields', text:'Operating envelope for Stage 1',
+    fields:[{k:'power',label:'RF power range (W)',ph:'e.g. 50-300'},
+            {k:'press',label:'Pressure range',ph:'e.g. 1-20 mTorr, or higher?'},
+            {k:'freq',label:'RF frequency',ph:'e.g. 13.56 MHz'},
+            {k:'type',label:'Discharge type',ph:'CCP / ICP / other'},
+            {k:'geom',label:'Chamber geometry (radius, gap)',ph:'keep current (R = 15 cm, L = 3 cm)?'},
+            {k:'elec',label:'Other fixed parameters',ph:''}] },
+  { id:'B2', type:'single', text:'Is the flow rate restricted to the three values 100, 200 and 300 sccm, or continuous between them?',
+    opts:['Only the three discrete values 100 / 200 / 300 sccm','Continuous range 100-300 sccm','Wider range (specify below)'] },
+  { id:'B3', key:true, type:'multi', text:'What physical role should gas flow play in the model?', hint:'Select all that apply.',
+    opts:['Neutral replenishment / residence time in the particle balance',
+          'Gas heating - neutral temperature from an energy balance (flow cools the gas)',
+          'Pressure is held fixed by a throttle valve; flow only changes residence time',
+          'Flow also changes the pressure (fixed pumping speed)',
+          'Other (describe below)'] },
+  { id:'B4', key:true, type:'single', text:'What should the OES stage do?',
+    opts:['Forward model only: synthesise the emission spectrum from the computed plasma state',
+          'Analysis only: extract temperatures and densities from measured spectra',
+          'Both'] },
+  { id:'B5', type:'multi', text:'Which spectral features should be included?', hint:'Select all that apply.',
+    opts:['Ar I lines (2p to 1s transitions, roughly 690-850 nm)',
+          'Ar II lines',
+          'Metastable / resonant states (absorption or population only)',
+          'Trace N2 second positive system',
+          'OH (A-X) band near 309 nm',
+          'H-alpha / H-beta (Balmer lines)',
+          'Other (describe below)'] },
+  { id:'B6', key:true, type:'single', text:'How should gas temperature be obtained?', hint:'Argon has no rotational band, so a molecular trace gas or a broadening method is needed.',
+    opts:['Rotational temperature from a trace-molecule band (N2 or OH) assumed present',
+          'Doppler broadening of an argon line',
+          'Pressure (collisional) broadening of an argon line',
+          'From a neutral-gas energy balance in the model, with OES used only as a cross-check',
+          'Other (describe below)'] },
+  { id:'B7', key:true, type:'multi', text:'What should the "Boltzmann distribution" display show?', hint:'Select all that apply.',
+    opts:['Boltzmann plot: ln(I&middot;&lambda;/gA) versus upper-level energy, giving an excitation temperature',
+          'Population distribution of excited levels (n versus E)',
+          'Maxwell-Boltzmann (or non-Maxwellian) electron energy distribution',
+          'Comparison of the Boltzmann-plot temperature with the model T<sub>e</sub> to show departure from equilibrium',
+          'Other (describe below)'] },
+  { id:'B8', type:'single', text:'How should the excited-level populations be computed?',
+    opts:['Simple: ground state plus a few effective levels (metastables, 4s, 4p)',
+          'Detailed collisional-radiative model of the Ar 1s and 2p manifolds',
+          'Assume partial local thermodynamic equilibrium (Boltzmann populations) and skip kinetics',
+          'Other (describe below)'] },
+  { id:'B9', type:'multi', text:'Which kinetic processes must be included for argon?', hint:'Select all that apply.',
+    opts:['Ground-state ionization and excitation','Step-wise excitation and ionization from metastables','Penning / metastable-metastable ionization','Radiation trapping (resonance lines)','Quenching and diffusion of metastables to walls','Elastic losses and gas heating','Other (describe below)'] },
+  { id:'B10', key:true, type:'single', text:'Electron energy distribution function assumption', hint:'Affects every rate coefficient.',
+    opts:['Maxwellian','Druyvesteyn','Bi-Maxwellian','Solve the Boltzmann equation (two-term approximation) from cross-sections','Other (describe below)'] },
+  { id:'B11', type:'single', text:'How should electron density be obtained in the OES stage?',
+    opts:['From the global-model power balance only','From line-ratio / collisional-radiative method','From Stark broadening of a hydrogen line (requires hydrogen)','Not required in the OES stage'] },
+  { id:'B12', type:'multi', text:'Which outputs and graphs should Stage 1 provide?', hint:'Select all that apply.',
+    opts:['Electron temperature and electron density','Gas (neutral) temperature','Excitation temperature','Metastable and excited-state densities','Ion flux','Synthetic emission spectrum','Line intensities and line ratios','Boltzmann plot','Electron energy distribution','Trends versus power, pressure and flow','Other (describe below)'] },
+  { id:'B13', type:'fields', text:'If spectra are synthesised: instrument emulation',
+    fields:[{k:'res',label:'Spectrometer resolution (FWHM, nm)',ph:'e.g. 0.1'},
+            {k:'range',label:'Wavelength range (nm)',ph:'e.g. 300-900'},
+            {k:'noise',label:'Noise level (% of peak)',ph:''},
+            {k:'resp',label:'Detector response correction?',ph:'yes / no'}] },
+  { id:'B14', key:true, type:'text', text:'Which cross-section / rate-coefficient source should the argon model use?',
+    hint:'The current ionization and excitation rate coefficients are "representative" fits without a cited origin. We found that they must be replaced together. LXCat, Biagi, Phelps, or a published argon model are options.' }
+]},
+
+{ id:'C', title: 'C. Stage 2 - Underwater oxygen plasma for disinfection of waste',
+  intro: 'This is a different regime from Stage 1 (atmospheric, plasma-liquid interaction, chemistry-driven). We need to know the intended set-up before choosing a model.',
+  qs: [
+  { id:'C1', key:true, type:'single', text:'Discharge configuration',
+    opts:['Plasma generated inside gas bubbles in the water',
+          'Direct discharge in the liquid (streamers, spark, corona)',
+          'Plasma above the water surface (jet or DBD) producing plasma-activated water',
+          'Plasma-liquid interface geometry (falling film, spray, etc.)',
+          'Other (describe below)'] },
+  { id:'C2', type:'fields', text:'Power supply and electrode set-up',
+    fields:[{k:'type',label:'Supply type',ph:'DC / pulsed DC / AC kHz / RF / ns pulses'},
+            {k:'volt',label:'Voltage',ph:''},
+            {k:'freq',label:'Frequency / pulse width',ph:''},
+            {k:'pow',label:'Power or energy per pulse',ph:''},
+            {k:'elec',label:'Electrode geometry and gap',ph:''},
+            {k:'press',label:'Pressure',ph:'atmospheric?'}] },
+  { id:'C3', type:'fields', text:'Oxygen supply',
+    fields:[{k:'flow',label:'O2 flow range (slm or sccm)',ph:''},
+            {k:'bub',label:'Bubble size / injection method',ph:''},
+            {k:'o3',label:'Separate ozone generator?',ph:'yes / no'},
+            {k:'pure',label:'Gas purity / humidity',ph:''}] },
+  { id:'C4', key:true, type:'fields', text:'What is the "waste" being disinfected?',
+    fields:[{k:'what',label:'Type of waste',ph:'hospital wastewater, municipal, other'},
+            {k:'vol',label:'Liquid volume',ph:''},
+            {k:'cond',label:'Conductivity',ph:''},
+            {k:'ph',label:'Initial pH',ph:''},
+            {k:'temp',label:'Initial temperature',ph:''},
+            {k:'org',label:'Organic load (COD / TOC)',ph:''}] },
+  { id:'C5', type:'multi', text:'Target microorganisms', hint:'Select all that apply.',
+    opts:['E. coli','S. aureus','Bacterial spores (e.g. Bacillus)','Viruses','Generic "microbial load" (no specific organism)','Other (describe below)'] },
+  { id:'C6', key:true, type:'single', text:'What kind of model do you want for Stage 2?',
+    opts:['Zero-dimensional reaction-kinetics model of reactive species in gas and liquid',
+          'Gas-phase global model, plus an empirical transfer of species into the liquid',
+          'Empirical dose-response model only, driven by delivered energy / dose',
+          'Other (describe below)'] },
+  { id:'C7', type:'multi', text:'Reactive species to include', hint:'Select all that apply.',
+    opts:['O, O(1D)','O2(a1&Delta;) singlet oxygen','O3 (ozone)','OH','H2O2','HO2 / O2<sup>-</sup>','Solvated electrons','UV / photon effects','NOx (only if air is used)','Other (describe below)'] },
+  { id:'C8', type:'single', text:'Disinfection kinetics model',
+    opts:['Chick-Watson','Hom model','Weibull','Log-linear with shoulder and tailing','Other (describe below)'] },
+  { id:'C9', type:'multi', text:'Which outputs should Stage 2 provide?', hint:'Select all that apply.',
+    opts:['Reactive-species concentrations versus time','pH, ORP and conductivity change','Log reduction versus treatment time','D-value / inactivation rate constant','Energy yield (log reduction per kWh or g/kWh)','Water temperature rise','Other (describe below)'] },
+  { id:'C10', type:'single', text:'Should OES also be applied to the underwater plasma?', hint:'For example O I 777 / 845 nm, OH 309 nm, H-alpha.',
+    opts:['Yes, same diagnostic framework as Stage 1','No, not for Stage 2','Not sure'] },
+  { id:'C11', type:'text', text:'What experimental or published disinfection data can we benchmark against?' }
+]},
+
+{ id:'D', title: 'D. Stage 3 - Langmuir probe',
+  intro: 'How the probe stage should connect to the plasma stages and which analysis theory to implement.',
+  qs: [
+  { id:'D1', key:true, type:'single', text:'What should the Langmuir probe stage do?',
+    opts:['Simulate an I-V characteristic from the digital twin, then analyse it to recover T<sub>e</sub> and n<sub>e</sub> as a consistency check',
+          'Analyse measured I-V curves',
+          'Both'] },
+  { id:'D2', type:'multi', text:'Which plasma is probed?', hint:'Select all that apply.',
+    opts:['Stage 1 low-pressure argon plasma','Stage 2 oxygen / underwater plasma','Generic user-specified plasma'] },
+  { id:'D3', type:'fields', text:'Probe type and geometry',
+    fields:[{k:'type',label:'Probe type',ph:'single cylindrical / double / triple / emissive'},
+            {k:'rad',label:'Tip radius',ph:''},
+            {k:'len',label:'Tip length',ph:''},
+            {k:'rf',label:'RF compensation?',ph:'yes / no'}] },
+  { id:'D4', key:true, type:'multi', text:'Which analysis theories should be implemented?', hint:'Select all that apply.',
+    opts:['Electron retardation region: exponential fit for T<sub>e</sub>','Ion saturation current (Bohm) for density','OML (orbital motion limited) theory','ABR / Laframboise theory','Druyvesteyn method: EEDF from the second derivative','Collisional corrections for higher pressure','Other (describe below)'] },
+  { id:'D5', type:'single', text:'Should RF distortion of the I-V curve be modelled?',
+    opts:['Yes, include sheath-oscillation distortion','No, assume an ideal RF-compensated probe'] },
+  { id:'D6', type:'multi', text:'Which artefacts should the synthetic I-V curve include?', hint:'Select all that apply.',
+    opts:['Measurement noise','Finite voltage resolution / sweep','Probe contamination / hysteresis','Magnetic or collisional effects','None, clean ideal curve'] },
+  { id:'D7', type:'multi', text:'Which outputs should Stage 3 provide?', hint:'Select all that apply.',
+    opts:['T<sub>e</sub>','n<sub>e</sub>','Plasma potential V<sub>p</sub>','Floating potential V<sub>f</sub>','EEDF / EEPF','Debye length','I-V curve plot','Other (describe below)'] },
+  { id:'D8', type:'single', text:'Should OES-derived values (Stage 1) be compared directly with probe-derived values?',
+    opts:['Yes, a side-by-side comparison of T<sub>e</sub> / n<sub>e</sub> (OES, probe, model)','No, keep the stages separate'] }
+]},
+
+{ id:'E', title: 'E. Modelling fidelity, validation and the role of AI',
+  intro: 'What level of physics is acceptable, how success is judged, and where machine learning is actually useful.',
+  qs: [
+  { id:'E1', key:true, type:'single', text:'Is the 0D (volume-averaged) global model still acceptable for Stage 1?',
+    opts:['Yes, 0D is sufficient','Needs spatial resolution (1D) for some quantities','Depends on the quantity (describe below)'] },
+  { id:'E2', type:'text', text:'What agreement with reference data would you accept (e.g. +/- 20-30 % for a global model)?' },
+  { id:'E3', type:'multi', text:'Where would machine learning add real value from a physics point of view?', hint:'Select all that apply.',
+    opts:['Inverse problem: inferring plasma parameters from an OES spectrum','Fast surrogate for the physics model','Optimising operating conditions for disinfection efficiency','Predicting log reduction from operating conditions','Anomaly / fault detection on diagnostics','It is not needed; focus on physics'] },
+  { id:'E4', type:'text', text:'Anything you think we are getting wrong, or pitfalls you want us to avoid?' },
+  { id:'E5', type:'text', text:'Any other requirements, preferences or comments?' }
+]}
+];
+
+/* ======================================================================
+   Rendering
+   ====================================================================== */
+const STORE_KEY = 'plasma-supervisor-questionnaire-v1';
+const root = document.getElementById('q');
+const allQs = SECTIONS.flatMap(s => s.qs);
+
+function el(tag, attrs, html) {
+  const e = document.createElement(tag);
+  if (attrs) for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (html !== undefined) e.innerHTML = html;
+  return e;
+}
+
+SECTIONS.forEach(sec => {
+  const s = el('section', {class: 'sec'});
+  s.appendChild(el('h2', null, sec.title));
+  s.appendChild(el('p', {class: 'intro'}, sec.intro));
+  sec.qs.forEach(q => {
+    const fs = el('fieldset', {class: 'q', 'data-q': q.id});
+    fs.appendChild(el('legend', null,
+      `<span class="qid">${q.id}</span>${q.text}${q.key ? '<span class="tag">KEY</span>' : ''}`));
+    if (q.hint) fs.appendChild(el('div', {class: 'hint'}, q.hint));
+
+    if (q.type === 'single' || q.type === 'multi') {
+      const box = el('div', {class: 'opts'});
+      q.opts.forEach((o, i) => {
+        const lab = el('label', {class: 'opt'});
+        const inp = el('input', {type: q.type === 'single' ? 'radio' : 'checkbox', name: q.id, value: o});
+        lab.appendChild(inp);
+        lab.appendChild(el('span', null, o));
+        box.appendChild(lab);
+      });
+      fs.appendChild(box);
+    } else if (q.type === 'fields') {
+      const box = el('div', {class: 'fields'});
+      q.fields.forEach(f => {
+        const d = el('div');
+        d.appendChild(el('label', null, f.label));
+        d.appendChild(el('input', {type: 'text', 'data-field': f.k, placeholder: f.ph || ''}));
+        box.appendChild(d);
+      });
+      fs.appendChild(box);
+    } else if (q.type === 'text') {
+      const d = el('div', {class: 'main-text'});
+      d.appendChild(el('textarea', {'data-main': '1', rows: 3, placeholder: 'Your answer...'}));
+      fs.appendChild(d);
+    }
+    if (q.type !== 'text') {
+      const n = el('div', {class: 'note empty'});
+      n.appendChild(el('textarea', {'data-note': '1', rows: 1, placeholder: 'Comments / details (optional)'}));
+      fs.appendChild(n);
+    }
+    s.appendChild(fs);
+  });
+  root.appendChild(s);
+});
+
+/* ---------- state collection ---------- */
+function readQuestion(q) {
+  const fs = root.querySelector(`[data-q="${q.id}"]`);
+  const out = {};
+  if (q.type === 'single' || q.type === 'multi') {
+    out.choice = [...fs.querySelectorAll('input:checked')].map(i => i.value);
+  } else if (q.type === 'fields') {
+    out.fields = {};
+    fs.querySelectorAll('[data-field]').forEach(i => { if (i.value.trim()) out.fields[i.dataset.field] = i.value.trim(); });
+  } else {
+    out.text = fs.querySelector('[data-main]').value.trim();
+  }
+  const note = fs.querySelector('[data-note]');
+  if (note) out.note = note.value.trim();
+  return out;
+}
+function isAnswered(a) {
+  return (a.choice && a.choice.length) || (a.fields && Object.keys(a.fields).length) || a.text || a.note;
+}
+function collect() {
+  const data = {version: 1, meta: {}, answers: {}};
+  document.querySelectorAll('[data-meta]').forEach(i => data.meta[i.dataset.meta] = i.value);
+  allQs.forEach(q => { data.answers[q.id] = readQuestion(q); });
+  return data;
+}
+function apply(data) {
+  if (!data || !data.answers) return;
+  document.querySelectorAll('[data-meta]').forEach(i => { if (data.meta && data.meta[i.dataset.meta] !== undefined) i.value = data.meta[i.dataset.meta]; });
+  allQs.forEach(q => {
+    const a = data.answers[q.id]; if (!a) return;
+    const fs = root.querySelector(`[data-q="${q.id}"]`);
+    fs.querySelectorAll('input[type=radio],input[type=checkbox]').forEach(i => { i.checked = !!(a.choice && a.choice.includes(i.value)); });
+    fs.querySelectorAll('[data-field]').forEach(i => { i.value = (a.fields && a.fields[i.dataset.field]) || ''; });
+    const m = fs.querySelector('[data-main]'); if (m) m.value = a.text || '';
+    const n = fs.querySelector('[data-note]'); if (n) n.value = a.note || '';
+  });
+  refresh();
+}
+
+/* ---------- UI refresh ---------- */
+function autosize(t) { t.style.height = 'auto'; t.style.height = (t.scrollHeight + 2) + 'px'; }
+function refresh() {
+  let done = 0;
+  allQs.forEach(q => {
+    const fs = root.querySelector(`[data-q="${q.id}"]`);
+    fs.querySelectorAll('.opt').forEach(l => l.classList.toggle('sel', l.querySelector('input').checked));
+    const n = fs.querySelector('.note');
+    if (n) n.classList.toggle('empty', !n.querySelector('textarea').value.trim());
+    if (isAnswered(readQuestion(q))) done++;
+  });
+  document.querySelectorAll('textarea').forEach(autosize);
+  const total = allQs.length;
+  document.getElementById('pbar').style.width = (100 * done / total) + '%';
+  document.getElementById('ptext').textContent = `${done} of ${total} answered`;
+}
+function persist() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(collect())); } catch (e) { /* storage may be blocked */ }
+}
+function onChange() { refresh(); persist(); }
+
+root.addEventListener('input', onChange);
+root.addEventListener('change', onChange);
+document.querySelectorAll('[data-meta]').forEach(i => i.addEventListener('input', persist));
+
+/* Allow un-ticking a radio by clicking it again */
+root.addEventListener('mousedown', e => {
+  const i = e.target.closest('input[type=radio]');
+  if (i) i.dataset.was = i.checked ? '1' : '';
+});
+root.addEventListener('click', e => {
+  const i = e.target.closest('input[type=radio]');
+  if (i && i.dataset.was === '1') { i.checked = false; i.dataset.was = ''; onChange(); }
+});
+
+/* ---------- toolbar actions ---------- */
+document.getElementById('btnPdf').onclick = () => { refresh(); window.print(); };
+window.addEventListener('beforeprint', refresh);
+
+document.getElementById('btnJson').onclick = () => {
+  const blob = new Blob([JSON.stringify(collect(), null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'plasma_questionnaire_answers.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+document.getElementById('btnLoad').onclick = () => document.getElementById('fileIn').click();
+document.getElementById('fileIn').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => { try { apply(JSON.parse(r.result)); persist(); } catch (err) { alert('That file could not be read as an answers file.'); } };
+  r.readAsText(f); e.target.value = '';
+};
+document.getElementById('btnClear').onclick = () => {
+  if (!confirm('Clear every answer on this page?')) return;
+  root.querySelectorAll('input[type=radio],input[type=checkbox]').forEach(i => i.checked = false);
+  root.querySelectorAll('input[type=text],textarea').forEach(i => i.value = '');
+  try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+  refresh();
+};
+
+/* ---------- initial load ---------- */
+(function init() {
+  document.getElementById('m_date').valueAsDate = new Date();
+  try {
+    const saved = localStorage.getItem(STORE_KEY);
+    if (saved) apply(JSON.parse(saved));
+  } catch (e) { /* ignore */ }
+  refresh();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SRS diagrams</title>
+<style>
+  body { margin:0; background:#fff; font-family:"Segoe UI",Roboto,Arial,sans-serif; }
+  .d { display:none; } .d.on { display:block; }
+  svg text { font-family:"Segoe UI",Roboto,Arial,sans-serif; }
+</style>
+</head>
+<body>
+<div id="usecase" class="d"></div>
+<div id="arch" class="d"></div>
+<script>
+/* ===================== USE CASE DIAGRAM ===================== */
+(function () {
+  const W = 1120, H = 1880;
+  const AX = 430, ARX = 128, BX = 752, BRX = 136, RY = 30;
+  const U = {
+    'UC-01':[AX,110,['UC-01 Configure','Low-Pressure Chamber']],
+    'UC-04':[BX,110,['UC-04 Run','Parameter Sweep']],
+    'UC-02':[AX,190,['UC-02 Run Low-Pressure','Plasma Simulation']],
+    'UC-03':[BX,190,['UC-03 Validate','Chamber Configuration']],
+    'UC-05':[AX,270,['UC-05 View Plasma','State and Profiles']],
+    'UC-06':[AX,350,['UC-06 Generate','Synthetic OES Spectrum']],
+    'UC-08':[BX,385,['UC-08 Determine','Excitation Temperature']],
+    'UC-07':[AX,430,['UC-07 Analyse','OES Spectrum']],
+    'UC-09':[BX,460,['UC-09 Determine','Gas Temperature']],
+    'UC-11':[AX,520,['UC-11 Simulate','Langmuir Probe I-V']],
+    'UC-12':[AX,600,['UC-12 Analyse','Probe I-V Curve']],
+    'UC-13':[BX,615,['UC-13 Extract','EEDF']],
+    'UC-14':[AX,680,['UC-14 Compare','Diagnostics']],
+    'UC-15':[AX,800,['UC-15 Configure','Underwater Plasma']],
+    'UC-16':[AX,880,['UC-16 Run Disinfection','Simulation']],
+    'UC-17':[BX,880,['UC-17 Validate','Discharge Configuration']],
+    'UC-18':[AX,960,['UC-18 Analyse','Underwater OES']],
+    'UC-19':[BX,960,['UC-19 Estimate n_e by','Stark Broadening']],
+    'UC-10':[AX,1090,['UC-10 Infer Plasma','Parameters with AI']],
+    'UC-24':[AX,1170,['UC-24 Detect Physics','Anomalies']],
+    'UC-25':[AX,1250,['UC-25 Get','Recommendations']],
+    'UC-26':[BX,1250,['UC-26 Re-simulate','with Digital Twin']],
+    'UC-27':[AX,1330,['UC-27 Explore Surrogate','and Explanations']],
+    'UC-28':[BX,1410,['UC-28 Train and','Evaluate AI Models']],
+    'UC-20':[BX,1530,['UC-20 Import','Measured Data']],
+    'UC-21':[BX,1620,['UC-21 Validate Against','Reference Data']],
+    'UC-22':[AX,1700,['UC-22 Manage','Sessions']],
+    'UC-23':[AX,1780,['UC-23 Export','Results']],
+  };
+  const rx = id => U[id][0] === AX ? ARX : BRX;
+  function edge(id, px, py) {           // point on ellipse boundary toward (px, py)
+    const [cx, cy] = U[id]; const dx = px - cx, dy = py - cy;
+    const t = 1 / Math.sqrt((dx / rx(id)) ** 2 + (dy / RY) ** 2);
+    return [cx + dx * t, cy + dy * t];
+  }
+  function between(a, b) {              // boundary points of two ellipses facing each other
+    const p = edge(a, U[b][0], U[b][1]), q = edge(b, U[a][0], U[a][1]); return [p, q];
+  }
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
+  <defs>
+    <marker id="open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10" fill="none" stroke="#222" stroke-width="1.4"/></marker>
+    <marker id="tri" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="13" markerHeight="13" orient="auto-start-reverse"><path d="M0,0 L12,6 L0,12 Z" fill="#fff" stroke="#222" stroke-width="1.3"/></marker>
+  </defs>
+  <rect x="0" y="0" width="${W}" height="${H}" fill="#fff"/>
+  <rect x="180" y="18" width="742" height="1842" rx="8" fill="#fbfcfe" stroke="#222" stroke-width="1.6"/>
+  <text x="551" y="40" font-size="17" font-weight="700" text-anchor="middle">Plasma Digital Twin Platform</text>`;
+  [['Stage 1 - Low-Pressure Plasma (OES and Langmuir probe)', 62, null], ['Stage 2 - Underwater Plasma (disinfection)', 745, 726], ['AI Module (core) - learns from the digital twin', 1045, 1027], ['Data and Sessions', 1480, 1462]].forEach(g => {
+    if (g[2]) s += `<line x1="190" x2="912" y1="${g[2]}" y2="${g[2]}" stroke="#9aa5b4" stroke-dasharray="6 5"/>`;
+    s += `<text x="196" y="${g[1]}" font-size="13" font-weight="600" fill="#22406f">${g[0]}</text>`; });
+  // associations from Student
+  const SX = 112, SY = 470;
+  // Lines end at each ellipse's LEFT vertex: every use case lies to the right of that
+  // vertex, so an association line can never cut through a neighbouring use case.
+  const left = id => [U[id][0] - rx(id), U[id][1]];
+  ['UC-01','UC-02','UC-05','UC-06','UC-07','UC-11','UC-12','UC-14','UC-15','UC-16','UC-18','UC-10','UC-24','UC-25','UC-27','UC-22','UC-23'].forEach(id => {
+    const [x, y] = left(id); s += `<line x1="${SX}" y1="${SY}" x2="${x}" y2="${y}" stroke="#333" stroke-width="1.1"/>`; });
+  // associations from Researcher
+  const RX0 = 112, RY0 = 1545;
+  ['UC-28','UC-20','UC-21'].forEach(id => { const [x, y] = left(id); s += `<line x1="${RX0}" y1="${RY0}" x2="${x}" y2="${y}" stroke="#333" stroke-width="1.1"/>`; });
+  // external actors (non-human)
+  const ext = [['OES Spectrometer','(measured spectra)',1480,'UC-20'],['Langmuir Probe System','(measured I-V curves)',1580,'UC-20'],['Reference Data Source','(NIST ASD, LXCat, literature)',1700,'UC-21']];
+  ext.forEach(e => { const [x, y] = edge(e[3], 955, e[2]); s += `<line x1="955" y1="${e[2]}" x2="${x}" y2="${y}" stroke="#333" stroke-width="1.1"/>`; });
+  // include / extend
+  const inc = [['UC-02','UC-03'],['UC-07','UC-08'],['UC-07','UC-09'],['UC-12','UC-13'],['UC-16','UC-17'],['UC-18','UC-19'],['UC-25','UC-26']];
+  inc.forEach(([a, b]) => { const [p, q] = between(a, b);
+    s += `<line x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" stroke="#222" stroke-width="1.2" stroke-dasharray="6 4" marker-end="url(#open)"/>`;
+    s += `<text x="${(p[0]+q[0])/2}" y="${(p[1]+q[1])/2 - 5}" font-size="11.5" text-anchor="middle" fill="#7a2e2e">«include»</text>`; });
+  const ext2 = [['UC-04','UC-02']];
+  ext2.forEach(([a, b]) => { const [p, q] = between(a, b);
+    s += `<line x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" stroke="#222" stroke-width="1.2" stroke-dasharray="6 4" marker-end="url(#open)"/>`;
+    s += `<text x="${(p[0]+q[0])/2 + 26}" y="${(p[1]+q[1])/2 + 4}" font-size="11.5" text-anchor="middle" fill="#2e4f7a">«extend»</text>`; });
+  // use case ellipses (drawn after lines so lines meet the edge cleanly)
+  Object.entries(U).forEach(([id, [x, y, t]]) => {
+    const ai = ['UC-10','UC-24','UC-25','UC-26','UC-27','UC-28'].includes(id);
+    s += `<ellipse cx="${x}" cy="${y}" rx="${rx(id)}" ry="${RY}" fill="${ai ? '#fdf3e8' : '#eef4fd'}" stroke="#1f3f73" stroke-width="1.4"/>`;
+    s += `<text x="${x}" y="${y - 3}" font-size="13" text-anchor="middle">${t[0]}</text><text x="${x}" y="${y + 13}" font-size="13" text-anchor="middle">${t[1]}</text>`; });
+  // stick figures
+  function stick(x, y, name, sub) {
+    return `<g stroke="#222" stroke-width="1.8" fill="none"><circle cx="${x}" cy="${y-42}" r="12"/><line x1="${x}" y1="${y-30}" x2="${x}" y2="${y+8}"/><line x1="${x-22}" y1="${y-16}" x2="${x+22}" y2="${y-16}"/><line x1="${x}" y1="${y+8}" x2="${x-17}" y2="${y+36}"/><line x1="${x}" y1="${y+8}" x2="${x+17}" y2="${y+36}"/></g>
+      <text x="${x}" y="${y+56}" font-size="14" font-weight="600" text-anchor="middle">${name}</text><text x="${x}" y="${y+72}" font-size="11.5" text-anchor="middle" fill="#555">${sub}</text>`;
+  }
+  s += stick(85, 485, 'Student', '(learner)');
+  s += stick(85, 1560, 'Researcher', '(supervisor / lab staff)');
+  s += `<line x1="85" y1="1506" x2="85" y2="572" stroke="#222" stroke-width="1.3" marker-end="url(#tri)"/>`;
+  s += `<text x="96" y="1040" font-size="11" fill="#444" transform="rotate(-90 96 1040)" text-anchor="middle">generalization</text>`;
+  ext.forEach(e => { s += `<rect x="955" y="${e[2]-30}" width="158" height="60" rx="3" fill="#fff" stroke="#222" stroke-width="1.4"/>
+     <text x="1034" y="${e[2]-13}" font-size="11" text-anchor="middle" fill="#555">«actor»</text>
+     <text x="1034" y="${e[2]+3}" font-size="12.5" font-weight="600" text-anchor="middle">${e[0]}</text>
+     <text x="1034" y="${e[2]+19}" font-size="10.5" text-anchor="middle" fill="#555">${e[1]}</text>`; });
+  s += `</svg>`;
+  document.getElementById('usecase').innerHTML = s;
+})();
+
+/* ===================== CONCEPTUAL ARCHITECTURE ===================== */
+(function () {
+  const W = 1180, H = 880;
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
+  <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="#334"/></marker></defs>
+  <rect width="${W}" height="${H}" fill="#fff"/>
+  <rect x="150" y="70" width="1010" height="790" rx="10" fill="none" stroke="#777" stroke-dasharray="8 6"/>
+  <text x="166" y="92" font-size="13" fill="#555">Local machine (Windows / Linux / macOS) - no internet connection required</text>`;
+  // user
+  s += `<g stroke="#222" stroke-width="1.8" fill="none"><circle cx="70" cy="140" r="12"/><line x1="70" y1="152" x2="70" y2="188"/><line x1="48" y1="166" x2="92" y2="166"/><line x1="70" y1="188" x2="53" y2="214"/><line x1="70" y1="188" x2="87" y2="214"/></g>
+  <text x="70" y="234" font-size="13" font-weight="600" text-anchor="middle">Student /</text><text x="70" y="250" font-size="13" font-weight="600" text-anchor="middle">Researcher</text>`;
+  function layer(y, h, title, color, boxes) {
+    let t = `<rect x="170" y="${y}" width="970" height="${h}" rx="8" fill="${color}" stroke="#9aa5b4"/><text x="186" y="${y+22}" font-size="14" font-weight="700" fill="#1b2430">${title}</text>`;
+    const n = boxes.length, gap = 12, bw = (970 - 32 - gap * (n - 1)) / n;
+    boxes.forEach((b, i) => { const x = 186 + i * (bw + gap);
+      t += `<rect x="${x}" y="${y+34}" width="${bw}" height="${h-46}" rx="6" fill="#fff" stroke="#6b7a90"/>`;
+      b.forEach((line, k) => t += `<text x="${x + bw/2}" y="${y + 56 + k * 16}" font-size="${k === 0 ? 12.5 : 11.2}" ${k === 0 ? 'font-weight="600"' : 'fill="#444"'} text-anchor="middle">${line}</text>`); });
+    return t;
+  }
+  s += layer(110, 130, '1. Presentation layer - Streamlit dashboard in the web browser (Plotly interactive charts)', '#e8f0fc', [
+    ['Home and', 'role selection', '(M1)'], ['Stage 1 pages', 'chamber, state, OES,', 'probe, comparison (M2-M7)'], ['Stage 2 pages', 'underwater setup,', 'disinfection (M8-M9)'], ['Data pages', 'import, validation,', 'sessions, export (M10-M11)'], ['AI pages', 'inference, anomalies,', 'recommendations, surrogate,', 'training (M12-M16)']]);
+  s += layer(270, 140, '2. Application service layer - orchestration, business rules, caching', '#eaf6f0', [
+    ['Configuration', 'Validator', '(envelope and', 'consistency rules)'], ['Simulation', 'Orchestrator', '(runs, sweeps,', 'result cache)'], ['Session', 'Manager'], ['Import and', 'Parsing Service', '(formats, units)'], ['Validation and', 'Benchmark Service', '(±30 % tolerance)'], ['Export and', 'Report Service', '(citation filter)'], ['AI Training and', 'Registry Service', '(datasets, MLflow,', 'twin-version check)']]);
+  // Domain layer: the two core modules side by side
+  s += `<rect x="170" y="440" width="970" height="200" rx="8" fill="#f3eefc" stroke="#9aa5b4"/><text x="186" y="462" font-size="14" font-weight="700" fill="#1b2430">3. Domain layer - the two core modules (pure, tested Python packages)</text>`;
+  function panel(x, w, title, color, boxes) {
+    let q = `<rect x="${x}" y="472" width="${w}" height="158" rx="7" fill="${color}" stroke="#8a7fb0" stroke-dasharray="5 3"/><text x="${x+10}" y="490" font-size="12.5" font-weight="700" fill="#3a2a6a">${title}</text>`;
+    const n = boxes.length, gap = 8, bw = (w - 20 - gap * (n - 1)) / n;
+    boxes.forEach((b, i) => { const bx = x + 10 + i * (bw + gap);
+      q += `<rect x="${bx}" y="498" width="${bw}" height="122" rx="6" fill="#fff" stroke="#6b7a90"/>`;
+      b.forEach((ln, k) => q += `<text x="${bx + bw/2}" y="${518 + k * 16}" font-size="${k === 0 ? 12 : 10.8}" ${k === 0 ? 'font-weight="600"' : 'fill="#444"'} text-anchor="middle">${ln}</text>`); });
+    return q;
+  }
+  s += panel(180, 640, 'Core Module 1 - Digital Twin (physics engine)', '#f7f3ff', [
+    ['Stage 1 Plasma', 'Model', 'global 0D + 1D,', 'Ar/N2/O2, gas', 'heating, EEDF'], ['Virtual OES', 'CR model,', 'spectrum, Boltzmann,', 'gas temperature'], ['Virtual Langmuir', 'Probe', 'I-V, OML,', 'Druyvesteyn EEPF,', 'RF distortion'], ['Stage 2 Underwater', 'Model', 'bubble discharge,', 'liquid chemistry,', 'Hom kinetics'], ['Validation', 'benchmarks and', 'measured data,', '±30 %']]);
+  s += panel(836, 294, 'Core Module 2 - AI Module', '#fff3e6', [
+    ['AI Models', 'spectrum inference,', 'anomaly detection,', 'surrogate + SHAP'], ['Recommendation', 'Engine', 'search on surrogate,', 'verify with twin']]);
+  s += `<line x1="822" y1="545" x2="844" y2="545" stroke="#7a2e2e" stroke-width="1.6" marker-end="url(#ar)" marker-start="url(#ar)"/>`;
+  s += `<text x="828" y="652" font-size="10.5" text-anchor="middle" fill="#7a2e2e">twin generates training data; AI calls the twin to verify</text>`;
+  s += layer(690, 150, '4. Data layer - local files only', '#fff4e6', [
+    ['SQLite database', 'sessions, configurations,', 'results, measured-data', 'records and flags'], ['Reference data files', 'NIST ASD line data,', 'LXCat cross-sections,', 'N2 band constants,', 'published reference data'], ['Measured data files', 'OES spectra (.txt),', 'probe I-V (.csv)', 'from lab instruments'], ['AI models', 'trained models,', 'model cards,', 'MLflow runs'], ['Exported outputs', 'PDF reports, CSV', 'tables, PNG figures']]);
+  // arrows
+  s += `<line x1="96" y1="175" x2="168" y2="175" stroke="#334" stroke-width="1.6" marker-end="url(#ar)" marker-start="url(#ar)"/><text x="132" y="166" font-size="10.5" text-anchor="middle" fill="#334">HTTP</text><text x="132" y="196" font-size="10.5" text-anchor="middle" fill="#334">localhost</text>`;
+  [[240,270],[410,440],[640,690]].forEach(([a,b]) => { [330, 655, 980].forEach(x => s += `<line x1="${x}" y1="${a+2}" x2="${x}" y2="${b-2}" stroke="#334" stroke-width="1.5" marker-end="url(#ar)" marker-start="url(#ar)"/>`); });
+  s += `<text x="${W/2}" y="40" font-size="18" font-weight="700" text-anchor="middle">Conceptual architecture of the Plasma Digital Twin Platform</text>`;
+  s += `</svg>`;
+  document.getElementById('arch').innerHTML = s;
+})();
+const id = (location.hash || '#usecase').slice(1);
+document.getElementById(id).classList.add('on');
+</script>
+</body>
+</html>

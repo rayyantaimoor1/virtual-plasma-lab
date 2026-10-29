@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plasma Digital Twin - Supervisor Questionnaire (Round 2)</title>
+<style>
+  :root { --bg:#f5f6f8; --card:#fff; --ink:#1b2430; --muted:#5d6877; --line:#d9dee5;
+          --accent:#1f5fbf; --soft:#e8f0fc; --warn:#9a3d00; --warn-soft:#fff2e6; --ok:#1d7a46; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font:15px/1.5 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .wrap { max-width:900px; margin:0 auto; padding:0 16px 90px; }
+  header.top { background:#14284b; color:#fff; padding:26px 0 20px; }
+  header.top h1 { margin:0 0 4px; font-size:23px; }
+  header.top p { margin:0; color:#c8d4ea; font-size:14px; }
+  .meta { display:grid; grid-template-columns:1.4fr 1fr; gap:12px; margin-top:16px; }
+  .meta label { font-size:12px; color:#c8d4ea; display:block; margin-bottom:3px; }
+  .meta input { width:100%; padding:8px 10px; border-radius:6px; border:1px solid #3a5183;
+                background:#1c3763; color:#fff; font:inherit; }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:10px;
+           padding:16px 20px; margin-top:16px; }
+  .panel h2 { margin:0 0 8px; font-size:17px; }
+  ol.steps { margin:6px 0 0; padding-left:22px; }
+  ol.steps li { margin:3px 0; }
+  table.und { width:100%; border-collapse:collapse; font-size:14px; margin-top:6px; }
+  table.und td { border-top:1px solid var(--line); padding:6px 8px; vertical-align:top; }
+  table.und td:first-child { width:30%; font-weight:600; color:#2b3f63; }
+
+  .q { background:var(--card); border:1px solid var(--line); border-radius:10px; margin-top:14px; overflow:hidden; }
+  .q.missing { border-color:#e0a070; box-shadow:0 0 0 2px #fbe3cf; }
+  .q h3 { margin:0; padding:10px 16px; background:var(--soft); font-size:15.5px; }
+  .q h3 .n { color:var(--accent); margin-right:6px; }
+  .q h3 .ref { float:right; font-weight:400; font-size:12px; color:var(--muted); }
+  .qb { padding:12px 16px 14px; }
+  .def { display:flex; gap:9px; align-items:flex-start; background:#f2f8f3; border:1px solid #cfe6d6;
+         border-radius:8px; padding:8px 10px; margin-bottom:10px; cursor:pointer; }
+  .def input { margin-top:4px; flex:none; }
+  .def b { color:var(--ok); }
+  .part { margin:9px 0; }
+  .part > label.lbl { display:block; font-size:13px; color:var(--muted); margin-bottom:3px; }
+  textarea { width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:6px; font:inherit;
+             resize:none; overflow:hidden; min-height:38px; background:#fff; }
+  textarea:focus, input:focus { outline:2px solid #9dbbea; border-color:var(--accent); }
+  .opt { display:flex; gap:8px; align-items:flex-start; padding:4px 8px; border-radius:6px; cursor:pointer; }
+  .opt:hover { background:#f2f5f9; }
+  .opt.sel { background:var(--soft); }
+  .opt input { margin-top:4px; flex:none; }
+
+  .actions { position:sticky; bottom:0; background:rgba(255,255,255,.97); border-top:1px solid var(--line);
+             padding:10px 0; margin-top:24px; z-index:5; }
+  .actions .wrap { padding-bottom:0; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  .progress { flex:1 1 180px; font-size:13px; color:var(--muted); }
+  .progress .bar { height:8px; background:#e3e8ef; border-radius:4px; overflow:hidden; margin-top:4px; }
+  .progress .bar i { display:block; height:100%; width:0; background:var(--accent); transition:width .2s; }
+  button { font:inherit; font-size:14px; padding:9px 16px; border-radius:7px; cursor:pointer;
+           border:1px solid var(--line); background:#fff; color:var(--ink); }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700; }
+  #banner { display:none; background:var(--warn-soft); border:1px solid #f0c9a4; color:var(--warn);
+            border-radius:8px; padding:12px 14px; margin-top:16px; }
+  #banner ul { margin:6px 0 8px; padding-left:20px; }
+  #banner button { font-size:13px; padding:6px 12px; margin-right:8px; }
+
+  /* The review block: exactly what goes into the PDF */
+  #review { background:#fff; border:1px solid var(--line); border-radius:10px; padding:20px 24px; margin-top:26px; }
+  #review h2 { margin:0 0 4px; font-size:17px; }
+  #review .sub { color:var(--muted); font-size:13px; margin-bottom:14px; }
+  .doc-head { border-bottom:2px solid #14284b; padding-bottom:8px; margin-bottom:12px; }
+  .doc-head h1 { font-size:18px; margin:0 0 4px; }
+  .doc-head div { font-size:13px; }
+  .rq { margin:0 0 12px; padding-bottom:10px; border-bottom:1px solid #e3e8ef; break-inside:avoid; }
+  .rq h4 { margin:0 0 4px; font-size:14px; }
+  .rq .ln { font-size:13.5px; margin:2px 0; white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere; }
+  .rq .ln b { color:#2b3f63; }
+  .rq .none { color:#a33; font-weight:700; }
+  .rq .acc { color:var(--ok); font-weight:600; }
+  .end { margin-top:10px; font-size:12px; color:var(--muted); }
+
+  @media (max-width:680px) { .meta { grid-template-columns:1fr; } }
+</style>
+<style id="printcss" media="print">
+  @page { size:A4; margin:14mm 14mm; }
+  * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  body { background:#fff; font-size:11pt; }
+  header.top, .panel, #form, #banner, .actions, .noprint { display:none !important; }
+  .wrap { max-width:none; padding:0; }
+  #review { border:0; padding:0; margin:0; }
+  #review .screen-only { display:none; }
+  .rq { break-inside:avoid; }
+  .rq .ln { font-size:11pt; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <h1>Plasma Digital Twin - Questionnaire, Round 2</h1>
+    <p>Follow-up to your first answers &middot; AI-Assisted Plasma Process Experimentation &amp; Digital Twin Analytics Platform &middot; COMSATS University Islamabad</p>
+    <div class="meta">
+      <div><label for="who">Your name (required)</label><input id="who" placeholder="e.g. Dr. Majid Iqbal"></div>
+      <div><label for="when">Date</label><input id="when" type="date"></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="panel">
+    <h2>How to complete this (3 steps)</h2>
+    <ol class="steps">
+      <li>Answer each question below. If the <b>proposed default</b> is fine for you, just tick <i>Accept the proposed default</i>.</li>
+      <li>Click <b>Save as PDF</b> at the bottom. The page first checks that nothing is left blank.</li>
+      <li>In the dialog that opens, set <b>Destination</b> to <i>Save as PDF</i> and click <b>Save</b>. Send that PDF back to the student.</li>
+    </ol>
+    <p style="margin:10px 0 0;color:var(--muted);font-size:13px">The PDF contains every answer written out in full text. The section at the very bottom, "Review", shows exactly what it will contain.</p>
+  </div>
+
+  <div class="panel">
+    <h2>What we understood from your first answers</h2>
+    <p style="margin:0 0 4px;color:var(--muted);font-size:13px">Please check this is right (Question 0 below).</p>
+    <table class="und">
+      <tr><td>Two plasmas</td><td>Low-pressure argon CCP in a chamber; and an underwater, atmospheric-pressure oxygen plasma.</td></tr>
+      <tr><td>Diagnostics</td><td>OES on both plasmas. Langmuir probe on the low-pressure argon plasma only.</td></tr>
+      <tr><td>Low-pressure conditions</td><td>10-100 W, 0.1-0.5 mbar, 13.56 MHz CCP, 40 x 40 cm chamber, argon flow 100-500 sccm (continuous). Nitrogen and oxygen may be added later.</td></tr>
+      <tr><td>Underwater conditions</td><td>Pulsed DC, about 10 kV, 5-10 kHz, pin-to-pin electrodes, 1 atm, O2 flow 100-300, plasma in bubbles; municipal waste; E. coli, S. aureus and spores.</td></tr>
+      <tr><td>Physics choices</td><td>Electron energy distribution: Druyvesteyn (low pressure), Maxwellian (underwater). Level populations: collisional-radiative model. Gas temperature: Doppler broadening or rotational temperature depending on gas. Electron density: Stark broadening of an argon line. Boltzmann plot, level populations and excitation temperature displayed.</td></tr>
+      <tr><td>Stage 2 model</td><td>Gas-phase global model plus empirical transfer of reactive species into the liquid; Hom disinfection model; species O3, OH, H2O2, HO2/O2-, UV.</td></tr>
+      <tr><td>Langmuir probe</td><td>Simulated I-V curve analysed with OML theory, RF distortion included; outputs Te, ne, Vp, Vf, EEDF, Debye length; compared against OES.</td></tr>
+      <tr><td>Scope</td><td>Semiconductor-processing framing removed. Simulation plus import of measured OES data. 1D needed for some quantities. First priority: stable plasma generation in the chamber.</td></tr>
+    </table>
+  </div>
+
+  <div id="banner"></div>
+
+  <form id="form" onsubmit="return false"></form>
+
+  <section id="review">
+    <div class="screen-only">
+      <h2>Review: exactly what will be saved in the PDF</h2>
+      <div class="sub">This updates as you type. Nothing is hidden or cut off in the PDF.</div>
+    </div>
+    <div class="doc-head">
+      <h1>Plasma Digital Twin - Questionnaire, Round 2: Answers</h1>
+      <div id="rv-meta"></div>
+    </div>
+    <div id="rv-body"></div>
+    <div class="end" id="rv-end"></div>
+  </section>
+</div>
+
+<div class="actions noprint">
+  <div class="wrap">
+    <div class="progress"><span id="ptext"></span><div class="bar"><i id="pbar"></i></div></div>
+    <button class="primary" id="btnPdf">Save as PDF</button>
+  </div>
+</div>
+
+<script>
+/* ======================================================================
+   Questions. part types: 'area' (text), 'radio', 'check'
+   def = proposed default (shown with an "accept" tick box)
+   ====================================================================== */
+const Q = [
+{ id:'Q0', title:'Is the summary above a correct reading of your first answers?', ref:'overall',
+  parts:[
+   {k:'ok', t:'radio', label:'Your verdict', opts:['Yes, it is correct','No - corrections below']},
+   {k:'fix', t:'area', label:'Corrections or additions (if any)'} ] },
+
+{ id:'Q1', title:'Underwater plasma: electrode gap, pulse width and power', ref:'form C2',
+  def:'Pin-to-pin gap 1-5 mm; pulse energy is a model input that can be varied.',
+  parts:[
+   {k:'gap', t:'area', label:'Pin-to-pin gap range (mm)'},
+   {k:'pw',  t:'area', label:'Pulse width (microseconds)'},
+   {k:'en',  t:'area', label:'Energy per pulse (mJ) or average power (W)'} ] },
+
+{ id:'Q2', title:'Low-pressure chamber geometry', ref:'form B1',
+  def:'Cylindrical stainless-steel chamber, 39 cm inner diameter x 42 cm high, with 14 cm diameter electrodes 4.5 cm apart (the set-up published by the COMSATS Plasma Research Laboratory); all dimensions editable.',
+  parts:[
+   {k:'shape', t:'radio', label:'What does "40 x 40 cm" describe?', opts:['Cylinder: about 39-40 cm diameter x 42 cm height','Cuboid: 40 x 40 cm cross-section','Electrode plates of 40 x 40 cm','Other (explain below)']},
+   {k:'gap',  t:'area', label:'Electrode gap (cm) and other dimensions'} ] },
+
+{ id:'Q3', title:'Properties of the municipal waste (liquid) being treated', ref:'form C4',
+  def:'Typical municipal wastewater values, all editable in the software.',
+  parts:[
+   {k:'vol',  t:'area', label:'Liquid volume per treatment (mL or L)'},
+   {k:'cond', t:'area', label:'Electrical conductivity (uS/cm)'},
+   {k:'ph',   t:'area', label:'Initial pH'},
+   {k:'temp', t:'area', label:'Initial temperature (deg C)'},
+   {k:'cod',  t:'area', label:'Organic load (COD or TOC, mg/L)'},
+   {k:'cfu',  t:'area', label:'Starting microbial count (CFU/mL)'} ] },
+
+{ id:'Q4', title:'Gas inside the underwater bubbles', ref:'form C1, C3',
+  def:'O2 saturated with water vapour (OH and H2O2 need H2O to form).',
+  parts:[
+   {k:'gas', t:'radio', label:'Bubble gas', opts:['O2 only','O2 plus water vapour','Other (explain below)']},
+   {k:'note', t:'area', label:'Comments'} ] },
+
+{ id:'Q5', title:'Langmuir probe: type, size and analysis', ref:'form D3, D4, D7',
+  def:'Single cylindrical tungsten probe, 0.195 mm radius, 5 mm exposed length, voltage sweep -20 V to +50 V in 0.5 V steps (the probe published by the COMSATS Plasma Research Laboratory); OML analysis plus the Druyvesteyn second-derivative method for the EEDF.',
+  parts:[
+   {k:'type', t:'radio', label:'Probe type', opts:['Single cylindrical','Double','Triple','Emissive','Other (explain below)']},
+   {k:'rad',  t:'area', label:'Tip radius (mm)'},
+   {k:'len',  t:'area', label:'Tip length (mm)'},
+   {k:'rfc',  t:'radio', label:'RF compensation', opts:['Yes','No']},
+   {k:'dru',  t:'radio', label:'Add the Druyvesteyn method (EEDF from the second derivative) alongside OML?', opts:['Yes','No']},
+   {k:'note', t:'area', label:'Comments'} ] },
+
+{ id:'Q6', title:'Spectrometer settings used for synthetic spectra', ref:'form B13',
+  def:'Resolution 0.05 nm; range 300-900 nm; noise 1 % of peak; all editable.',
+  parts:[
+   {k:'res',  t:'area', label:'Resolution (FWHM, nm)'},
+   {k:'rng',  t:'area', label:'Wavelength range (nm)'},
+   {k:'noise',t:'area', label:'Noise level (% of peak)'} ] },
+
+{ id:'Q7', title:'AI layer and acceptable agreement with reference data', ref:'form E3, E2',
+  def:'AI layer kept optional and decided later; agreement within +/- 30 %.',
+  parts:[
+   {k:'ai', t:'radio', label:'Should an AI / machine-learning layer be part of the project?', opts:['Yes, it should be kept','Optional - decide later','No, focus on physics only']},
+   {k:'aiuse', t:'area', label:'If yes, for what? (e.g. inferring plasma parameters from an OES spectrum, stability detection, surrogate model)'},
+   {k:'tol', t:'area', label:'Acceptable agreement with reference data (e.g. +/- 30 %)'} ] },
+
+{ id:'Q8', title:'Where is 1D (spatial) modelling needed?', ref:'form E1',
+  def:'1D only for Stage 1 spatial profiles; 0D everywhere else.',
+  parts:[
+   {k:'what', t:'area', label:'Which quantities need spatial resolution, and for which plasma?'} ] },
+
+{ id:'Q9', title:'Measured data', ref:'form A3b',
+  parts:[
+   {k:'have', t:'radio', label:'Do you have real measured data?', opts:['Yes - OES spectra','Yes - OES spectra and Langmuir probe curves','Not yet','No']},
+   {k:'fmt',  t:'area', label:'File format and instrument (e.g. .txt/.csv, spectrometer model)'},
+   {k:'share',t:'radio', label:'Can the student have a sample file?', opts:['Yes, will send','Not possible']} ] },
+
+{ id:'Q10', title:'Mandatory stages and deadline', ref:'form A7',
+  parts:[
+   {k:'must', t:'radio', label:'Which stages are mandatory?', opts:['Stage 1 only (low-pressure argon: chamber + OES + Langmuir probe)','Stage 1 and Stage 2 (underwater)','Everything is mandatory','Other (explain below)']},
+   {k:'dl',   t:'area', label:'Deadline / milestone dates'},
+   {k:'note', t:'area', label:'Comments'} ] }
+];
+
+/* ======================================================================
+   Build the form
+   ====================================================================== */
+const KEY = 'plasma-q2-v1';
+const form = document.getElementById('form');
+const $ = (s, r=document) => r.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+Q.forEach((q, qi) => {
+  const d = document.createElement('div');
+  d.className = 'q'; d.id = q.id; d.dataset.q = q.id;
+  let h = `<h3><span class="n">${q.id === 'Q0' ? 'Question 0' : 'Question ' + q.id.slice(1)}.</span>${esc(q.title)}<span class="ref">${esc(q.ref)}</span></h3><div class="qb">`;
+  if (q.def) h += `<label class="def"><input type="checkbox" data-def="1"><span><b>Accept the proposed default:</b> ${esc(q.def)}</span></label>`;
+  q.parts.forEach(p => {
+    h += `<div class="part" data-k="${p.k}"><label class="lbl">${esc(p.label)}</label>`;
+    if (p.t === 'area') h += `<textarea rows="1" data-k="${p.k}"></textarea>`;
+    else p.opts.forEach(o => {
+      h += `<label class="opt"><input type="${p.t === 'check' ? 'checkbox' : 'radio'}" name="${q.id}_${p.k}" data-k="${p.k}" value="${esc(o)}"><span>${esc(o)}</span></label>`;
+    });
+    h += `</div>`;
+  });
+  h += `</div>`;
+  d.innerHTML = h;
+  form.appendChild(d);
+});
+
+/* ---------- reading / writing state ---------- */
+function readQ(q) {
+  const root = document.getElementById(q.id);
+  const out = {def: !!(root.querySelector('[data-def]') && root.querySelector('[data-def]').checked), parts: {}};
+  q.parts.forEach(p => {
+    const box = root.querySelector(`.part[data-k="${p.k}"]`);
+    if (p.t === 'area') out.parts[p.k] = box.querySelector('textarea').value.trim();
+    else out.parts[p.k] = [...box.querySelectorAll('input:checked')].map(i => i.value);
+  });
+  return out;
+}
+function partFilled(v) { return Array.isArray(v) ? v.length > 0 : !!v; }
+function qAnswered(q, a) {
+  if (q.id === 'Q0') return partFilled(a.parts.ok);
+  return a.def || Object.values(a.parts).some(partFilled);
+}
+function collect() {
+  const data = {who: $('#who').value, when: $('#when').value, q: {}};
+  Q.forEach(q => data.q[q.id] = readQ(q));
+  return data;
+}
+function apply(data) {
+  if (!data) return;
+  $('#who').value = data.who || ''; if (data.when) $('#when').value = data.when;
+  Q.forEach(q => {
+    const a = data.q && data.q[q.id]; if (!a) return;
+    const root = document.getElementById(q.id);
+    const dc = root.querySelector('[data-def]'); if (dc) dc.checked = !!a.def;
+    q.parts.forEach(p => {
+      const box = root.querySelector(`.part[data-k="${p.k}"]`), v = a.parts[p.k];
+      if (p.t === 'area') box.querySelector('textarea').value = v || '';
+      else box.querySelectorAll('input').forEach(i => i.checked = Array.isArray(v) && v.includes(i.value));
+    });
+  });
+}
+
+/* ---------- the review / print document (plain text, built on every change) ---------- */
+function buildReview() {
+  const d = collect();
+  $('#rv-meta').innerHTML = `<b>Respondent:</b> ${esc(d.who || '(name not entered)')} &nbsp;&middot;&nbsp; <b>Date:</b> ${esc(d.when || '')}`;
+  let h = '';
+  Q.forEach(q => {
+    const a = d.q[q.id];
+    h += `<div class="rq"><h4>${q.id === 'Q0' ? 'Question 0' : 'Question ' + q.id.slice(1)}. ${esc(q.title)}</h4>`;
+    const answered = qAnswered(q, a);
+    if (a.def) h += `<div class="ln acc">Accepted the proposed default: ${esc(q.def)}</div>`;
+    if (!answered) h += `<div class="ln none">NOT ANSWERED</div>`;
+    q.parts.forEach(p => {
+      const v = a.parts[p.k], txt = Array.isArray(v) ? v.join('; ') : v;
+      const lab = esc(p.label) + (/\?$/.test(p.label) ? '' : ':');
+      if (txt) h += `<div class="ln"><b>${lab}</b> ${esc(txt)}</div>`;
+      else if (!a.def && answered) h += `<div class="ln"><b>${lab}</b> (left blank)</div>`;
+    });
+    h += `</div>`;
+  });
+  $('#rv-body').innerHTML = h;
+  const n = Q.filter(q => qAnswered(q, d.q[q.id])).length;
+  $('#rv-end').textContent = `${n} of ${Q.length} questions answered. Generated from the Round-2 questionnaire page.`;
+  return d;
+}
+
+/* ---------- UI refresh ---------- */
+function autosize(t) { t.style.height = 'auto'; t.style.height = (t.scrollHeight + 2) + 'px'; }
+function refresh() {
+  const d = buildReview();
+  document.querySelectorAll('.opt').forEach(o => o.classList.toggle('sel', o.querySelector('input').checked));
+  document.querySelectorAll('textarea').forEach(autosize);
+  const n = Q.filter(q => qAnswered(q, d.q[q.id])).length;
+  $('#ptext').textContent = `${n} of ${Q.length} questions answered`;
+  $('#pbar').style.width = (100 * n / Q.length) + '%';
+  document.querySelectorAll('.q').forEach(el => {
+    const q = Q.find(x => x.id === el.id);
+    if (qAnswered(q, d.q[q.id])) el.classList.remove('missing');
+  });
+  try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) { /* storage may be blocked */ }
+}
+form.addEventListener('input', refresh);
+form.addEventListener('change', refresh);
+$('#who').addEventListener('input', refresh);
+$('#when').addEventListener('input', refresh);
+
+/* ---------- Save as PDF with a completeness check ---------- */
+function problems() {
+  const d = collect(), list = [];
+  if (!d.who.trim()) list.push({id:'who', label:'Your name (at the top of the page)'});
+  Q.forEach(q => { if (!qAnswered(q, d.q[q.id])) list.push({id:q.id, label: (q.id === 'Q0' ? 'Question 0' : 'Question ' + q.id.slice(1)) + ' - ' + q.title}); });
+  return list;
+}
+function goTo(id) {
+  const el = document.getElementById(id); if (!el) return;
+  el.scrollIntoView({behavior:'smooth', block:'center'});
+  if (el.classList.contains('q')) el.classList.add('missing');
+  if (id === 'who') el.focus();
+}
+function doPrint() { refresh(); $('#banner').style.display = 'none'; window.print(); }
+$('#btnPdf').addEventListener('click', () => {
+  const list = problems(), b = $('#banner');
+  if (!list.length) { doPrint(); return; }
+  list.forEach(p => { const el = document.getElementById(p.id); if (el && el.classList.contains('q')) el.classList.add('missing'); });
+  b.innerHTML = `<b>Some items are still blank (${list.length}).</b><ul>` + list.map(p => `<li>${esc(p.label)}</li>`).join('') +
+    `</ul><button id="bGo" class="primary">Go to the first blank one</button><button id="bSave">Save as PDF anyway</button>`;
+  b.style.display = 'block'; b.scrollIntoView({behavior:'smooth', block:'center'});
+  $('#bGo').onclick = () => goTo(list[0].id);
+  $('#bSave').onclick = doPrint;
+});
+window.addEventListener('beforeprint', refresh);   /* also covers Ctrl+P */
+
+/* ---------- init ---------- */
+(function () {
+  $('#when').valueAsDate = new Date();
+  try { const s = localStorage.getItem(KEY); if (s) apply(JSON.parse(s)); } catch (e) {}
+  refresh();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plasma Digital Twin - Interactive Mockups (SRS v1.1)</title>
+<style>
+  :root { --bg:#f4f6f9; --card:#fff; --ink:#1b2430; --muted:#5f6b7a; --line:#dde3ea; --accent:#1f5fbf;
+          --soft:#e8f0fc; --ok:#1d7a46; --ok-soft:#e6f4ec; --warn:#a15c00; --warn-soft:#fff4e1; --bad:#b3261e; --bad-soft:#fdecea;
+          --s1:#1f5fbf; --s2:#0f8a8a; --s3:#7a4fc0; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.45 "Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .app { display:flex; min-height:100vh; }
+  aside { width:236px; flex:none; background:#14284b; color:#dfe7f5; padding:14px 10px; }
+  .brand { font-weight:700; font-size:15px; padding:4px 8px 12px; border-bottom:1px solid #2b4370; margin-bottom:8px; }
+  .brand small { display:block; font-weight:400; color:#9fb2d6; font-size:11.5px; }
+  .navh { font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:#8ea3c9; margin:12px 8px 4px; }
+  .nav a { display:flex; justify-content:space-between; align-items:center; color:#dfe7f5; text-decoration:none; padding:6px 8px; border-radius:6px; font-size:13px; }
+  .nav a:hover { background:#1e3763; }
+  .nav a.on { background:#2a4a85; color:#fff; font-weight:600; }
+  .nav a .id { font-size:10.5px; color:#9fb2d6; }
+  .lock { font-size:10px; background:#3a3f4b; color:#cfd6e3; border-radius:4px; padding:0 4px; margin-left:4px; }
+  main { flex:1; min-width:0; }
+  .top { display:flex; align-items:center; gap:12px; padding:10px 18px; background:#fff; border-bottom:1px solid var(--line); }
+  .top h1 { font-size:17px; margin:0; flex:1; }
+  .mid { font-size:11px; font-weight:700; color:#fff; background:var(--accent); border-radius:5px; padding:2px 7px; margin-right:8px; }
+  .role { display:flex; border:1px solid var(--line); border-radius:7px; overflow:hidden; }
+  .role button { border:0; background:#fff; padding:6px 11px; font:inherit; font-size:12.5px; cursor:pointer; }
+  .role button.on { background:var(--accent); color:#fff; }
+  .tag { font-size:11px; padding:2px 8px; border-radius:10px; background:var(--soft); color:#22406f; }
+  .wrap { padding:16px 18px 24px; }
+  section.scr { display:none; } section.scr.on { display:block; }
+  .grid { display:grid; gap:14px; }
+  .g2 { grid-template-columns:1fr 1fr; } .g3 { grid-template-columns:repeat(3,1fr); } .g4 { grid-template-columns:repeat(4,1fr); }
+  .g13 { grid-template-columns:1fr 2fr; } .g31 { grid-template-columns:2fr 1fr; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 14px; }
+  .card h3 { margin:0 0 8px; font-size:13.5px; display:flex; justify-content:space-between; align-items:center; }
+  .card h3 .hint { font-weight:400; font-size:11.5px; color:var(--muted); }
+  label.f { display:block; font-size:12px; color:var(--muted); margin:8px 0 3px; }
+  .inrow { display:flex; gap:8px; align-items:center; }
+  input[type=text], input[type=number], select { width:100%; padding:6px 8px; border:1px solid var(--line); border-radius:6px; font:inherit; font-size:13px; background:#fff; }
+  input[type=range] { width:100%; }
+  .unit { font-size:12px; color:var(--muted); white-space:nowrap; }
+  .ro { background:#f1f3f6 !important; color:#555; }
+  .btn { display:inline-block; border:1px solid var(--line); background:#fff; border-radius:7px; padding:7px 12px; font:inherit; font-size:13px; cursor:pointer; color:var(--ink); text-decoration:none; }
+  .btn.p { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+  .btn.s { padding:4px 9px; font-size:12px; }
+  .btns { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .kpi { background:#fff; border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
+  .kpi .n { font-size:11.5px; color:var(--muted); } .kpi .v { font-size:20px; font-weight:700; margin-top:2px; } .kpi .u { font-size:12px; color:var(--muted); font-weight:400; }
+  .msg { border-radius:8px; padding:7px 10px; font-size:12.5px; margin-top:8px; }
+  .msg.ok { background:var(--ok-soft); color:var(--ok); } .msg.warn { background:var(--warn-soft); color:var(--warn); } .msg.bad { background:var(--bad-soft); color:var(--bad); }
+  table.t { width:100%; border-collapse:collapse; font-size:12.5px; }
+  table.t th { text-align:left; font-weight:600; color:#2b3f63; background:#f3f6fb; padding:5px 7px; border-bottom:1px solid var(--line); }
+  table.t td { padding:5px 7px; border-bottom:1px solid #eef1f5; }
+  .pill { display:inline-block; font-size:11px; padding:1px 7px; border-radius:9px; }
+  .pill.ok { background:var(--ok-soft); color:var(--ok); } .pill.bad { background:var(--bad-soft); color:var(--bad); } .pill.warn { background:var(--warn-soft); color:var(--warn); }
+  .stage { border-left:4px solid var(--s1); }
+  .stage.b { border-left-color:var(--s2); } .stage.c { border-left-color:var(--s3); }
+  .seg { display:flex; gap:6px; flex-wrap:wrap; } .seg span { border:1px solid var(--line); border-radius:6px; padding:4px 9px; font-size:12.5px; cursor:pointer; background:#fff; }
+  .seg span.on { border-color:var(--accent); background:var(--soft); color:#22406f; font-weight:600; }
+  .note { font-size:11px; color:var(--muted); margin-top:6px; }
+  .drop { border:2px dashed #b9c6d8; border-radius:10px; padding:16px; text-align:center; color:var(--muted); background:#fafcff; }
+  svg text { font-family:"Segoe UI",Roboto,Arial,sans-serif; }
+  .disabled { opacity:.45; pointer-events:none; }
+  .roleonly { display:none; } body.res .roleonly { display:block; } body.res .studonly { display:none; }
+  .stamp { position:fixed; right:10px; bottom:6px; font-size:10.5px; color:#8a95a5; }
+</style>
+</head>
+<body>
+<div class="app">
+<aside>
+  <div class="brand">Plasma Digital Twin<small>Digital Twin + AI (two core modules)</small></div>
+  <div class="nav" id="nav"></div>
+</aside>
+<main>
+  <div class="top">
+    <h1><span class="mid" id="mid">M1</span><span id="mtitle">Home</span></h1>
+    <span class="tag">Session: S-0007 (unsaved)</span>
+    <div class="role" title="Usage role (no login)">
+      <button id="rStu" class="on">Student</button><button id="rRes">Researcher</button>
+    </div>
+  </div>
+  <div class="wrap" id="screens"></div>
+</main>
+</div>
+<div class="stamp">Mockup for SRS v1.1 - values shown are illustrative, not model output</div>
+
+<script>
+/* ---------------- tiny SVG chart helpers (illustrative data only) ---------------- */
+function axes(w, h, p, xl, yl, xr, yr, xt, yt) {
+  let s = `<rect x="${p.l}" y="${p.t}" width="${w-p.l-p.r}" height="${h-p.t-p.b}" fill="#fff" stroke="#cfd7e2"/>`;
+  const X = v => p.l + (v - xr[0]) / (xr[1] - xr[0]) * (w - p.l - p.r);
+  const Y = v => h - p.b - (v - yr[0]) / (yr[1] - yr[0]) * (h - p.t - p.b);
+  (xt || []).forEach(v => { s += `<line x1="${X(v)}" x2="${X(v)}" y1="${h-p.b}" y2="${h-p.b+4}" stroke="#889"/><text x="${X(v)}" y="${h-p.b+15}" font-size="10" text-anchor="middle" fill="#556">${v}</text>`; });
+  (yt || []).forEach(v => { s += `<line x1="${p.l-4}" x2="${p.l}" y1="${Y(v)}" y2="${Y(v)}" stroke="#889"/><line x1="${p.l}" x2="${w-p.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="#eef1f5"/><text x="${p.l-6}" y="${Y(v)+3}" font-size="10" text-anchor="end" fill="#556">${v}</text>`; });
+  s += `<text x="${(p.l + w - p.r)/2}" y="${h-4}" font-size="11" text-anchor="middle" fill="#334">${xl}</text>`;
+  s += `<text transform="translate(12,${(p.t + h - p.b)/2}) rotate(-90)" font-size="11" text-anchor="middle" fill="#334">${yl}</text>`;
+  return {s, X, Y};
+}
+function line(pts, X, Y, color, width, dash) {
+  return `<polyline fill="none" stroke="${color}" stroke-width="${width||1.6}" ${dash?`stroke-dasharray="${dash}"`:''} points="${pts.map(q=>X(q[0]).toFixed(1)+','+Y(q[1]).toFixed(1)).join(' ')}"/>`;
+}
+function legend(items, x, y) {
+  return items.map((it,i)=>`<rect x="${x}" y="${y+i*15-8}" width="12" height="3" fill="${it[1]}"/><text x="${x+16}" y="${y+i*15-4}" font-size="10.5" fill="#334">${it[0]}</text>`).join('');
+}
+const gauss = (x, c, s) => Math.exp(-0.5 * ((x - c) / s) ** 2);
+function spectrum(w, h, withOverlay) {
+  const p = {l:46, r:12, t:10, b:34};
+  const a = axes(w, h, p, 'Wavelength (nm)', 'Intensity (a.u.)', [300, 900], [0, 1.05], [300,400,500,600,700,800,900], [0,0.5,1]);
+  const lines = [[696.5,.42],[706.7,.30],[714.7,.12],[727.3,.18],[738.4,.40],[750.4,1.0],[751.5,.55],[763.5,.78],[772.4,.36],[794.8,.47],[801.5,.43],[811.5,.92],[826.5,.38],[840.8,.33],[842.5,.52],[852.1,.30],
+                 [315.9,.20],[337.1,.34],[357.7,.22],[380.5,.12],[777.4,.16],[844.6,.10],[415.9,.06],[420.1,.05],[427.2,.04]];
+  const pts = []; for (let x = 300; x <= 900; x += 0.5) { let y = 0.01; lines.forEach(L => y += L[1] * gauss(x, L[0], 0.9)); pts.push([x, Math.min(y, 1.04)]); }
+  let s = a.s + line(pts, a.X, a.Y, '#1f5fbf', 1.2);
+  if (withOverlay) { const q = pts.map(t => [t[0], Math.max(0, t[1]*0.93 + 0.015*Math.sin(t[0]))]); s += line(q, a.X, a.Y, '#d0731a', 1, '3 2'); s += legend([['Synthetic (CR model)','#1f5fbf'],['Measured (imported)','#d0731a']], w-170, 24); }
+  [[337.1,'N2 SPS (0,0)'],[315.9,'N2 (1,0)'],[750.4,'Ar I 750.4'],[811.5,'Ar I 811.5'],[777.4,'O I 777.4']].forEach(L => {
+    s += `<text x="${a.X(L[0])}" y="${a.Y(Math.min(1, lines.find(z=>z[0]===L[0])[1])+0.09)}" font-size="9.5" text-anchor="middle" fill="#444">${L[1]}</text>`; });
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%">${s}</svg>`;
+}
+function boltzmann(w, h) {
+  const p = {l:52, r:12, t:10, b:34};
+  const a = axes(w, h, p, 'Upper-level energy E_k (eV)', 'ln(I·λ / g·A)', [12.8, 15.0], [-6, 0], [13,13.5,14,14.5,15], [-6,-4,-2,0]);
+  const pts = [[12.91,-0.55],[13.07,-0.82],[13.08,-0.95],[13.17,-1.05],[13.27,-1.21],[13.28,-1.35],[13.30,-1.29],[13.33,-1.48],[13.48,-1.62],[14.46,-2.9],[14.50,-3.05],[14.53,-3.12],[14.69,-3.31]];
+  let s = a.s; pts.forEach(q => s += `<circle cx="${a.X(q[0])}" cy="${a.Y(q[1])}" r="3.6" fill="#1f5fbf"/>`);
+  s += line([[12.85,-0.43],[14.9,-3.75]], a.X, a.Y, '#b3261e', 1.6);
+  s += `<text x="${p.l+10}" y="${p.t+16}" font-size="11" fill="#b3261e">fit: slope = -1/kT_exc,  T_exc = 0.62 eV,  R² = 0.97</text>`;
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%">${s}</svg>`;
+}
+function populations(w, h) {
+  const p = {l:52, r:12, t:10, b:34};
+  const a = axes(w, h, p, 'Level energy (eV)', 'log10(n / g)  (m^-3)', [11.5, 13.6], [10, 16], [11.5,12,12.5,13,13.5], [10,12,14,16]);
+  const cr = [[11.55,15.2],[11.62,14.6],[11.72,14.9],[11.83,14.1],[12.91,11.9],[13.07,11.7],[13.15,11.4],[13.28,11.2],[13.48,10.8]];
+  const bz = [[11.5,15.3],[13.6,11.9]];
+  let s = a.s + line(bz, a.X, a.Y, '#7a4fc0', 1.4, '5 3');
+  cr.forEach(q => s += `<rect x="${a.X(q[0])-3.5}" y="${a.Y(q[1])-3.5}" width="7" height="7" fill="#0f8a8a"/>`);
+  s += legend([['CR model (1s, 2p levels)','#0f8a8a'],['Boltzmann at T_exc','#7a4fc0']], w-175, 22);
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%">${s}</svg>`;
+}
+function iv(w, h, overlay) {
+  const p = {l:56, r:12, t:10, b:34};
+  const a = axes(w, h, p, 'Probe bias V (V)', 'Probe current I (mA)', [-20, 50], [-0.2, 3.2], [-20,-10,0,10,20,30,40,50], [0,1,2,3]);
+  const Te = 2.4, Vp = 17.5, Vf = 5.2, isat = 0.06, esat = 2.9;
+  /* exponential electron-retardation region, smoothly capped at electron saturation */
+  const f = V => V < Vp ? Math.min(-isat + (isat + 0.002) * Math.exp((V - Vf) / Te), esat) : esat + 0.012 * (V - Vp);
+  const pts = []; for (let V = -20; V <= 50; V += 0.5) pts.push([V, Math.min(f(V), 3.15)]);
+  let s = a.s + line(pts, a.X, a.Y, '#1f5fbf', 1.8);
+  if (overlay) { const q = pts.map(t => [t[0], Math.min(3.15, t[1] * (1 + 0.04 * Math.sin(t[0] * 1.7)))]); s += line(q, a.X, a.Y, '#d0731a', 1, '3 2'); }
+  s += `<line x1="${a.X(Vf)}" x2="${a.X(Vf)}" y1="${p.t}" y2="${h-p.b}" stroke="#888" stroke-dasharray="3 3"/><text x="${a.X(Vf)+4}" y="${p.t+12}" font-size="10" fill="#555">V_f</text>`;
+  s += `<line x1="${a.X(Vp)}" x2="${a.X(Vp)}" y1="${p.t}" y2="${h-p.b}" stroke="#888" stroke-dasharray="3 3"/><text x="${a.X(Vp)+4}" y="${h-p.b-8}" font-size="10" fill="#555">V_p</text>`;
+  s += legend([['RF-distorted synthetic I-V','#1f5fbf']].concat(overlay?[['Measured (imported)','#d0731a']]:[]), p.l+12, p.t+36);
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%">${s}</svg>`;
+}
+function eedf(w, h) {
+  const p = {l:56, r:12, t:10, b:34};
+  const a = axes(w, h, p, 'Electron energy ε (eV)', 'EEPF (eV^-3/2)', [0, 20], [0, 0.32], [0,5,10,15,20], [0,0.1,0.2,0.3]);
+  const dr = [], mx = [];
+  for (let e = 0; e <= 20; e += 0.25) { dr.push([e, 0.30 * Math.exp(-0.55 * (e / 2.4) ** 2)]); mx.push([e, 0.27 * Math.exp(-e / 2.4)]); }
+  let s = a.s + line(dr, a.X, a.Y, '#1f5fbf', 1.8) + line(mx, a.X, a.Y, '#999', 1.2, '4 3');
+  s += legend([['Druyvesteyn (from d²I/dV²)','#1f5fbf'],['Maxwellian, same mean energy','#999']], w-190, 22);
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%">${s}</svg>`;
+}
+function profile(w, h) {
+  const p = {l:56, r:12, t:10, b:34};
+  const a = axes(w, h, p, 'Axial position z (cm)', 'n_e (10^15 m^-3)', [0, 4.5], [0, 2.4], [0,1,2,3,4], [0,1,2]);
+  const pts = []; for (let z = 0; z <= 4.5; z += 0.05) pts.push([z, 2.2 * Math.sin(Math.PI * (0.06 + 0.88 * z / 4.5))]);
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%">${a.s + line(pts, a.X, a.Y, '#1f5fbf', 2)}</svg>`;
+}
+function trend(w, h) {
+  const p = {l:56, r:56, t:10, b:34};
+  const a = axes(w, h, p, 'RF power (W)', 'n_e (10^15 m^-3)', [10, 100], [0, 3], [10,25,50,75,100], [0,1,2,3]);
+  const ne = [], te = [];
+  for (let P = 10; P <= 100; P += 5) { ne.push([P, 0.028 * P]); te.push([P, 2.55 - 0.002 * P]); }
+  let s = a.s + line(ne, a.X, a.Y, '#1f5fbf', 2);
+  const Y2 = v => h - p.b - (v - 2) / (1) * (h - p.t - p.b);
+  s += `<polyline fill="none" stroke="#0f8a8a" stroke-width="2" stroke-dasharray="5 3" points="${te.map(q=>a.X(q[0]).toFixed(1)+','+Y2(q[1]).toFixed(1)).join(' ')}"/>`;
+  [2,2.5,3].forEach(v => s += `<text x="${w-p.r+6}" y="${Y2(v)+3}" font-size="10" fill="#0f8a8a">${v}</text>`);
+  s += `<text transform="translate(${w-10},${(p.t+h-p.b)/2}) rotate(90)" font-size="11" text-anchor="middle" fill="#0f8a8a">T_e (eV)</text>`;
+  s += legend([['n_e','#1f5fbf'],['T_e','#0f8a8a']], p.l+12, p.t+16);
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%">${s}</svg>`;
+}
+function species(w, h) {
+  const p = {l:56, r:12, t:10, b:34};
+  const a = axes(w, h, p, 'Treatment time (s)', 'Concentration (mg/L)', [0, 60], [0, 12], [0,10,20,30,40,50,60], [0,4,8,12]);
+  const o3 = [], h2o2 = [], oh = [];
+  for (let t = 0; t <= 60; t += 1) { o3.push([t, 9.5 * (1 - Math.exp(-t / 18))]); h2o2.push([t, 0.16 * t]); oh.push([t, 0.9 * (1 - Math.exp(-t / 3))]); }
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%">${a.s + line(o3, a.X, a.Y, '#1f5fbf', 2) + line(h2o2, a.X, a.Y, '#0f8a8a', 2) + line(oh, a.X, a.Y, '#7a4fc0', 2, '4 3') + legend([['O3 (dissolved)','#1f5fbf'],['H2O2','#0f8a8a'],['OH (x10^-3, steady state)','#7a4fc0']], p.l+12, p.t+16)}</svg>`;
+}
+function survival(w, h) {
+  const p = {l:56, r:12, t:10, b:34};
+  const a = axes(w, h, p, 'Treatment time (s)', 'log10(N / N0)', [0, 60], [-4, 0.2], [0,10,20,30,40,50,60], [-4,-3,-2,-1,0]);
+  const hom = []; for (let t = 0; t <= 60; t += 1) hom.push([t, -0.0042 * Math.pow(t, 1.65)]);
+  let s = a.s + line(hom, a.X, a.Y, '#1f5fbf', 2);
+  [[10,-0.2],[20,-0.65],[30,-1.15],[45,-2.2],[60,-3.4]].forEach(q => s += `<circle cx="${a.X(q[0])}" cy="${a.Y(q[1])}" r="3.6" fill="#d0731a"/>`);
+  s += legend([['Hom model fit','#1f5fbf'],['Published reference data','#d0731a']], w-175, 22);
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%">${s}</svg>`;
+}
+function uwSpectrum(w, h) {
+  const p = {l:46, r:12, t:10, b:34};
+  const a = axes(w, h, p, 'Wavelength (nm)', 'Intensity (a.u.)', [280, 880], [0, 1.05], [300,400,500,600,700,800], [0,0.5,1]);
+  const L = [[309.0,.8,2.5],[656.3,1.0,1.4],[486.1,.25,1.2],[777.4,.62,1.0],[844.6,.35,1.0]];
+  const pts = []; for (let x = 280; x <= 880; x += 0.5) { let y = 0.03 + 0.04*Math.exp(-(((x-480)/220)**2)); L.forEach(q => y += q[1]*gauss(x, q[0], q[2])); pts.push([x, Math.min(y,1.04)]); }
+  let s = a.s + line(pts, a.X, a.Y, '#0f8a8a', 1.3);
+  [[309.0,'OH (A-X) 309'],[656.3,'H-alpha 656.3'],[777.4,'O I 777.4'],[844.6,'O I 844.6']].forEach(q => s += `<text x="${a.X(q[0])}" y="${a.Y(L.find(z=>z[0]===q[0])[1])-6}" font-size="9.5" text-anchor="middle" fill="#444">${q[1]}</text>`);
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%">${s}</svg>`;
+}
+function compareBars(w, h) {
+  const p = {l:56, r:12, t:10, b:34};
+  const a = axes(w, h, p, '', 'Deviation from model (%)', [0, 4], [-40, 40], [], [-30,0,30]);
+  let s = a.s + `<rect x="${p.l}" y="${a.Y(30)}" width="${w-p.l-p.r}" height="${a.Y(-30)-a.Y(30)}" fill="#e6f4ec" opacity=".7"/>`;
+  [['T_e (OES)',12,'#1d7a46'],['T_e (probe)',-2,'#1d7a46'],['n_e (probe)',2,'#1d7a46'],['T_gas (OES)',4,'#1d7a46']].forEach((b,i) => {
+    const x = a.X(i + 0.25), bw = (a.X(1) - a.X(0)) * 0.5;
+    s += `<rect x="${x}" y="${Math.min(a.Y(b[1]), a.Y(0))}" width="${bw}" height="${Math.abs(a.Y(b[1]) - a.Y(0))}" fill="${b[2]}"/>`;
+    s += `<text x="${x + bw/2}" y="${h - p.b + 15}" font-size="10.5" text-anchor="middle" fill="#334">${b[0]}</text>`;
+    s += `<text x="${x + bw/2}" y="${a.Y(b[1]) + (b[1] >= 0 ? -4 : 12)}" font-size="10" text-anchor="middle" fill="#334">${b[1] > 0 ? '+' : ''}${b[1]}%</text>`; });
+  s += `<line x1="${p.l}" x2="${w-p.r}" y1="${a.Y(0)}" y2="${a.Y(0)}" stroke="#667"/><text x="${w-p.r-4}" y="${a.Y(30)+12}" font-size="10" text-anchor="end" fill="#1d7a46">tolerance band ±30 %</text>`;
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%">${s}</svg>`;
+}
+
+function parity(w, h) {
+  const p = {l:52, r:12, t:10, b:34};
+  const a = axes(w, h, p, 'Twin T_e (eV)', 'AI-predicted T_e (eV)', [1.5, 4], [1.5, 4], [1.5,2,2.5,3,3.5,4], [1.5,2,2.5,3,3.5,4]);
+  let s = a.s + line([[1.5,1.5],[4,4]], a.X, a.Y, '#999', 1, '4 3');
+  for (let i = 0; i < 70; i++) { const x = 1.7 + 2.1 * ((i * 37) % 70) / 70; const e = 0.08 * Math.sin(i * 2.3); s += `<circle cx="${a.X(x)}" cy="${a.Y(x + e)}" r="2.6" fill="#1f5fbf" opacity=".75"/>`; }
+  for (let i = 0; i < 25; i++) { const x = 3.3 + 0.6 * ((i * 13) % 25) / 25; const e = 0.16 * Math.sin(i * 1.7) - 0.08; s += `<circle cx="${a.X(x)}" cy="${a.Y(x + e)}" r="2.6" fill="#d0731a" opacity=".8"/>`; }
+  s += legend([['Random split (interpolation)','#1f5fbf'],['Region split (extrapolation)','#d0731a']], p.l + 10, p.t + 18);
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%">${s}</svg>`;
+}
+function shapBars(w, h, rows, unit) {
+  const p = {l:118, r:40, t:8, b:28};
+  const max = Math.max(...rows.map(r => Math.abs(r[1])));
+  let s = `<line x1="${p.l}" x2="${p.l}" y1="${p.t}" y2="${h-p.b}" stroke="#889"/>`;
+  const bh = (h - p.t - p.b) / rows.length;
+  rows.forEach((r, i) => {
+    const y = p.t + i * bh + bh * 0.2, len = Math.abs(r[1]) / max * (w - p.l - p.r);
+    const neg = r[1] < 0, x = neg ? p.l : p.l;
+    s += `<text x="${p.l-6}" y="${y + bh*0.45}" font-size="10.5" text-anchor="end" fill="#334">${r[0]}</text>`;
+    s += `<rect x="${x}" y="${y}" width="${len}" height="${bh*0.6}" fill="${neg ? '#b3261e' : '#1f5fbf'}"/>`;
+    s += `<text x="${x + len + 4}" y="${y + bh*0.45}" font-size="10" fill="#334">${r[1] > 0 && rows.some(q=>q[1]<0) ? '+' : ''}${r[1]}</text>`;
+  });
+  s += `<text x="${(p.l + w - p.r)/2}" y="${h-6}" font-size="10.5" text-anchor="middle" fill="#334">${unit}</text>`;
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%">${s}</svg>`;
+}
+function heatmap(w, h) {
+  const p = {l:52, r:56, t:10, b:34};
+  const a = axes(w, h, p, 'RF power (W)', 'Pressure (mbar)', [10, 100], [0.1, 0.5], [10,25,50,75,100], [0.1,0.2,0.3,0.4,0.5]);
+  let s = a.s; const nx = 18, ny = 10;
+  const col = v => { const t = Math.max(0, Math.min(1, v)); const r = Math.round(232 - 200 * t), g = Math.round(240 - 150 * t), b = Math.round(252 - 60 * t); return `rgb(${r},${g},${b})`; };
+  for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
+    const P = 10 + 90 * (i + 0.5) / nx, pr = 0.1 + 0.4 * (j + 0.5) / ny, ne = 0.028 * P * (0.75 + 0.6 * pr);
+    const x0 = a.X(10 + 90 * i / nx), x1 = a.X(10 + 90 * (i + 1) / nx), y0 = a.Y(0.1 + 0.4 * (j + 1) / ny), y1 = a.Y(0.1 + 0.4 * j / ny);
+    s += `<rect x="${x0}" y="${y0}" width="${x1-x0+0.5}" height="${y1-y0+0.5}" fill="${col(ne / 3.3)}"/>`;
+  }
+  for (let k = 0; k <= 4; k++) { const y = p.t + (h - p.t - p.b) * (1 - k / 4); s += `<rect x="${w-p.r+10}" y="${y - (h-p.t-p.b)/4}" width="12" height="${(h-p.t-p.b)/4}" fill="${col(k/4)}"/>`; }
+  s += `<text x="${w-p.r+26}" y="${p.t+10}" font-size="9.5" fill="#334">3.3</text><text x="${w-p.r+26}" y="${h-p.b}" font-size="9.5" fill="#334">0</text>`;
+  s += `<text transform="translate(${w-6},${(p.t+h-p.b)/2}) rotate(90)" font-size="10" text-anchor="middle" fill="#334">n_e (10^15 m^-3)</text>`;
+  s += `<circle cx="${a.X(50)}" cy="${a.Y(0.3)}" r="5" fill="none" stroke="#b3261e" stroke-width="2"/>`;
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%">${s}</svg>`;
+}
+function anomalyTimeline(w, h) {
+  const p = {l:52, r:12, t:10, b:34};
+  const a = axes(w, h, p, 'Checked run (newest right)', 'Anomaly score', [0, 30], [0, 1], [0,5,10,15,20,25,30], [0,0.5,1]);
+  let s = a.s;
+  s += `<line x1="${p.l}" x2="${w-p.r}" y1="${a.Y(0.6)}" y2="${a.Y(0.6)}" stroke="#a15c00" stroke-dasharray="4 3"/><text x="${w-p.r-4}" y="${a.Y(0.6)-4}" font-size="9.5" text-anchor="end" fill="#a15c00">Warning 0.60</text>`;
+  s += `<line x1="${p.l}" x2="${w-p.r}" y1="${a.Y(0.75)}" y2="${a.Y(0.75)}" stroke="#b3261e" stroke-dasharray="4 3"/><text x="${w-p.r-4}" y="${a.Y(0.75)-4}" font-size="9.5" text-anchor="end" fill="#b3261e">Critical 0.75</text>`;
+  for (let i = 1; i <= 29; i++) {
+    let v = 0.32 + 0.08 * Math.sin(i * 1.9) + 0.04 * Math.cos(i * 0.7);
+    if (i === 22) v = 0.82; if (i === 27) v = 0.66;
+    const c = v >= 0.75 ? '#b3261e' : v >= 0.6 ? '#a15c00' : '#1d7a46';
+    s += `<circle cx="${a.X(i)}" cy="${a.Y(v)}" r="3.6" fill="${c}"/>`;
+  }
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%">${s}</svg>`;
+}
+function pareto(w, h) {
+  const p = {l:52, r:12, t:10, b:34};
+  const a = axes(w, h, p, 'Energy per litre (kJ/L)', 'Twin log reduction (log10)', [4, 14], [1.5, 4.2], [4,6,8,10,12,14], [2,3,4]);
+  const front = e => 3.05 + 0.9 * Math.log(e / 8);   /* best achievable log reduction at each energy */
+  let s = a.s + `<line x1="${p.l}" x2="${w-p.r}" y1="${a.Y(3)}" y2="${a.Y(3)}" stroke="#1d7a46" stroke-dasharray="4 3"/><text x="${p.l+6}" y="${a.Y(3)-5}" font-size="10" fill="#1d7a46">target: 3.0 log</text>`;
+  const fr = []; for (let e = 4.5; e <= 13.5; e += 0.25) fr.push([e, front(e)]);
+  s += line(fr, a.X, a.Y, '#9fb2d6', 1.2, '2 2');
+  for (let i = 0; i < 60; i++) { const e = 4.5 + 9 * ((i * 29) % 60) / 60; const lr = front(e) - 0.15 - 0.9 * ((i * 17) % 60) / 60; if (lr > 1.55) s += `<circle cx="${a.X(e)}" cy="${a.Y(lr)}" r="2.4" fill="#9fb2d6"/>`; }
+  [[8.0,3.05,'#1f5fbf','1',-14,-8],[8.4,3.01,'#1f5fbf','2',8,-8],[8.1,2.92,'#b3261e','3',2,16],[12.0,3.4,'#7a4fc0','M9',8,4]].forEach(c => {
+    s += `<circle cx="${a.X(c[0])}" cy="${a.Y(c[1])}" r="5" fill="${c[2]}"/><text x="${a.X(c[0])+c[4]}" y="${a.Y(c[1])+c[5]}" font-size="10.5" font-weight="600" fill="${c[2]}">${c[3]}</text>`; });
+  s += legend([['Candidate (meets target)','#1f5fbf'],['Candidate (misses target)','#b3261e'],['Current run (M9)','#7a4fc0'],['Other designs searched','#9fb2d6']], w-170, h-p.b-50);
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%">${s}</svg>`;
+}
+
+/* ---------------- screens ---------------- */
+const lock = '<span class="lock">Researcher</span>';
+const S = [
+{ id:'M1', nav:'Home', grp:'General', title:'Home', html:`
+<div class="grid g31">
+ <div>
+  <div class="grid g2">
+   <div class="card stage"><h3>Stage 1 - Low-Pressure Plasma</h3><div style="font-size:12.5px;color:#556">RF capacitively coupled Ar (+N2, +O2) plasma in a vacuum chamber, with virtual OES and Langmuir probe diagnostics.</div><div class="btns"><a class="btn p s" href="#M2">Open Stage 1</a></div></div>
+   <div class="card stage b"><h3>Stage 2 - Underwater Plasma</h3><div style="font-size:12.5px;color:#556">Pulsed DC oxygen bubble discharge for disinfection of municipal wastewater, with virtual OES.</div><div class="btns"><a class="btn p s" href="#M8">Open Stage 2</a></div></div>
+   <div class="card stage c"><h3>Diagnostics &amp; Data</h3><div style="font-size:12.5px;color:#556">Compare OES, probe and model; import measured files; validate against published data.</div><div class="btns"><a class="btn s" href="#M7">Compare</a><a class="btn s" href="#M10">Import / Validate</a></div></div>
+   <div class="card stage" style="border-left-color:#d0731a"><h3>AI Module</h3><div style="font-size:12.5px;color:#556">Infer plasma parameters from spectra, detect physics anomalies, explore the fast surrogate, and get recommendations verified by the twin.</div><div class="btns"><a class="btn s" href="#M12">Infer</a><a class="btn s" href="#M13">Anomalies</a><a class="btn s" href="#M14">Recommend</a></div></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h3>Quick start <span class="hint">loads the default Stage 1 experiment</span></h3>
+   <div class="inrow"><select style="max-width:340px"><option>Stable Ar plasma - 50 W, 0.3 mbar, Ar 300 sccm</option><option>Ar + 5 % N2 (gas temperature by N2 bands)</option><option>Ar + 5 % N2 + 5 % O2</option></select><a class="btn p" href="#M3">Run default experiment</a></div></div>
+  <div class="card" style="margin-top:14px"><h3>Recent sessions <a class="btn s" href="#M11">View all</a></h3>
+   <table class="t"><tr><th>Session</th><th>Stage</th><th>Configuration</th><th>Saved</th></tr>
+   <tr><td>S-0006</td><td>Stage 1</td><td>80 W, 0.2 mbar, Ar 300 sccm + 5 % N2</td><td>24-Oct-2026 16:10</td></tr>
+   <tr><td>S-0005</td><td>Stage 2</td><td>10 kV, 7 kHz, 100 W, gap 2 mm, O2 100 sccm</td><td>24-Oct-2026 11:42</td></tr>
+   <tr><td>S-0004</td><td>Stage 1</td><td>30 W, 0.5 mbar, Ar 500 sccm</td><td>23-Oct-2026 15:03</td></tr></table></div>
+ </div>
+ <div>
+  <div class="card"><h3>Usage role <span class="hint">no login</span></h3><div class="seg"><span class="on">Student</span><span>Researcher</span></div><div class="note">Researcher mode also shows measured-data import, validation and model-data settings.</div></div>
+  <div class="card" style="margin-top:14px"><h3>Reference data status</h3>
+   <table class="t"><tr><td>Atomic line data (NIST ASD)</td><td><span class="pill ok">loaded</span></td></tr><tr><td>Electron cross-sections (LXCat)</td><td><span class="pill ok">loaded</span></td></tr><tr><td>N2 band constants</td><td><span class="pill ok">loaded</span></td></tr><tr><td>Disinfection reference data</td><td><span class="pill ok">loaded</span></td></tr><tr><td>AI models (twin v1.0.0)</td><td><span class="pill ok">current</span></td></tr></table></div>
+  <div class="card" style="margin-top:14px"><h3>Help</h3><div class="btns" style="margin-top:0"><span class="btn s">User guide</span><span class="btn s">Glossary of terms</span></div></div>
+ </div>
+</div>`},
+
+{ id:'M2', nav:'Chamber Setup', grp:'Stage 1 - Low-Pressure', title:'Low-Pressure Chamber Configuration', html:`
+<div class="grid g2">
+ <div class="card"><h3>Discharge parameters</h3>
+  <label class="f">RF power (10 - 100 W)</label><div class="inrow"><input type="range" min="10" max="100" value="50"><input type="number" value="50" style="width:90px"><span class="unit">W</span></div>
+  <label class="f">Chamber pressure (0.1 - 0.5 mbar)</label><div class="inrow"><input type="range" min="0.1" max="0.5" step="0.01" value="0.3"><input type="number" value="0.30" style="width:90px"><span class="unit">mbar</span></div><div class="note">= 30.0 Pa = 225 mTorr</div>
+  <label class="f">RF frequency</label><div class="inrow"><input type="text" class="ro" value="13.56" readonly style="width:90px"><span class="unit">MHz (fixed)</span></div>
+  <label class="f">Argon flow rate (100 - 500 sccm)</label><div class="inrow"><input type="range" min="100" max="500" value="300"><input type="number" value="300" style="width:90px"><span class="unit">sccm</span></div>
+  <label class="f">Gas mixture</label><div class="seg"><span>Ar only</span><span class="on">Ar + N2</span><span>Ar + O2</span><span>Ar + N2 + O2</span></div>
+  <div class="grid g2" style="margin-top:4px"><div><label class="f">N2 fraction of Ar flow</label><div class="inrow"><input type="number" value="5" style="width:80px"><span class="unit">% (= 15 sccm)</span></div></div><div><label class="f">O2 fraction of Ar flow</label><div class="inrow"><input type="number" value="0" class="ro" style="width:80px"><span class="unit">% (not in mixture)</span></div></div></div>
+ </div>
+ <div>
+  <div class="card"><h3>Chamber geometry</h3>
+   <div class="grid g2"><div><label class="f">Chamber diameter</label><div class="inrow"><input type="number" value="40"><span class="unit">cm</span></div></div><div><label class="f">Chamber height</label><div class="inrow"><input type="number" value="40"><span class="unit">cm</span></div></div>
+   <div><label class="f">Electrode diameter</label><div class="inrow"><input type="number" value="14"><span class="unit">cm</span></div></div><div><label class="f">Electrode gap</label><div class="inrow"><input type="number" value="4.5"><span class="unit">cm</span></div></div></div></div>
+  <div class="card" style="margin-top:14px"><h3>Model options</h3>
+   <label class="f">Electron energy distribution (EEDF)</label><div class="seg"><span class="on">Druyvesteyn (default)</span><span>Maxwellian</span></div>
+   <label class="f">Spatial resolution</label><div class="seg"><span>0D global model</span><span class="on">0D + 1D axial profiles</span></div>
+   <label class="f">Preset</label><div class="inrow"><select><option>Stable Ar plasma (default)</option><option>Low-power exploration</option><option>High-pressure exploration</option></select><span class="btn s">Reset to defaults</span></div>
+  </div>
+  <div class="msg ok">All parameters are inside the operating envelope.</div>
+  <div class="msg warn">Note: at 0.30 mbar the sheath is collisional; the collisional sheath model is used.</div>
+  <div class="btns"><a class="btn p" href="#M3">Run simulation</a><span class="btn">Set up parameter sweep</span><span class="btn">Save configuration</span></div>
+ </div>
+</div>
+<div class="card" style="margin-top:14px"><h3>Parameter sweep <span class="hint">optional - runs the simulation over a range</span></h3>
+ <div class="grid g4"><div><label class="f">Swept parameter</label><select><option>RF power</option><option>Pressure</option><option>Argon flow</option><option>Admixture fraction</option></select></div><div><label class="f">From</label><input type="number" value="10"></div><div><label class="f">To</label><input type="number" value="100"></div><div><label class="f">Points (max 200)</label><input type="number" value="19"></div></div></div>`},
+
+{ id:'M3', nav:'Plasma State', grp:'Stage 1 - Low-Pressure', title:'Low-Pressure Plasma State Results', html:`
+<div class="grid g4">
+ <div class="kpi"><div class="n">Electron temperature T_e</div><div class="v">2.42 <span class="u">eV</span></div></div>
+ <div class="kpi"><div class="n">Electron density n_e (volume avg.)</div><div class="v">1.38 <span class="u">x10^15 m^-3</span></div></div>
+ <div class="kpi"><div class="n">Gas temperature T_gas</div><div class="v">352 <span class="u">K</span></div></div>
+ <div class="kpi"><div class="n">Ion flux to electrode</div><div class="v">3.3 <span class="u">x10^17 m^-2 s^-1</span></div></div>
+</div>
+<div class="grid g3" style="margin-top:14px">
+ <div class="card"><h3>Species densities</h3><table class="t"><tr><th>Species</th><th>Density (m^-3)</th></tr>
+  <tr><td>Ar (ground)</td><td>6.2 x 10^21</td></tr><tr><td>Ar metastable 1s5</td><td>3.1 x 10^16</td></tr><tr><td>Ar metastable 1s3</td><td>4.0 x 10^15</td></tr><tr><td>Ar+</td><td>1.35 x 10^15</td></tr><tr><td>N2</td><td>3.1 x 10^20</td></tr><tr><td>N2+</td><td>3.0 x 10^13</td></tr><tr><td>N (atomic)</td><td>8.4 x 10^17</td></tr></table></div>
+ <div class="card"><h3>EEDF used <span class="hint">Druyvesteyn</span></h3>${eedf(360,210)}</div>
+ <div class="card"><h3>1D axial profile <span class="hint">between electrodes</span></h3>${profile(360,210)}</div>
+</div>
+<div class="grid g2" style="margin-top:14px">
+ <div class="card"><h3>Power and particle balance</h3><table class="t"><tr><th>Loss channel</th><th>Share of absorbed power</th></tr><tr><td>Ionization</td><td>22 %</td></tr><tr><td>Excitation (incl. radiation)</td><td>41 %</td></tr><tr><td>Elastic collisions / gas heating</td><td>9 %</td></tr><tr><td>Ion and electron kinetic energy to walls</td><td>28 %</td></tr></table>
+  <div class="msg ok">Particle and power balances converged (residual &lt; 10^-8).</div><div class="msg warn">Model validity: collisional sheath regime; 1D profile uses ambipolar diffusion.</div></div>
+ <div class="card"><h3>Sweep results <span class="hint">RF power 10 - 100 W, 19 points</span></h3>${trend(520,220)}</div>
+</div>
+<div class="btns"><a class="btn p" href="#M4">Send to virtual OES</a><a class="btn p" href="#M6">Send to Langmuir probe</a><span class="btn">Save session</span><span class="btn">Export CSV</span></div>`},
+
+{ id:'M4', nav:'Virtual OES', grp:'Stage 1 - Low-Pressure', title:'Virtual OES - Synthetic Spectrum', html:`
+<div class="grid g31">
+ <div class="card"><h3>Synthetic emission spectrum <span class="hint">drag to zoom, double-click to reset</span></h3>${spectrum(760,300,true)}
+  <div class="inrow" style="margin-top:6px"><span class="unit">Species shown:</span><div class="seg"><span class="on">Ar I</span><span class="on">N2 SPS</span><span>O I</span></div><span class="btn s roleonly">Overlay measured spectrum</span><span class="btn s">Export spectrum (.txt)</span></div></div>
+ <div class="card"><h3>Instrument settings</h3>
+  <label class="f">Resolution (FWHM)</label><div class="inrow"><input type="number" value="0.005"><span class="unit">nm</span></div>
+  <label class="f">Wavelength range</label><div class="inrow"><input type="number" value="300"><span class="unit">to</span><input type="number" value="900"><span class="unit">nm</span></div>
+  <label class="f">Noise level</label><div class="inrow"><input type="number" value="1"><span class="unit">% of peak</span></div>
+  <label class="f">Integration time</label><div class="inrow"><input type="number" value="100"><span class="unit">ms</span></div>
+  <div class="msg ok">Spectrum computed from the collisional-radiative model for session S-0007.</div>
+  <div class="btns"><span class="btn p">Recompute</span><a class="btn" href="#M5">Analyse spectrum</a></div></div>
+</div>
+<div class="card" style="margin-top:14px"><h3>Identified lines <span class="hint">line data: NIST Atomic Spectra Database</span></h3>
+ <table class="t"><tr><th>λ (nm)</th><th>Species</th><th>Transition</th><th>E_k (eV)</th><th>g_k·A_ki (10^7 s^-1)</th><th>Relative intensity</th><th>Use in Boltzmann plot</th></tr>
+ <tr><td>750.39</td><td>Ar I</td><td>2p1 → 1s2</td><td>13.48</td><td>4.45</td><td>1.00</td><td>yes</td></tr>
+ <tr><td>811.53</td><td>Ar I</td><td>2p9 → 1s5</td><td>13.08</td><td>23.1</td><td>0.92</td><td>yes</td></tr>
+ <tr><td>763.51</td><td>Ar I</td><td>2p6 → 1s5</td><td>13.17</td><td>12.3</td><td>0.78</td><td>yes</td></tr>
+ <tr><td>420.07</td><td>Ar I</td><td>3p5 → 1s5</td><td>14.50</td><td>0.68</td><td>0.05</td><td>yes</td></tr>
+ <tr><td>337.13</td><td>N2</td><td>C-B (0,0) band head</td><td>-</td><td>-</td><td>0.34</td><td>no (molecular band)</td></tr></table></div>`},
+
+{ id:'M5', nav:'OES Analysis', grp:'Stage 1 - Low-Pressure', title:'OES Analysis - Boltzmann Plot and Temperatures', html:`
+<div class="inrow" style="margin-bottom:10px"><span class="unit">Spectrum source:</span><div class="seg"><span class="on">Synthetic (S-0007)</span><span class="roleonly">Imported measurement</span></div></div>
+<div class="grid g2">
+ <div class="card"><h3>Boltzmann plot <span class="hint">13 Ar I lines selected</span></h3>${boltzmann(520,250)}<div class="msg ok">13 lines spanning 1.78 eV of upper-level energy - fit accepted.</div></div>
+ <div class="card"><h3>Excited-level populations <span class="hint">CR model vs Boltzmann</span></h3>${populations(520,250)}<div class="msg warn">2p populations deviate from a Boltzmann distribution: T_exc is not equal to T_e (non-equilibrium plasma).</div></div>
+</div>
+<div class="grid g3" style="margin-top:14px">
+ <div class="card"><h3>Excitation temperature</h3><div class="kpi" style="border:0;padding:0"><div class="v">0.62 <span class="u">eV  ± 0.04</span></div></div><div class="note">Linear least-squares fit, R² = 0.97</div></div>
+ <div class="card"><h3>Gas temperature</h3><label class="f">Method</label><div class="seg"><span>Doppler broadening (Ar I 811.5 nm)</span><span class="on">N2 rotational (1,0) band 315.9 nm</span></div>
+  <div class="kpi" style="border:0;padding:0;margin-top:6px"><div class="v">365 <span class="u">K  ± 25</span></div></div><div class="msg ok">NH (A-X) overlap check: no NH contribution detected.</div></div>
+ <div class="card"><h3>Electron density used</h3><div class="kpi" style="border:0;padding:0"><div class="v">1.41 <span class="u">x10^15 m^-3</span></div></div><div class="note">Source: Langmuir probe (simulated, session S-0007). A measured probe value replaces it when imported. Stark broadening is not used at low pressure.</div></div>
+</div>
+<div class="btns"><a class="btn p" href="#M7">Compare with probe and model</a><span class="btn">Select lines</span><span class="btn">Export results</span></div>`},
+
+{ id:'M6', nav:'Langmuir Probe', grp:'Stage 1 - Low-Pressure', title:'Virtual Langmuir Probe', html:`
+<div class="grid g13">
+ <div>
+  <div class="card"><h3>Probe</h3>
+   <label class="f">Probe type</label><select><option>Single cylindrical</option></select>
+   <div class="grid g2"><div><label class="f">Tip radius</label><div class="inrow"><input type="number" value="0.195"><span class="unit">mm</span></div></div><div><label class="f">Exposed length</label><div class="inrow"><input type="number" value="5"><span class="unit">mm</span></div></div></div>
+   <label class="f">Tip material</label><input type="text" value="Tungsten" class="ro" readonly></div>
+  <div class="card" style="margin-top:14px"><h3>Voltage sweep</h3>
+   <div class="grid g2"><div><label class="f">From</label><div class="inrow"><input type="number" value="-20"><span class="unit">V</span></div></div><div><label class="f">To</label><div class="inrow"><input type="number" value="50"><span class="unit">V</span></div></div></div>
+   <label class="f">Step</label><div class="inrow"><input type="number" value="0.5"><span class="unit">V</span></div>
+   <label class="f">RF distortion</label><div class="seg"><span class="on">On (sheath oscillation)</span><span>Off (ideal compensated probe)</span></div>
+   <label class="f">Noise level</label><div class="inrow"><input type="number" value="1"><span class="unit">%</span></div>
+   <div class="btns"><span class="btn p">Generate I-V curve</span><span class="btn roleonly">Import measured I-V (.csv)</span></div></div>
+ </div>
+ <div>
+  <div class="card"><h3>I-V characteristic</h3>${iv(700,250,false)}</div>
+  <div class="grid g2" style="margin-top:14px">
+   <div class="card"><h3>Analysis results <span class="hint">OML theory</span></h3><table class="t">
+    <tr><td>Floating potential V_f</td><td>5.2 V</td></tr><tr><td>Plasma potential V_p (d²I/dV² zero crossing)</td><td>17.5 V</td></tr>
+    <tr><td>Electron temperature T_e</td><td>2.38 eV</td></tr><tr><td>Electron density n_e</td><td>1.41 x 10^15 m^-3</td></tr><tr><td>Debye length λ_D</td><td>0.30 mm</td></tr></table>
+    <div class="msg ok">OML validity check passed: tip radius / Debye length = 0.65.</div></div>
+   <div class="card"><h3>EEPF <span class="hint">Druyvesteyn method</span></h3>${eedf(340,200)}</div>
+  </div>
+  <div class="btns"><a class="btn p" href="#M7">Compare diagnostics</a><span class="btn">Export I-V and results</span></div>
+ </div>
+</div>`},
+
+{ id:'M7', nav:'Compare Diagnostics', grp:'Stage 1 - Low-Pressure', title:'Diagnostics Comparison (Model vs OES vs Probe)', html:`
+<div class="grid g2">
+ <div class="card"><h3>Side-by-side values <span class="hint">session S-0007</span></h3>
+  <table class="t"><tr><th>Quantity</th><th>Model</th><th>OES</th><th>Langmuir probe</th><th>Max deviation</th><th>Within ±30 %</th></tr>
+  <tr><td>T_e (eV)</td><td>2.42</td><td>2.71 (CR line ratio)</td><td>2.38</td><td>+12 %</td><td><span class="pill ok">yes</span></td></tr>
+  <tr><td>n_e (10^15 m^-3)</td><td>1.38</td><td>(taken from probe)</td><td>1.41</td><td>+2 %</td><td><span class="pill ok">yes</span></td></tr>
+  <tr><td>T_gas (K)</td><td>352</td><td>365 (N2 rot.)</td><td>-</td><td>+4 %</td><td><span class="pill ok">yes</span></td></tr>
+  <tr><td>T_exc (eV)</td><td>-</td><td>0.62</td><td>-</td><td>-</td><td>not compared</td></tr></table>
+  <div class="msg ok">Verdict: all 3 comparable quantities agree with the model within the ±30 % tolerance.</div>
+  <div class="note">T_exc is reported but not compared with T_e: the CR model shows the 2p levels are not in Boltzmann equilibrium.</div></div>
+ <div class="card"><h3>Deviation chart</h3>${compareBars(520,250)}</div>
+</div>
+<div class="card" style="margin-top:14px"><h3>Method assumptions</h3><table class="t"><tr><th>Diagnostic</th><th>Assumptions shown to the user</th></tr>
+ <tr><td>Model</td><td>0D global model with 1D axial profile; Druyvesteyn EEDF; published rate data.</td></tr>
+ <tr><td>OES</td><td>Optically thin lines; CR model populations; instrument function convolved.</td></tr>
+ <tr><td>Langmuir probe</td><td>OML collection, RF distortion included, Druyvesteyn EEPF from second derivative.</td></tr></table></div>`},
+
+{ id:'M8', nav:'Underwater Setup', grp:'Stage 2 - Underwater', title:'Underwater Plasma Configuration', html:`
+<div class="grid g3">
+ <div class="card"><h3>Pulsed DC supply</h3>
+  <label class="f">Supply type</label><input type="text" class="ro" value="Pulsed DC (fixed)" readonly>
+  <label class="f">Pulse voltage (1 - 10 kV)</label><div class="inrow"><input type="number" value="10"><span class="unit">kV</span></div>
+  <label class="f">Pulse repetition frequency (5 - 10 kHz)</label><div class="inrow"><input type="number" value="5"><span class="unit">kHz</span></div>
+  <label class="f">Pulse width</label><div class="inrow"><input type="number" value="10"><span class="unit">µs</span></div>
+  <label class="f">Average power</label><div class="inrow"><input type="number" value="100"><span class="unit">W</span></div>
+  <div class="msg ok">Duty cycle = 5 %; energy per pulse = 20 mJ.</div></div>
+ <div class="card"><h3>Reactor and gas</h3>
+  <label class="f">Electrode geometry</label><input type="text" class="ro" value="Pin-to-pin" readonly>
+  <label class="f">Electrode gap</label><div class="seg"><span>1 mm</span><span class="on">2 mm</span><span>3 mm</span></div>
+  <label class="f">Pressure</label><div class="inrow"><input type="text" class="ro" value="1" readonly><span class="unit">atm (fixed)</span></div>
+  <label class="f">O2 flow into bubbles (100 - 300 sccm)</label><div class="inrow"><input type="number" value="100"><span class="unit">sccm</span></div>
+  <label class="f">Bubble gas</label><div class="seg"><span class="on">O2 + water vapour</span><span>O2 only</span></div>
+  <label class="f">EEDF</label><input type="text" class="ro" value="Maxwellian (fixed for Stage 2)" readonly></div>
+ <div class="card"><h3>Waste water and target</h3>
+  <div class="grid g2"><div><label class="f">Volume</label><div class="inrow"><input type="number" value="500"><span class="unit">mL</span></div></div><div><label class="f">Conductivity</label><div class="inrow"><input type="number" value="750"><span class="unit">µS/cm</span></div></div>
+  <div><label class="f">Initial pH</label><input type="number" value="7.5"></div><div><label class="f">Temperature</label><div class="inrow"><input type="number" value="25"><span class="unit">°C</span></div></div>
+  <div><label class="f">COD</label><div class="inrow"><input type="number" value="430"><span class="unit">mg/L</span></div></div><div><label class="f">Waste type</label><select><option>Municipal (medium)</option></select></div></div>
+  <label class="f">Target microorganism</label><select><option>E. coli</option><option>S. aureus</option><option>Bacterial spores (Bacillus)</option></select>
+  <div class="grid g2"><div><label class="f">Initial count</label><div class="inrow"><input type="number" value="150000"><span class="unit">CFU/mL</span></div></div><div><label class="f">Treatment time</label><div class="inrow"><input type="number" value="1"><span class="unit">min</span></div></div></div></div>
+</div>
+<div class="msg bad" style="max-width:640px">Example of a blocked input: pulse width 100 µs at 10 kHz gives a duty cycle of 100 % - not a pulsed discharge. Reduce the width or the frequency.</div>
+<div class="btns"><a class="btn p" href="#M9">Run disinfection simulation</a><span class="btn">Reset to defaults</span><span class="btn">Save configuration</span></div>`},
+
+{ id:'M9', nav:'Disinfection Results', grp:'Stage 2 - Underwater', title:'Underwater Plasma and Disinfection Results', html:`
+<div class="grid g4">
+ <div class="kpi"><div class="n">Log reduction at 1 min</div><div class="v">3.4 <span class="u">log10</span></div></div>
+ <div class="kpi"><div class="n">D-value</div><div class="v">17.6 <span class="u">s</span></div></div>
+ <div class="kpi"><div class="n">Energy yield</div><div class="v">0.28 <span class="u">log per kJ/L</span></div></div>
+ <div class="kpi"><div class="n">Bubble plasma T_e / n_e</div><div class="v">1.9 <span class="u">eV / 2.4x10^22 m^-3</span></div></div>
+</div>
+<div class="grid g2" style="margin-top:14px">
+ <div class="card"><h3>Reactive species in the liquid</h3>${species(520,230)}</div>
+ <div class="card"><h3>Survival curve <span class="hint">Hom model, E. coli</span></h3>${survival(520,230)}<div class="note">Hom parameters fitted to published reference data (source shown in report); replaced when validated measurements exist.</div></div>
+</div>
+<div class="grid g2" style="margin-top:14px">
+ <div class="card"><h3>Underwater OES <span class="hint">n_e from H-alpha Stark broadening</span></h3>${uwSpectrum(520,210)}<div class="note">H-alpha Stark FWHM = 0.42 nm → n_e = 2.4 x 10^22 m^-3 (resolvable with the 0.005 nm instrument).</div></div>
+ <div class="card"><h3>Water chemistry after treatment</h3><table class="t"><tr><th>Property</th><th>Before</th><th>After 1 min</th></tr><tr><td>pH</td><td>7.50</td><td>6.85</td></tr><tr><td>ORP (mV)</td><td>210</td><td>640</td></tr><tr><td>Conductivity (µS/cm)</td><td>750</td><td>780</td></tr><tr><td>Temperature (°C)</td><td>25.0</td><td>27.9</td></tr></table>
+  <div class="btns"><span class="btn">Save session</span><span class="btn">Export CSV</span></div></div>
+</div>`},
+
+{ id:'M10', nav:'Import &amp; Validate', grp:'Data', title:'Measured Data Import and Validation', research:true, html:`
+<div class="studonly msg warn" style="max-width:640px">This screen is part of Researcher mode. Switch the usage role (top right) to Researcher.</div>
+<div class="grid g2">
+ <div>
+  <div class="card"><h3>1. Upload measured file</h3><div class="drop">Drop an OES spectrum (.txt) or Langmuir probe I-V file (.csv) here, or <u>browse</u><br><span style="font-size:11.5px">Maximum 50 MB</span></div>
+   <div class="msg ok">probe_2026-11-03_run4.csv - 141 rows read.</div></div>
+  <div class="card" style="margin-top:14px"><h3>2. Metadata (all required)</h3>
+   <div class="grid g2"><div><label class="f">Diagnostic</label><select><option>Langmuir probe I-V</option><option>OES spectrum</option></select></div><div><label class="f">Plasma</label><select><option>Stage 1 low-pressure</option><option>Stage 2 underwater</option></select></div>
+   <div><label class="f">RF power (W)</label><input type="number" value="50"></div><div><label class="f">Pressure (mbar)</label><input type="number" value="0.3"></div>
+   <div><label class="f">Ar flow (sccm)</label><input type="number" value="300"></div><div><label class="f">Gas mixture</label><select><option>Ar + 5 % N2</option></select></div>
+   <div><label class="f">Measurement date</label><input type="text" value="03-Nov-2026"></div><div><label class="f">Instrument</label><input type="text" value="Single probe, tungsten"></div></div></div>
+ </div>
+ <div>
+  <div class="card"><h3>3. Column mapping and units</h3><div class="grid g2"><div><label class="f">Column 1</label><select><option>Voltage (V)</option></select></div><div><label class="f">Column 2</label><select><option>Current (A)</option></select></div></div>${iv(520,170,true)}</div>
+  <div class="card" style="margin-top:14px"><h3>4. Data use</h3>
+   <div class="msg warn">Validation only: measured data are never used to tune model parameters.</div>
+   <label class="f">Citation permission</label><div class="seg"><span class="on">Not citable (default)</span><span>Citable in reports</span></div><div class="note">Non-citable data are excluded from every exported report and figure.</div>
+   <div class="btns"><span class="btn p">Save to validation set</span><span class="btn">Cancel</span></div></div>
+ </div>
+</div>
+<div class="card" style="margin-top:14px"><h3>Literature benchmark <span class="hint">tolerance ±30 % fixed before the comparison</span></h3>
+ <table class="t"><tr><th>Check</th><th>Reference source</th><th>Computed</th><th>Reference</th><th>Deviation</th><th>Result</th></tr>
+ <tr><td>n_e trend with power (Ar, 0.5 mbar)</td><td>Wali et al. 2024 (COMSATS lab)</td><td>see plot</td><td>see plot</td><td>-</td><td><span class="pill ok">trend agrees</span></td></tr>
+ <tr><td>T_e at reference condition</td><td>Published Ar CCP data</td><td>2.42 eV</td><td>2.10 eV</td><td>+15 %</td><td><span class="pill ok">pass</span></td></tr>
+ <tr><td>E. coli log reduction</td><td>Published underwater discharge data</td><td>3.4</td><td>2.9</td><td>+17 %</td><td><span class="pill ok">pass</span></td></tr></table>
+ <div class="btns"><span class="btn p">Run validation</span><span class="btn">Generate validation report</span></div></div>`},
+
+{ id:'M11', nav:'Sessions &amp; Export', grp:'Data', title:'Session History and Export', html:`
+<div class="card"><h3>Saved sessions <span class="hint">select up to 5 to compare</span></h3>
+ <div class="inrow" style="margin-bottom:8px"><select style="max-width:180px"><option>All stages</option><option>Stage 1</option><option>Stage 2</option></select><input type="text" placeholder="Search by note or parameter" style="max-width:300px"></div>
+ <table class="t"><tr><th></th><th>Session</th><th>Stage</th><th>Configuration</th><th>Key results</th><th>Saved</th><th>Note</th></tr>
+ <tr><td><input type="checkbox" checked></td><td>S-0006</td><td>1</td><td>80 W, 0.2 mbar, Ar 300 + 5 % N2</td><td>T_e 2.6 eV, n_e 2.3e15</td><td>24-Oct 16:10</td><td>N2 band test</td></tr>
+ <tr><td><input type="checkbox" checked></td><td>S-0004</td><td>1</td><td>30 W, 0.5 mbar, Ar 500</td><td>T_e 2.1 eV, n_e 0.7e15</td><td>23-Oct 15:03</td><td>high pressure</td></tr>
+ <tr><td><input type="checkbox"></td><td>S-0005</td><td>2</td><td>10 kV, 7 kHz, 100 W, 2 mm</td><td>3.1 log in 1 min</td><td>24-Oct 11:42</td><td>-</td></tr></table>
+ <div class="btns"><span class="btn p">Open / replay</span><span class="btn">Compare selected (2)</span><span class="btn">Delete</span></div></div>
+<div class="grid g2" style="margin-top:14px">
+ <div class="card"><h3>Comparison of S-0006 and S-0004</h3>${trend(520,200)}</div>
+ <div class="card"><h3>Export</h3><label class="f">Content</label><div class="seg"><span class="on">Results tables</span><span class="on">Figures</span><span>Raw spectra / I-V</span></div>
+  <label class="f">Format</label><div class="seg"><span class="on">PDF report</span><span>CSV</span><span>PNG</span></div>
+  <div class="msg warn">1 non-citable measured dataset will be excluded from this export.</div><div class="btns"><span class="btn p">Export</span></div></div>
+</div>`},
+
+{ id:'M12', nav:'Parameter Inference', grp:'AI Module (Core)', title:'AI Parameter Inference from Spectra', html:`
+<div class="grid g2">
+ <div class="card"><h3>Input spectrum <span class="hint">synthetic or imported</span></h3><div class="seg"><span class="on">Synthetic (S-0007)</span><span class="roleonly">Imported measurement</span></div>${spectrum(520,190,false)}
+  <div class="grid g2"><div><label class="f">Model</label><div class="seg"><span class="on">XGBoost</span><span>Random Forest</span><span>Ridge baseline</span></div></div><div><label class="f">Interval level</label><div class="inrow"><input type="number" value="90" style="width:80px"><span class="unit">% (conformal)</span></div></div></div>
+  <div class="btns"><span class="btn p">Infer plasma parameters</span></div></div>
+ <div class="card"><h3>Inferred parameters <span class="hint">AI estimate next to the physics analysis</span></h3>
+  <table class="t"><tr><th>Quantity</th><th>AI estimate</th><th>90 % interval</th><th>Physics analysis</th><th>Difference</th></tr>
+  <tr><td>T_e (eV)</td><td>2.47</td><td>2.21 - 2.75</td><td>2.42 (model)</td><td>+2 %</td></tr><tr><td>n_e (10^15 m^-3)</td><td>1.30</td><td>0.98 - 1.71</td><td>1.38 (model)</td><td>-6 %</td></tr><tr><td>T_gas (K)</td><td>358</td><td>331 - 389</td><td>365 (OES)</td><td>-2 %</td></tr></table>
+  <div class="msg ok">Input lies inside the training range (power, pressure, flow, mixture).</div>
+  <div class="card" style="margin-top:10px;background:#fafcff"><h3>Held-out performance <span class="hint">model XGB-T-04, twin v1.0.0</span></h3>
+   <table class="t"><tr><th>Metric (T_e)</th><th>XGBoost</th><th>Ridge baseline</th></tr><tr><td>Mean absolute error</td><td>0.09 eV</td><td>0.21 eV</td></tr><tr><td>90 % interval coverage</td><td>88 %</td><td>-</td></tr><tr><td>Paired bootstrap test</td><td colspan="2">p &lt; 0.001 (AI error significantly lower)</td></tr></table></div>
+  <div class="note">Trained only on synthetic spectra from the digital twin; measured data are never used for training. Full metrics on M16.</div></div>
+</div>`},
+
+{ id:'M13', nav:'Anomaly Detection', grp:'AI Module (Core)', title:'AI Physics-Relationship Anomaly Detection', html:`
+<div class="inrow" style="margin-bottom:10px"><span class="unit">Check:</span><div class="seg"><span class="on">Saved sessions</span><span class="roleonly">Imported measured files</span></div><span class="btn p s">Run anomaly check</span></div>
+<div class="grid g2">
+ <div class="card"><h3>Checked runs <span class="hint">Isolation Forest on twin residuals</span></h3>
+  <table class="t"><tr><th>Run</th><th>Source</th><th>Score</th><th>Severity</th><th>Likely cause</th><th>Range check</th></tr>
+  <tr><td>S-0022</td><td>Session (Stage 1)</td><td>0.82</td><td><span class="pill bad">Critical</span></td><td>Probe n_e vs model residual</td><td><span class="pill ok">all in range</span></td></tr>
+  <tr><td>S-0027</td><td>Session (Stage 1)</td><td>0.66</td><td><span class="pill warn">Warning</span></td><td>Line-ratio residual (750/811 nm)</td><td><span class="pill ok">all in range</span></td></tr>
+  <tr><td>S-0028</td><td>Session (Stage 1)</td><td>0.31</td><td><span class="pill ok">Normal</span></td><td>-</td><td><span class="pill ok">all in range</span></td></tr>
+  <tr><td>S-0029</td><td>Session (Stage 2)</td><td>0.29</td><td><span class="pill ok">Normal</span></td><td>-</td><td><span class="pill ok">all in range</span></td></tr></table>
+  <div class="msg warn">S-0022 and S-0027 pass a simple range check but break the expected physics relationship.</div>
+  <div class="btns"><span class="btn">Mark as reviewed</span><span class="btn">Export anomaly log</span></div></div>
+ <div class="card"><h3>Anomaly score history</h3>${anomalyTimeline(520,220)}</div>
+</div>
+<div class="grid g2" style="margin-top:14px">
+ <div class="card"><h3>Why S-0022 was flagged <span class="hint">contribution of each residual</span></h3>${shapBars(520,170,[['Probe n_e residual',0.41],['Probe I-V shape residual',0.22],['OES T_e residual',0.07],['Line-ratio residual',0.04]],'Contribution to anomaly score')}
+  <div class="note">Probe-derived n_e is 46 % below the twin and the I-V shape is distorted: consistent with a contaminated probe tip.</div></div>
+ <div class="card"><h3>Detector quality <span class="hint">held-out injected faults</span></h3>
+  <table class="t"><tr><th>Metric</th><th>Isolation Forest</th><th>Range-check baseline</th></tr><tr><td>Recall (faults caught)</td><td>94 %</td><td>31 %</td></tr><tr><td>False-alarm rate</td><td>4 %</td><td>2 %</td></tr></table>
+  <div class="note">Faults injected by the twin: probe contamination, spectrometer wavelength shift, air leak, power-meter miscalibration, RF compensation failure.</div></div>
+</div>`},
+
+{ id:'M14', nav:'Recommendations', grp:'AI Module (Core)', title:'AI Recommendations (Inverse Design, Verified by the Twin)', html:`
+<div class="grid g13">
+ <div class="card"><h3>Goal</h3>
+  <label class="f">Stage</label><div class="seg"><span>Stage 1</span><span class="on">Stage 2</span></div>
+  <label class="f">Objective</label><select><option>Reach a target log reduction with the least energy per litre</option><option>Maximise log reduction within an energy budget</option></select>
+  <div class="grid g2"><div><label class="f">Target log reduction</label><input type="number" value="3.0"></div><div><label class="f">Organism</label><select><option>E. coli</option></select></div></div>
+  <label class="f">Keep fixed</label><div class="seg"><span class="on">Volume 500 mL</span><span>Gap</span><span>O2 flow</span></div>
+  <div class="note">All other settings searched within the operating envelope (duty cycle &lt; 1).</div>
+  <div class="btns"><span class="btn p">Find settings</span></div>
+  <div class="msg ok">Searched 4 800 candidates on the surrogate; top 3 re-simulated by the digital twin.</div></div>
+ <div class="card"><h3>Ranked candidates <span class="hint">every outcome re-simulated by the twin</span></h3>
+  <table class="t"><tr><th>#</th><th>Settings</th><th>Surrogate</th><th>Twin-verified</th><th>Energy</th><th>Meets target</th></tr>
+  <tr><td>1</td><td>10 kV, 7 kHz, 10 µs, 80 W, gap 2 mm, O2 150 sccm, 50 s</td><td>3.12 log</td><td><b>3.05 log</b></td><td>8.0 kJ/L</td><td><span class="pill ok">yes</span></td></tr>
+  <tr><td>2</td><td>9 kV, 8 kHz, 8 µs, 70 W, gap 3 mm, O2 200 sccm, 60 s</td><td>3.08 log</td><td><b>3.01 log</b></td><td>8.4 kJ/L</td><td><span class="pill ok">yes</span></td></tr>
+  <tr><td>3</td><td>10 kV, 6 kHz, 12 µs, 90 W, gap 1 mm, O2 100 sccm, 45 s</td><td>3.05 log</td><td><b>2.92 log</b></td><td>8.1 kJ/L</td><td><span class="pill bad">no</span></td></tr></table>
+  <div class="note">Candidate 1 saves 33 % energy compared with the current run (M9: 3.4 log at 12.0 kJ/L).</div>
+  <div class="btns"><span class="btn p">Apply candidate 1 to configuration</span><span class="btn">Save recommendation</span></div></div>
+</div>
+<div class="grid g2" style="margin-top:14px">
+ <div class="card"><h3>Energy vs disinfection <span class="hint">twin results</span></h3>${pareto(520,220)}</div>
+ <div class="card"><h3>What-if (counterfactual) <span class="hint">change one setting of the current run</span></h3>
+  <div class="grid g2"><div><label class="f">Setting</label><select><option>Pulse frequency</option></select></div><div><label class="f">New value</label><div class="inrow"><input type="number" value="7"><span class="unit">kHz</span></div></div></div>
+  <table class="t" style="margin-top:8px"><tr><th>Output</th><th>Current (5 kHz)</th><th>Twin at 7 kHz</th></tr><tr><td>Log reduction (1 min)</td><td>3.4</td><td>3.9</td></tr><tr><td>Energy per pulse</td><td>20 mJ</td><td>14.3 mJ</td></tr><tr><td>Dissolved O3 at 1 min</td><td>9.0 mg/L</td><td>10.1 mg/L</td></tr></table>
+  <div class="msg ok">Re-simulated by the digital twin (not an estimate).</div></div>
+</div>`},
+
+{ id:'M15', nav:'Surrogate & Explain', grp:'AI Module (Core)', title:'AI Surrogate Model and Explainability (SHAP)', html:`
+<div class="inrow" style="margin-bottom:10px"><span class="unit">Stage:</span><div class="seg"><span class="on">Stage 1</span><span>Stage 2</span></div><span class="unit" style="margin-left:12px">Output:</span><div class="seg"><span class="on">n_e</span><span>T_e</span><span>T_gas</span><span>Ar 750 nm</span></div></div>
+<div class="grid g2">
+ <div class="card"><h3>Fast map from the surrogate <span class="hint">180 points in 0.4 s; Ar 300 sccm, Ar + 5 % N2</span></h3>${heatmap(520,240)}<div class="note">Values from the surrogate (labelled). Circle = current run S-0007.</div>
+  <div class="btns"><span class="btn p s">Check selected point with twin</span></div>
+  <div class="msg ok">Twin check at 50 W, 0.30 mbar: n_e = 1.38 x 10^15 (surrogate 1.36 x 10^15, -1.4 %), within tolerance.</div></div>
+ <div class="card"><h3>Which inputs drive T_e? <span class="hint">global SHAP, mean |SHAP| (eV)</span></h3>${shapBars(520,150,[['Pressure',0.31],['N2 fraction',0.04],['Ar flow',0.07],['RF power',0.03]].sort((x,y)=>y[1]-x[1]),'mean |SHAP value| (eV)')}
+  <div class="note">Pressure dominates T_e and power barely matters, as the particle balance predicts.</div>
+  <h3 style="margin-top:10px">Why this run has T_e = 2.42 eV <span class="hint">local SHAP for S-0007</span></h3>${shapBars(520,130,[['Pressure 0.30 mbar',-0.21],['Ar flow 300 sccm',0.05],['N2 5 %',0.03],['RF power 50 W',-0.01]],'contribution vs average T_e 2.56 eV')}</div>
+</div>
+<div class="card" style="margin-top:14px"><h3>Surrogate accuracy <span class="hint">held-out twin runs</span></h3>
+ <table class="t"><tr><th>Output</th><th>R²</th><th>Median relative error</th><th>Surrogate time</th><th>Twin time</th><th>Speed-up</th></tr><tr><td>n_e</td><td>0.993</td><td>2.1 %</td><td>2 ms</td><td>1.4 s</td><td>700x</td></tr><tr><td>T_e</td><td>0.989</td><td>1.6 %</td><td>2 ms</td><td>1.4 s</td><td>700x</td></tr><tr><td>Log reduction (Stage 2)</td><td>0.984</td><td>3.8 %</td><td>3 ms</td><td>6.2 s</td><td>2 000x</td></tr></table></div>`},
+
+{ id:'M16', nav:'AI Training & Models', grp:'AI Module (Core)', title:'AI Training, Evaluation and Model Registry', html:`
+<div class="grid g3">
+ <div class="card"><h3>Training data <span class="hint">generated by the twin</span></h3><table class="t">
+  <tr><td>Dataset</td><td>DS-003</td></tr><tr><td>Twin version</td><td>1.0.0</td></tr><tr><td>Stage 1 runs</td><td>20 000</td></tr><tr><td>Stage 2 runs</td><td>8 000</td></tr><tr><td>Injected-fault runs</td><td>5 000</td></tr><tr><td>Seed</td><td>20261101</td></tr></table>
+  <div class="msg ok">Noise and fault settings locked 01-Nov-2026, before any training.</div></div>
+ <div class="card"><h3>Train a model <span class="lock">Researcher</span></h3>
+  <label class="f">Task</label><select><option>Spectrum -> plasma parameters</option><option>Anomaly detection</option><option>Surrogate (Stage 1)</option><option>Surrogate (Stage 2)</option></select>
+  <label class="f">Algorithm</label><div class="seg"><span class="on">XGBoost</span><span>Random Forest</span><span>Isolation Forest</span></div>
+  <label class="f">Evaluation split</label><div class="seg"><span class="on">Random + region (both)</span></div>
+  <div class="btns roleonly"><span class="btn p">Start training</span></div><div class="note studonly">Students can view models and metrics; training is a Researcher action.</div></div>
+ <div class="card"><h3>Predicted vs twin <span class="hint">XGB-T-04, T_e</span></h3>${parity(340,230)}</div>
+</div>
+<div class="card" style="margin-top:14px"><h3>Model registry <span class="hint">every run logged with MLflow (local)</span></h3>
+ <table class="t"><tr><th>Model</th><th>Task</th><th>Trained on</th><th>Key result (held out)</th><th>Baseline</th><th>Status</th></tr>
+ <tr><td>XGB-T-04</td><td>Spectrum -> T_e, n_e, T_gas</td><td>DS-003 / twin 1.0.0</td><td>MAE T_e 0.09 eV; coverage 88 %</td><td>Ridge: 0.21 eV (p &lt; 0.001)</td><td><span class="pill ok">current</span></td></tr>
+ <tr><td>IF-A-02</td><td>Anomaly detection</td><td>DS-003 / twin 1.0.0</td><td>Recall 94 % at 4 % false alarms</td><td>Range check: 31 %</td><td><span class="pill ok">current</span></td></tr>
+ <tr><td>XGB-S1-03</td><td>Surrogate, Stage 1</td><td>DS-003 / twin 1.0.0</td><td>R² 0.993 (n_e)</td><td>-</td><td><span class="pill ok">current</span></td></tr>
+ <tr><td>XGB-S2-01</td><td>Surrogate, Stage 2</td><td>DS-002 / twin 0.9.2</td><td>R² 0.981</td><td>-</td><td><span class="pill warn">out of date - retrain</span></td></tr></table>
+ <div class="btns"><span class="btn">Open model card</span><span class="btn">Compare runs</span></div></div>`}
+];
+
+/* ---------------- render ---------------- */
+const nav = document.getElementById('nav'), screens = document.getElementById('screens');
+let lastGrp = '';
+S.forEach(s => {
+  if (s.grp !== lastGrp) { nav.insertAdjacentHTML('beforeend', `<div class="navh">${s.grp}</div>`); lastGrp = s.grp; }
+  nav.insertAdjacentHTML('beforeend', `<a href="#${s.id}" data-id="${s.id}"><span>${s.nav}${s.research ? lock : ''}</span><span class="id">${s.id}</span></a>`);
+  screens.insertAdjacentHTML('beforeend', `<section class="scr" id="sec-${s.id}">${s.html}</section>`);
+});
+function show() {
+  const id = (location.hash || '#M1').slice(1).split('&')[0];
+  const s = S.find(x => x.id === id) || S[0];
+  document.querySelectorAll('section.scr').forEach(e => e.classList.toggle('on', e.id === 'sec-' + s.id));
+  document.querySelectorAll('.nav a').forEach(a => a.classList.toggle('on', a.dataset.id === s.id));
+  document.getElementById('mid').textContent = s.id;
+  document.getElementById('mtitle').textContent = s.title;
+  if (/role=res/.test(location.hash) || s.research) setRole(true);
+}
+function setRole(res) {
+  document.body.classList.toggle('res', res);
+  document.getElementById('rRes').classList.toggle('on', res);
+  document.getElementById('rStu').classList.toggle('on', !res);
+}
+document.getElementById('rStu').onclick = () => setRole(false);
+document.getElementById('rRes').onclick = () => setRole(true);
+/* simple interactivity: segmented buttons toggle within their group */
+document.addEventListener('click', e => {
+  const sp = e.target.closest('.seg span'); if (!sp) return;
+  const multi = sp.parentElement.dataset.multi === '1';
+  if (!multi) sp.parentElement.querySelectorAll('span').forEach(x => x.classList.remove('on'));
+  sp.classList.toggle('on', multi ? !sp.classList.contains('on') : true);
+});
+window.addEventListener('hashchange', show);
+show();
+</script>
+</body>
+</html>
