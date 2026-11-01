@@ -25,3 +25,8 @@ desktop.ini
 
 # Plagiarism / AI-detection reports from the library (kept local, not published)
 docs/srs/palagairism report/
+
+# Local SQLite write-ahead files and Claude session settings
+*.db-wal
+*.db-shm
+.claude/

@@ -1,0 +1,196 @@
+# Operating envelope of the Plasma Digital Twin Platform.
+#
+# This is the ONE place that holds allowed ranges, defaults and tolerances. The screens and the
+# validator both read it, so what a user sees can never disagree with what the code accepts.
+#
+# WHY IT IS VERSIONED: SRS CON-7 and ACC-4 require the ±30 % tolerance to be fixed before any
+# comparison is run. Keeping it in a tracked file means a later change shows up in git history,
+# so nobody can quietly widen the tolerance after seeing a failing result.
+#
+# A table with `min` and `max` is a range: min <= default <= max. A default may sit on a limit
+# because the supervisor's values do: 10 kV is both the maximum and the default.
+# Each entry names the SRS requirement it comes from.
+
+config_version = "1.0"
+
+[validation]
+agreement_tolerance_fraction = 0.30   # ±30 % (CON-7, supervisor)
+regression_relative_tolerance = 1e-9  # same inputs and seed must reproduce results (REL-4)
+
+[solver]
+residual_limit = 1e-8                 # a run is accepted only below this (ACC-3)
+power_share_tolerance_percent = 0.5   # power shares must sum to 100 ± 0.5 % (ACC-3)
+
+# ----------------------------------------------------------------- Stage 1: low-pressure argon CCP
+[stage1.fixed]
+rf_frequency_mhz = 13.56              # FR2.3
+
+[stage1.rf_power_w]                   # FR2.1
+min = 10
+default = 50
+max = 100
+step = 1
+
+[stage1.pressure_mbar]                # FR2.2: 0.1-0.5 mbar = 10-50 Pa = 75-375 mTorr
+min = 0.1
+default = 0.3
+max = 0.5
+
+[stage1.ar_flow_sccm]                 # FR2.4
+min = 100
+default = 300
+max = 500
+
+[stage1.admixture_percent_of_ar]      # FR2.5, LI-2: N2 and O2 are each a percentage of the Ar flow
+min = 1
+default = 5
+max = 10
+
+[stage1.geometry_cm]                  # FR2.6: defaults only. Rules: electrode < chamber, gap < height, all > 0
+chamber_diameter = 40.0
+chamber_height = 40.0
+electrode_diameter = 14.0
+electrode_gap = 4.5
+
+[stage1.options]
+gas_mixtures = ["Ar", "Ar+N2", "Ar+O2", "Ar+N2+O2"]   # FR2.5
+eedf = ["Druyvesteyn", "Maxwellian"]                  # FR2.7: the first entry is the default
+spatial = ["0D", "0D+1D"]                             # FR2.8
+sweep_max_points = 200                                # FR2.12
+
+# ----------------------------------------------------------------- Virtual OES
+[oes.resolution_fwhm_nm]              # FR4.3: the laboratory instrument is better than 0.01 nm
+min = 0.001
+default = 0.005
+max = 2.0
+
+[oes.wavelength_start_nm]             # FR4.3
+min = 200
+default = 300
+max = 1000
+
+[oes.wavelength_end_nm]               # FR4.3
+min = 200
+default = 900
+max = 1000
+
+[oes.noise_percent_of_peak]           # FR4.3
+min = 0
+default = 1
+max = 20
+
+[oes.boltzmann_fit]                   # FR5.2, FR5.3
+min_lines = 4
+min_energy_span_ev = 1.0
+unreliable_below_r_squared = 0.90
+
+# ----------------------------------------------------------------- Virtual Langmuir probe
+[probe.tip_radius_mm]                 # FR6.1: default from the COMSATS laboratory probe
+min = 0.05
+default = 0.195
+max = 1.0
+
+[probe.exposed_length_mm]             # FR6.1
+min = 1
+default = 5
+max = 20
+
+[probe.sweep_start_v]                 # FR6.2
+min = -100
+default = -20
+max = 100
+
+[probe.sweep_end_v]                   # FR6.2
+min = -100
+default = 50
+max = 100
+
+[probe.sweep_step_v]                  # FR6.2
+min = 0.1
+default = 0.5
+max = 2.0
+
+[probe.noise_percent_of_saturation]   # FR6.4
+min = 0
+default = 1
+max = 10
+
+[probe.limits]
+sweep_max_points = 2001               # FR6.2
+oml_max_radius_over_debye = 1.0       # FR6.7
+
+# ----------------------------------------------------------------- Stage 2: underwater O2 plasma
+[stage2.fixed]
+supply = "Pulsed DC"                  # FR8.1
+electrode_geometry = "Pin-to-pin"     # FR8.6
+pressure_atm = 1.0                    # FR8.7
+eedf = "Maxwellian"                   # FR8.10
+
+[stage2.pulse_voltage_kv]             # FR8.2
+min = 1
+default = 10
+max = 10
+
+[stage2.pulse_frequency_khz]          # FR8.3
+min = 5
+default = 5
+max = 10
+
+[stage2.average_power_w]              # FR8.5
+min = 10
+default = 100
+max = 100
+
+[stage2.o2_flow_sccm]                 # FR8.8
+min = 100
+default = 100
+max = 300
+
+[stage2.pulse_rules]                  # FR8.4, E5. Duty cycle = pulse width x frequency.
+default_width_us = 10.0
+duty_cycle_block_at = 1.0
+duty_cycle_warn_above = 0.5
+
+[stage2.water_volume_ml]              # FR8.11
+min = 50
+default = 500
+max = 5000
+
+[stage2.water_ph]                     # FR8.11
+min = 2.0
+default = 7.5
+max = 12.0
+
+[stage2.water_temperature_c]          # FR8.11
+min = 5
+default = 25
+max = 60
+
+[stage2.treatment_time_min]           # FR8.12
+min = 0.1
+default = 1.0
+max = 30
+
+[stage2.defaults]                     # FR8.11, FR8.12: medium-strength municipal waste water
+conductivity_us_per_cm = 750
+cod_mg_per_l = 430
+initial_count_cfu_per_ml = 150000     # supervisor: 1-2 lac
+
+[stage2.options]
+electrode_gap_mm = [1, 2, 3]          # FR8.6
+default_gap_mm = 2
+bubble_gas = ["O2 + water vapour", "O2 only"]         # FR8.9: the first entry is the default
+organisms = ["E. coli", "S. aureus", "Bacterial spores"]  # FR8.12: the first entry is the default
+
+# ----------------------------------------------------------------- Measured data and sessions
+[data]
+import_max_file_mb = 50               # FR10.1
+compare_min_sessions = 2              # FR11.2
+compare_max_sessions = 5              # FR11.2
+
+# ----------------------------------------------------------------- AI module
+[ai]
+prediction_interval_percent = 90      # FR12.3
+anomaly_warning_score = 0.60          # FR13.3
+anomaly_critical_score = 0.75         # FR13.3
+surrogate_twin_disagreement_percent = 5  # FR15.3, E27

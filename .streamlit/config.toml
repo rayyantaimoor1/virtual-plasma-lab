@@ -1,0 +1,9 @@
+# SEC-1: accept connections from this computer only, so measured data is not exposed on a network.
+[server]
+address = "127.0.0.1"
+port = 8501
+
+# SEC-5: the application makes no outbound network connection at run time.
+[browser]
+serverAddress = "localhost"
+gatherUsageStats = false

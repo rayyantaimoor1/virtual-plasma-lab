@@ -112,13 +112,13 @@ Rules:
 - Optional: a GitHub Actions workflow that runs pytest on every push.
 
 **Tests** (`tests/test_config.py`, `tests/test_db.py`)
-- The config loads, and every range has min < default < max.
+- The config loads, and every range has min < max and min ≤ default ≤ max. A default may equal a limit because the supervisor's values do (10 kV is both the default and the maximum).
 - The database is created in a temporary folder and all tables exist; creating it a second time does not fail.
 
 **Exit gate**
-- [ ] `pytest` passes.
-- [ ] `streamlit run app/Home.py` opens in the browser.
-- [ ] `requirements.txt` has exact versions.
+- [x] `pytest` passes.
+- [x] `streamlit run app/Home.py` opens in the browser.
+- [x] `requirements.txt` has exact versions.
 
 **Commit:** `Phase 0: project skeleton, config, SQLite schema, pytest`
 
