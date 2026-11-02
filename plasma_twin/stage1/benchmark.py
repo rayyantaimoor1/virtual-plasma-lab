@@ -8,7 +8,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from plasma_twin.config.loader import load_envelope
+from plasma_twin.probe.retardation import probe_style_te
 from plasma_twin.reference.loaders import load_benchmarks
+from plasma_twin.stage1.eedf import SHAPES
 from plasma_twin.stage1.global_model import Stage1Inputs, solve
 
 # Saikia et al. (2018): asymmetric electrodes 8 cm and 10 cm across, 7.5 cm apart. The model is
@@ -38,8 +40,16 @@ class Comparison:
         return abs(self.difference) <= load_envelope()["validation"]["agreement_tolerance_fraction"]
 
 
-def compare(eedf: str = "Druyvesteyn", edge_length: str = "sheath") -> list[Comparison]:
-    """Run the model at every Saikia point and pair each result with the measurement."""
+def compare(eedf: str = "Druyvesteyn", edge_length: str = "sheath", te_definition: str = "probe",
+            probe_window: str = "full") -> list[Comparison]:
+    """Run the model at every Saikia point and pair each result with the measurement.
+
+    te_definition "probe" (run 3 onwards): the model T_e is converted to what Saikia et al.'s slope
+    method would read from the model's EEDF (probe/retardation.py). "mean_energy" is the definition
+    used in runs 1 and 2, kept so those runs can be reproduced.
+    """
+    if te_definition not in ("probe", "mean_energy"):
+        raise ValueError("te_definition must be 'probe' or 'mean_energy'")
     rows = [r for r in load_benchmarks() if r["id"].startswith("saikia2018_")]
     gas_temperature = load_envelope()["stage1"]["fixed"]["gas_temperature_k"]
     out: list[Comparison] = []
@@ -54,7 +64,9 @@ def compare(eedf: str = "Druyvesteyn", edge_length: str = "sheath") -> list[Comp
         # Points outside our envelope are still run, for information; the envelope check is off
         # only here, and only those inside it can count for the exit gate.
         result = solve(inputs, check_envelope=False)
-        modelled = {"n_e": result.ne_center_m3, "T_e": result.te_ev}
+        te = (probe_style_te(result.te_ev, SHAPES[eedf], probe_window) if te_definition == "probe"
+              else result.te_ev)
+        modelled = {"n_e": result.ne_center_m3, "T_e": te}
         for quantity, row in measured.items():
             out.append(Comparison(point, quantity, inputs.pressure_mbar, inputs.rf_power_w,
                                   float(row["value"]), modelled[quantity], point in GATE_POINTS))
