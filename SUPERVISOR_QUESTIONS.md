@@ -26,6 +26,7 @@ Is the CCP symmetric (two electrodes of the same size, facing each other) or asy
 Is this the generator's forward power, or the power actually absorbed by the plasma? Some power is always lost in the matching network and cables, often 20–50 % in a CCP.
 
 **Until answered:** the model treats it as power absorbed by the plasma. A coupling-efficiency setting can be added later if you give a typical value.
+**Why it matters now:** the first comparison with published measurements gave an electron density 2–3 times too high (docs/validation/phase2_stage1_benchmarks.md). If only part of the generator power reaches the plasma, that explains some of the gap.
 **Answer:**
 
 ### Q4. Pressure unit
