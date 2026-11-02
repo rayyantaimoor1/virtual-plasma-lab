@@ -329,6 +329,7 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
 **4d — Line-ratio T_e** (`oes/line_ratio.py`)
 - Fit T_e and n_e together by matching the CR model's normalized 2p → 1s line intensities to the spectrum's, by least squares on log intensities. Gas density, gas temperature and geometry are taken as known.
 - **Tests:** from a noise-free synthetic spectrum, the fitted T_e is within ±30 % of the model T_e (ACC-2). In fact it should come back almost exactly, and the test records how closely.
+- **As built (3 November 2026):** noise-free, T_e and n_e come back within 10⁻³ (27 lines); with 1 % noise, T_e is within about 1 %. **Known limitation:** with 5 % noise the fit fails (T_e +216 %). Weak lines, whose A values are up to 1000 times smaller, are swamped by noise, and the unweighted log fit trusts them as much as the strong ones. Weighting each line by its uncertainty is the standard fix. It is a change of method, so it is recorded as future work and not slipped in.
 
 **4e — Gas temperature and the N₂ band** (`oes/gas_temp.py`; rules written before 4e starts)
 - **Doppler:** the gas temperature from the extra width of an isolated line, enabled only when the instrument FWHM is no larger than the expected Doppler FWHM (E8). At 300 K the Doppler FWHM of an argon line near 750 nm is about 0.0015 nm, so at the default 0.005 nm it is disabled.
