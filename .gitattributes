@@ -1,0 +1,2 @@
+# Checksums cover exact bytes, so git must never change line endings in reference data.
+data/reference/constants/* -text

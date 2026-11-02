@@ -20,7 +20,7 @@ This is a **new project**. It is not a continuation of the earlier `plasma-digit
 
 ## Status
 
-Phase 0 is complete: the project skeleton, operating-envelope configuration, SQLite schema and tests. No physics or AI has been built yet. See `BUILD_STEPS.md` for the plan.
+Phases 0 and 1 are complete: the project skeleton, operating-envelope configuration, SQLite schema, and the reference data (NIST lines, LXCat cross-sections, molecular constants) with checksums, citations and tests. Benchmark values are collected in Phase 2. No physics or AI has been built yet. See `BUILD_STEPS.md` for the plan.
 
 ## Running it
 
@@ -29,9 +29,12 @@ You need Python 3.12 or later. From the project folder on Windows:
 ```
 py -m venv .venv
 .venv\Scripts\python -m pip install -r requirements.txt
+.venv\Scripts\python scripts/fetch_reference.py nist
 .venv\Scripts\python -m pytest
 .venv\Scripts\python -m streamlit run app/Home.py
 ```
+
+Some physics data cannot be stored in this public repository. The NIST command above downloads part of it. The LXCat data must be downloaded personally: see `data/reference/README.md`.
 
 Run the last command from the project folder, because Streamlit reads its local-only settings from `.streamlit/config.toml` there.
 

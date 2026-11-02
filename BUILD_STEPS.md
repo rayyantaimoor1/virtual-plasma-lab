@@ -129,23 +129,25 @@ Rules:
 **Goal:** all published data the models need, stored locally with a citation and a checksum (MNT-2, CON-9, E1/E6).
 
 **Build**
-- `data/reference/`:
+- `data/reference/`, described in its `README.md`. NIST and LXCat files stay out of the public repository, because of their copyright and redistribution terms. `scripts/fetch_reference.py` downloads the NIST files. Each team member downloads the LXCat file personally, because LXCat requires agreement to its policy and uses a human-verification check.
   - NIST argon line data (wavelength, A_ki, g_k, E_k for the Ar I 2p→1s lines and the 3p lines used).
   - O I, H-alpha and OH data for Stage 2.
   - LXCat argon cross-sections (elastic, excitation, ionization), with N₂ and O₂ sets.
   - N₂ C–B band constants.
-  - Published benchmark values for validation.
+  - Published benchmark values for validation. Each value must be read in its source and recorded with where it was found.
 - `data/reference/manifest.json`: for each file, its source, citation, download date and SHA-256 checksum.
 - `plasma_twin/reference/loaders.py`: functions that read each file into NumPy arrays with stated units and verify the checksum.
 
 **Tests** (`tests/test_reference.py`)
 - Every file in the manifest exists and its checksum matches.
 - Spot values are correct, for example that Ar I 811.53 nm has the NIST A value.
-- A corrupted file is detected and reported as missing (event E6).
+- A corrupted file is detected and refused, and an absent file is reported as missing (event E6).
+- Spot-value tests skip where the downloaded files are absent, as on GitHub. Run them locally.
 
 **Exit gate**
-- [ ] Every value has a citation in the manifest.
-- [ ] Tests pass.
+- [x] Every value has a citation in the manifest. (LXCat: Biagi database, MAGBOLTZ 8.97, retrieved 2 November 2026.)
+- [x] Tests pass with no skips on a computer that has all the data. (48 passed, 0 skipped, 2 November 2026.)
+- [x] At least three Stage 1 benchmark points are recorded, or moved to Phase 2's gate by decision. **Moved to Phase 2's gate by team decision, 2 November 2026:** nothing is compared with benchmarks until the Phase 2 model exists.
 
 **Commit:** `Phase 1: reference data with manifest, checksums and loaders`
 
@@ -182,6 +184,7 @@ Rules:
   - Out-of-range inputs are rejected (E3).
 
 **Exit gate**
+- [ ] At least three Stage 1 argon benchmark points (0.1–0.5 mbar, 13.56 MHz) are in `data/reference/constants/benchmarks.csv`, each read in its source and recorded with its citation and location. They must be committed **before** the model is first compared with them (ACC-4). Moved here from Phase 1.
 - [ ] 2a, 2b and 2c tests pass.
 - [ ] One run takes ≤ 2 s (PER-1).
 - [ ] T_e and n_e at 3 reference points are within ±30 % of published values (ACC-1). The tolerance is fixed in `envelope.toml` before this check is run.

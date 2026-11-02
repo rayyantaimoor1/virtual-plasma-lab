@@ -30,3 +30,7 @@ docs/srs/palagairism report/
 *.db-wal
 *.db-shm
 .claude/
+
+# Third-party data that may not be redistributed (see data/reference/README.md)
+data/reference/nist/
+data/reference/lxcat/

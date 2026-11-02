@@ -1,0 +1,74 @@
+{
+  "datasets": [
+    {
+      "id": "nist_ar_i",
+      "path": "nist/ar_i_300_1000nm.csv",
+      "title": "Ar I spectral lines, 300-1000 nm",
+      "source": "NIST Atomic Spectra Database, version 5.12",
+      "url": "https://physics.nist.gov/asd",
+      "citation": "Kramida, A., Ralchenko, Yu., Reader, J. and NIST ASD Team (2024). NIST Atomic Spectra Database (version 5.12). National Institute of Standards and Technology, Gaithersburg, MD. DOI: 10.18434/T4W30F",
+      "in_repository": false,
+      "how_to_get": "Run: python scripts/fetch_reference.py nist",
+      "retrieved": "2026-11-01",
+      "sha256": "ce5e742152e77b3ac7c76e9e5b3fc1d0ee9f141acf9eec913cad79900c9c6ac5"
+    },
+    {
+      "id": "nist_o_i",
+      "path": "nist/o_i_300_1000nm.csv",
+      "title": "O I spectral lines, 300-1000 nm",
+      "source": "NIST Atomic Spectra Database, version 5.12",
+      "url": "https://physics.nist.gov/asd",
+      "citation": "Kramida, A., Ralchenko, Yu., Reader, J. and NIST ASD Team (2024). NIST Atomic Spectra Database (version 5.12). National Institute of Standards and Technology, Gaithersburg, MD. DOI: 10.18434/T4W30F",
+      "in_repository": false,
+      "how_to_get": "Run: python scripts/fetch_reference.py nist",
+      "retrieved": "2026-11-01",
+      "sha256": "4d38a6024382e72fce263fbbeff33c5cafaf81ab83ef57d8aca8ee0f7e9895fb"
+    },
+    {
+      "id": "nist_h_i",
+      "path": "nist/h_i_300_1000nm.csv",
+      "title": "H I spectral lines including H-alpha, 300-1000 nm",
+      "source": "NIST Atomic Spectra Database, version 5.12",
+      "url": "https://physics.nist.gov/asd",
+      "citation": "Kramida, A., Ralchenko, Yu., Reader, J. and NIST ASD Team (2024). NIST Atomic Spectra Database (version 5.12). National Institute of Standards and Technology, Gaithersburg, MD. DOI: 10.18434/T4W30F",
+      "in_repository": false,
+      "how_to_get": "Run: python scripts/fetch_reference.py nist",
+      "retrieved": "2026-11-01",
+      "sha256": "cedf41a7fde5f1c168dddc7d16196885ccdbf1e0fbbc559ca67e6cf8819f2ec6"
+    },
+    {
+      "id": "lxcat_cross_sections",
+      "path": "lxcat/cross_sections.txt",
+      "title": "Electron scattering cross-sections for Ar, N2 and O2",
+      "source": "LXCat, Biagi database (transcription of S. F. Biagi's Fortran code MAGBOLTZ); all 107 processes for e/Ar, e/N2 and e/O2",
+      "url": "https://www.lxcat.net/Biagi",
+      "citation": "Biagi database, www.lxcat.net, retrieved on November 2, 2026. Fortran program MAGBOLTZ, S. F. Biagi, version 8.97 (Ar: Sept 2011; N2 and O2: Oct 2012). General: Pitchford, L. C., et al. (2017). LXCat: An Open-Access, Web-Based Platform for Data Needed for Modeling Low Temperature Plasmas. Plasma Process. Polym. 14, 1600098.",
+      "in_repository": false,
+      "how_to_get": "Download it yourself from www.lxcat.net, following data/reference/README.md, then run: python scripts/fetch_reference.py lxcat YOUR_FILE",
+      "retrieved": "2026-11-02",
+      "sha256": "11cbee6e75eeed4a88276315b31d9be9112e5340c63b7b14151eef0937eb33d5"
+    },
+    {
+      "id": "diatomic_constants",
+      "path": "constants/diatomic_constants.csv",
+      "title": "Spectroscopic constants of N2 (C, B) and OH (A, X)",
+      "source": "NIST Chemistry WebBook, SRD 69, Constants of Diatomic Molecules",
+      "url": "https://webbook.nist.gov/chemistry/",
+      "citation": "Huber, K. P. and Herzberg, G. (1979). Molecular Spectra and Molecular Structure IV: Constants of Diatomic Molecules. Van Nostrand Reinhold. Data prepared by Gallagher, J. W. and Johnson, R. D. III, in NIST Chemistry WebBook, NIST Standard Reference Database 69.",
+      "in_repository": true,
+      "retrieved": "2026-11-01",
+      "sha256": "ec007eb62390b0f5aefb8915df710bf3968b79b6ce5f3bb6114433a707c57859"
+    },
+    {
+      "id": "benchmarks",
+      "path": "constants/benchmarks.csv",
+      "title": "Published validation values",
+      "source": "Published papers, cited row by row",
+      "url": "data/reference/README.md",
+      "citation": "Each row of the file carries its own citation and location in the source.",
+      "in_repository": true,
+      "retrieved": "2026-11-01",
+      "sha256": "cbe5eba13bcbcaca1b22a3c834943a5e7c3b8369118bb45e25ae276822275c73"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+# Constants of diatomic molecules, read from the NIST Chemistry WebBook table on 2026-11-01.
+# Compiled by K. P. Huber and G. Herzberg, data collected through February 1977.
+# Units: cm^-1. Used for the N2 second positive band (C-B) and the OH (A-X) band.
+molecule,state,Te_cm1,we_cm1,wexe_cm1,Be_cm1,alpha_e_cm1,source
+N2,C3Pi_u,89136.88,2047.178,28.4450,1.82473,0.01868,NIST WebBook (Huber and Herzberg)
+N2,B3Pi_g,59619.35,1733.39,14.122,1.63745,0.01791,NIST WebBook (Huber and Herzberg)
+OH,A2Sigma+,32684.1,3178.86,92.917,17.358,0.7868,NIST WebBook (Huber and Herzberg)
+OH,X2Pi,0,3737.761,84.8813,18.9108,0.7242,NIST WebBook (Huber and Herzberg)

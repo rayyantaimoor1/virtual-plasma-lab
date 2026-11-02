@@ -1,0 +1,4 @@
+# Published validation values (ACC-1, BO-1, BO-4). Add a row only after reading the value in the
+# source itself, and record exactly where it is, for example "Table 2" or "Fig. 5, read from the plot".
+# A value read from a graph must say so. Fix these values before comparing any model result (ACC-4).
+id,quantity,value,unit,uncertainty,gas,frequency_mhz,pressure_mbar,power_w,other_conditions,method,citation,location_in_source
