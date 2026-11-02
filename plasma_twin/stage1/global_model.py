@@ -493,7 +493,9 @@ def solve(inputs: Stage1Inputs, check_envelope: bool = True) -> Stage1Result:
     if not inputs.gas_heating:
         fixed = _solve_at_fixed_gas_temperature(inputs)
         return replace(fixed, gas_heating_w=gas_heating_power(fixed))
-    trial = inputs.wall_temperature_k
+    # Start from the given gas temperature (300 K by default; a sweep passes the previous point's
+    # value, which saves repetitions). It must not start below the wall temperature.
+    trial = max(inputs.gas_temperature_k, inputs.wall_temperature_k)
     for _ in range(100):
         result = _solve_at_fixed_gas_temperature(replace(inputs, gas_temperature_k=trial))
         heat = gas_heating_power(result)
