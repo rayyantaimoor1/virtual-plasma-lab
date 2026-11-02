@@ -217,6 +217,9 @@ Rules:
 - [x] 2a, 2b and 2c tests pass. (116 passed, 2 November 2026.)
 - [x] One run takes ≤ 2 s (PER-1). (About 0.08 s; 0.5 s for the first run, which builds the rate tables.)
 - [ ] T_e and n_e at 3 reference points are within ±30 % of published values (ACC-1). The tolerance is fixed in `envelope.toml` before this check is run. **Failed, 2 November 2026,** on run 1 (n_e +161 to +217 %, T_e +117 to +137 %), on run 2 with excited atoms (n_e +159 to +216 %, T_e +115 to +136 %), and on run 3 with probe-style T_e (n_e unchanged, T_e +54 to +69 %). Record and analysis: `docs/validation/phase2_stage1_benchmarks.md`.
+  **Left open by team decision, 2 November 2026.** Phase 2 is closed with this one item unmet. The remaining n_e gap most likely needs the supervisor's answer to Q3 (generator power or absorbed power), and further physics changes without it would risk tuning the model to the data. When Q3 is answered, the comparison is re-run under the same rules and recorded as run 4.
+
+**Phase 2 closed** on 2 November 2026: 145 tests pass, every other gate item is met, and the open item above is recorded.
 
 **Commit:** `Phase 2: Stage 1 EEDF, rate coefficients and argon global model`
 
