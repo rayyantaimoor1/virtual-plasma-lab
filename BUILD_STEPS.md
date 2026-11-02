@@ -253,10 +253,29 @@ Built in five small steps, each tested and committed before the next. Every new 
 - Up to 200 points over power, pressure, Ar flow or admixture fraction. A point that fails is recorded with its reason and the sweep carries on.
 - Tests: the requested number of points; a failed point is kept as a failure and the others are kept; 200 points in ≤ 120 s (PER-4).
 
-**3e — N₂ and O₂ mixtures** (`stage1/mixtures.py`)
-- Four modes (Ar, Ar+N₂, Ar+O₂, Ar+N₂+O₂), each admixture a percentage of the Ar flow (default 5 %), with O⁻ when O₂ is present. Its reaction set and sources are written here before coding starts.
-  - ⚠ The supervisor has not confirmed whether N₂ and O₂ are added in the same run (SUPERVISOR_QUESTIONS.md, Q5). All four modes are built.
-- Tests: a zero-percent admixture reproduces the pure-argon result exactly.
+**3e — N₂ and O₂ mixtures** (`stage1/mixtures.py`; rules fixed 3 November 2026, before any code)
+- Four modes (Ar, Ar+N₂, Ar+O₂, Ar+N₂+O₂). Each admixture is a percentage of the Ar flow (1–10 %, default 5 %), so its mole fraction is f / (1 + f_N₂ + f_O₂). 0 % switches the admixture off, and then the pure-argon model runs unchanged.
+  - ⚠ The supervisor has not confirmed whether N₂ and O₂ go in together (SUPERVISOR_QUESTIONS.md, Q5), so all four modes are built.
+- Built in two steps, each tested and committed: **3e-1** argon + N₂ (several positive ions, no negative ions), then **3e-2** oxygen (O⁻, O atoms, O₂(a¹Δ), electronegative transport).
+- **Electron collisions with N₂ and O₂:** integrated from the Biagi cross-sections with the chosen EEDF, like argon. This covers ionization (N₂⁺, O₂⁺), all excitations as energy losses, dissociative attachment O₂ → O⁻ + O, dissociation of O₂ (the two "DISOC" states, 6.1 and 8.4 eV, each giving two O atoms), O₂(a¹Δ) excitation and N₂(C) excitation (needed for the 337 nm band in Phase 4). The O₂ three-body attachment is left out: it is normalized to gas density, and at an O₂ partial pressure of about 0.02 mbar it is negligible.
+- **Argon with the molecules** (sources read directly):
+  - **Charge transfer** (Anicich, *J. Phys. Chem. Ref. Data* 22, 1469, 1993, evaluated values at 300 K, ±20 %): Ar⁺ + N₂ → N₂⁺ + Ar, 1.10×10⁻¹⁷ m³/s; Ar⁺ + O₂ → O₂⁺ + Ar, 4.60×10⁻¹⁷ m³/s. (The 2026 CCP paper below uses 1.2×10⁻¹⁷ for O₂; the evaluated compilation is preferred.)
+  - **Metastable quenching by N₂:** 3×10⁻¹⁷ m³/s in total (Le Calvé & Bourène 1973, as cited in arXiv:1104.5373). Of this, 2.8×10⁻¹⁷ m³/s goes to N₂(C) at 300 K (Pothiraja, Bibinov & Awakowicz 2010, as cited in arXiv:1109.5620).
+  - **Metastable quenching by O₂:** Dong et al., arXiv:2601.08138 (2026), a CCP Ar/O₂ global model, Table A1, rows 31 and 33: 1.12×10⁻¹⁵ (to ground) and 5.8×10⁻¹⁷ m³/s (dissociating O₂). Row 31 is several times faster than two atoms colliding at their thermal speed would suggest. It is used as published and flagged here.
+  - **Applied to metastables only:** both quenching sources concern metastables. 4p atoms radiate about a thousand times faster than they could be quenched.
+- **Oxygen chemistry (3e-2):** from Dong et al. (2026) Table A1, with Kemaneci et al. (arXiv:1612.07268) Tables IV–VIII where Dong gives nothing.
+  - **Electron reactions** with O, O⁻ and O₂(a), and O₂⁺ dissociative recombination: Dong rows 16, 21 and 23–26.
+  - **Detachment:** O⁻ + O → O₂ + e (row 27); O⁻ + O₂(a) → O₃ + e (row 28; O₃ is not tracked, so it counts as a loss).
+  - **Ion–ion recombination:** O⁻ with every positive ion at Dong's row 19 value, 1.5×10⁻¹³ (300/T_g)^0.5 m³/s. **Flagged:** Dong's row 36 gives O⁻ + Ar⁺ as 2.7×10⁻¹⁷, about 10⁴ times below every other ion–ion recombination in both tables. It looks like a misprint, but we will not "correct" a source from memory, so the row 19 value stands in for all positive ions. Ion–ion recombination depends only weakly on which positive ion takes part.
+  - **Wall losses:** O atoms recombine at the walls with probability γ = 0.09 (Kemaneci Table VIII). O₂(a) is quenched at the walls with γ = 0.007 (Dong row 93). Both use Chantry's formula. Their diffusion coefficients are the argon-metastable value scaled by √(reduced mass of Ar–Ar / reduced mass of species–Ar), the Chapman–Enskog mass dependence with the same collision size; this approximation is stated in the code.
+  - **Oxygen atoms are conserved:** O₂ + O₂(a) + O/2 equals the O₂ fed in.
+- **Transport with several ions:** each positive ion has its own Bohm speed and edge factor, from its own mass.
+  - **With O⁻ present** (degree of electronegativity α = n₋/n_e), each edge factor is divided by (1 + α), and the Bohm speed is multiplied by √((1+α)/(1+αγ)) with γ = T_e/T_g. When attachment is faster than ambipolar diffusion the factor becomes 1 (Kemaneci et al. 2016, Eqs. 6, 7 and 11–14). O⁻ ions are held inside the plasma and are not lost to the walls.
+  - **The collisional Child law** uses the flux-weighted ion mass.
+- **Left out, stated:** N₂ dissociation and N atoms (Biagi has no explicit dissociation channel); N₂⁺ dissociative recombination (a source exists only for some channels; estimated at about 10 % of N₂⁺ loss); NO, O₃ and O₂(b) as tracked species; and gas heating by dissociation.
+- **Rates at the Druyvesteyn EEDF:** rates taken from Maxwellian fits (the excited-state, O, O⁻ and O₂(a) electron reactions) are evaluated at the model's T_e. This approximation is stated, as for argon.
+- **Solver:** the mixture unknowns are solved together, starting from the pure-argon solution and stepping the admixture up from 0 % to the requested value.
+- **Tests:** a 0 % admixture reproduces the pure-argon result exactly; every balance closes below 10⁻⁸; charge and oxygen atoms are conserved; adding N₂ or O₂ lowers the metastable density; adding O₂ makes the plasma electronegative (α > 0); the four modes converge over the envelope.
 
 **Exit gate**
 - [ ] Tests pass.
