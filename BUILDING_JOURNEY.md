@@ -112,3 +112,30 @@ It is written so that either of us can explain any decision to the evaluation co
 **How Phase 2 closed (2 November 2026).** By team decision, Phase 2 closed with one gate item unmet: agreement with the measured n_e and T_e within ±30 %. Every other item passed. We chose not to keep adding physics while the most likely remaining cause, generator versus absorbed power, waits on the supervisor (Q3). Without his answer, each new change would risk tuning the model to the data. When Q3 is answered, the same comparison is re-run as run 4.
 
 **Where it stands:** the model is built and well tested (145 tests pass, plus the gate test marked as an expected failure), and the trends match the measurements. The ±30 % gate is not met. All three runs are recorded in `docs/validation/phase2_stage1_benchmarks.md`.
+
+---
+
+## Phase 3: Stage 1 extensions (in progress: 3a–3d done, 3e not started)
+
+**What we made**
+- **3a, gas flow (`gas_flow.py`):** converts sccm to atoms per second, works out the residence time in the 40 × 40 cm chamber, and adds pumping as a loss for excited atoms.
+- **3b, gas temperature (`gas_temperature.py`):** T_gas is now an output of a heat balance, and the model is re-solved until it settles. It gives about 301–304 K over 10–100 W.
+- **3c, axial profile (`profile1d.py`):** the n_e profile between the electrodes. It is the cosine solution of ambipolar diffusion, pinned to the 0D centre and sheath-edge densities.
+- **3d, sweeps (`sweep.py`):** up to 200 points. A failed point is kept with its reason; 200 points take about 66 s, inside the 120 s limit (PER-4).
+- **Data:** argon thermal conductivity, 300–1000 K, from the NIST WebBook, with checksum and citation.
+
+**Techniques and why**
+- **Switches for every new effect.** With flow and heating off, the Phase 2 results come back exactly, and the Phase 2 tests now run that model explicitly.
+- **Expectations written down before building.** For example, the plan said flow would barely matter in pure argon, because pumping takes seconds and diffusion to the walls milliseconds. The result agreed: under 1 %.
+- **Exact maths instead of a mesh.**
+  - Heat conduction in the cylinder is solved with a Bessel–cosine series, and a test checks it against the exact slab result l²/12.
+  - The Kirchhoff transform makes conduction linear even though the conductivity changes with temperature.
+- **Gas heating sources chosen on physics, not on the result.** Only elastic collisions and metastable quenching heat the gas. Sheath ion energy goes to the electrodes, and pooling energy goes to electrons. So T_gas is labelled as a lower estimate.
+
+**Problems and how we handled them**
+- **I misremembered the sccm conversion** (4.46 instead of 4.48 × 10¹⁷ atoms/s). The code was right and the test was wrong. The test now checks against CODATA's Loschmidt constant, not a remembered number.
+- **The Kirchhoff inversion was 6 % off for small temperature rises.** I had interpolated Φ in straight lines, but it curves because κ rises about 13 % between NIST points. Fixed by integrating the interpolated κ exactly and inverting with a root finder. A test caught it.
+- **A line-number edit removed the wrong lines.** Spotted on inspection and repaired before anything was run or committed.
+- **The plan's 1D test was wrong for our model.** It said "the profile's average equals the 0D n_e", but the 0D n_e is the centre density. The test now checks the centre and edge values instead, with the reason in `BUILD_STEPS.md`.
+
+**What is left:** 3e, N₂ and O₂ mixtures. Its reaction set and sources must be written into `BUILD_STEPS.md` before any code.
