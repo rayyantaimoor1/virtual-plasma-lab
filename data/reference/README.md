@@ -26,6 +26,15 @@ These are the steps used for the recorded file on 2 November 2026. The **Next** 
 8. On the output page, click the **TXT** link and save the file, for example as `lxcat_download.txt`.
 9. Run `python scripts/fetch_reference.py lxcat lxcat_download.txt`.
 
+### The second LXCat file: BSR argon (Phase 4)
+
+The virtual spectrometer needs electron collisions that start from argon's excited 1s levels, which only the BSR database has. Downloaded on 2 November 2026 (LXCat's header date):
+
+1. Choose **Scattering cross sections**, then in the database list press **−** and click **BSR (Quantum-mechanical calculations by O. Zatsarinny and K. Bartschat)**.
+2. The first species is **e**. As the second species, tick **Ar**, **Ar(4s[3/2]2)**, **Ar(4s[3/2]1)**, **Ar(4s'[1/2]0)** and **Ar(4s'[1/2]1)**. In Paschen notation these are the ground state, 1s5, 1s4, 1s3 and 1s2.
+3. Select all three data groups and all 177 processes, accept the terms of use if you agree, and save the **TXT** output.
+4. Run `python scripts/fetch_reference.py lxcat YOUR_FILE --dataset lxcat_bsr_argon`.
+
 Reports must cite the database, www.lxcat.net and the retrieval date, as [LXCat requires](https://nl.lxcat.net/instructions/how_reference.php). The citation recorded in `manifest.json` comes from the file's header, including the MAGBOLTZ version Biagi asks to be named.
 
 LXCat writes the download date into the header, so each person's file differs and will not match the recorded checksum. Before accepting a teammate's file, compare it with the recorded one, ignoring the date line.

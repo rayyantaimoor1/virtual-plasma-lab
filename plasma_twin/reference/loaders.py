@@ -244,3 +244,8 @@ def load_thermal_conductivity(manifest_path: Path = MANIFEST_PATH) -> tuple[np.n
     rows = _read_csv("argon_thermal_conductivity", manifest_path)
     return (np.array([float(r["temperature_k"]) for r in rows]),
             np.array([float(r["thermal_conductivity_w_per_m_k"]) for r in rows]))
+
+
+def load_bsr_argon(manifest_path: Path = MANIFEST_PATH) -> list[CrossSection]:
+    """BSR (Zatsarinny & Bartschat) electron collisions with Ar and its four 1s levels (Phase 4)."""
+    return read_lxcat(verified_path("lxcat_bsr_argon", manifest_path))

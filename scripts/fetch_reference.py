@@ -5,7 +5,8 @@ application (SEC-5, OE-4).
 
   python scripts/fetch_reference.py nist            download NIST lines into data/reference/nist/
   python scripts/fetch_reference.py nist --record   same, and record their checksums as the reference
-  python scripts/fetch_reference.py lxcat FILE      copy your LXCat download in and record its checksum
+  python scripts/fetch_reference.py lxcat FILE      copy your LXCat (Biagi) download in and record its checksum
+  python scripts/fetch_reference.py lxcat FILE --dataset lxcat_bsr_argon   the same for the BSR argon file
   python scripts/fetch_reference.py record-tracked  record checksums of files kept in the repository
   python scripts/fetch_reference.py status          show the state of every data set
 
@@ -75,12 +76,12 @@ def fetch_nist(record: bool) -> None:
         write_manifest(updates)
 
 
-def register_lxcat(source: Path) -> None:
-    entry = load_manifest()["lxcat_cross_sections"]
+def register_lxcat(source: Path, dataset_id: str = "lxcat_cross_sections") -> None:
+    entry = load_manifest()[dataset_id]
     target = REFERENCE_DIR / entry["path"]
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(source, target)
-    write_manifest({"lxcat_cross_sections": {"sha256": sha256_of(target), "retrieved": date.today().isoformat()}})
+    write_manifest({dataset_id: {"sha256": sha256_of(target), "retrieved": date.today().isoformat()}})
     print(f"Registered {target.name}. Now tell Claude, so the citation can be read from the file header.")
 
 
@@ -103,13 +104,14 @@ def main() -> None:
     nist.add_argument("--record", action="store_true")
     lxcat = commands.add_parser("lxcat")
     lxcat.add_argument("file", type=Path)
+    lxcat.add_argument("--dataset", default="lxcat_cross_sections")
     commands.add_parser("status")
     commands.add_parser("record-tracked")
     args = parser.parse_args()
     if args.command == "nist":
         fetch_nist(args.record)
     elif args.command == "lxcat":
-        register_lxcat(args.file)
+        register_lxcat(args.file, args.dataset)
     elif args.command == "record-tracked":
         record_tracked()
     show_status()

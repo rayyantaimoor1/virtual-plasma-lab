@@ -291,20 +291,43 @@ Built in five small steps, each tested and committed before the next. Every new 
 
 **Goal:** turn the plasma state into a spectrum and analyse it (Module 3; FR4.x and FR5.x).
 
-**Build**
-- `oes/cr_model.py`: collisional-radiative populations of the argon 1s and 2p levels from T_e, n_e and the EEDF.
-- `oes/spectrum.py`:
-  - Line intensities computed from the populations, the A coefficients and the wavelengths.
-  - Convolution with the instrument function (default FWHM 0.005 nm).
-  - Seeded noise.
-  - The N₂ second positive band and the O I lines when those gases are present.
-- `oes/boltzmann.py`:
-  - The Boltzmann plot and T_exc with its standard error and R².
-  - A rule that needs at least 4 lines spanning at least 1.0 eV (E9).
-- `oes/gas_temp.py`:
-  - N₂ rotational temperature from the (1,0) band at 315.9 nm, with an NH overlap check.
-  - Doppler broadening, enabled only when the instrument FWHM is no larger than the expected Doppler FWHM (E8).
-- `oes/line_ratio.py`: T_e estimated by fitting CR-model line ratios.
+Built in five steps, each tested and committed. The rules for 4a–4d were fixed on 3 November 2026, before any code. Those for 4e are written before 4e starts.
+
+**Data added for this phase:** the LXCat **BSR** database (Zatsarinny & Bartschat, R-matrix), with electron collisions from the argon ground state and from each of the four 1s levels (177 processes). It is local only, like Biagi (`data/reference/README.md`). The file itself pairs each Racah level name with its Paschen name, so the mapping is not taken from memory.
+
+**4a — Collisional-radiative model** (`oes/cr_model.py`)
+- **Levels:** the four 1s levels (1s5, 1s4, 1s3, 1s2) and the ten 2p levels, each on its own. The ground-state density is the model's argon density.
+- **Electron excitation:** from the ground state to every 1s and 2p level, and from every 1s level to every 2p level and to the other 1s levels, all integrated from the BSR cross-sections with the chosen EEDF.
+  - The reverse (de-excitation) rates come from the same cross-sections by detailed balance on the cross-section (the Klein–Rosseland relation σ_ji(ε) = (g_i/g_j)·((ε+ΔE)/ε)·σ_ij(ε+ΔE)). This keeps them right for a non-Maxwellian EEDF.
+- **Ionization from 1s and 2p:** the same published fits as Phase 2d (Kemaneci Table III, rows 8 and 15).
+- **Radiation:** every 2p → 1s line in the NIST Ar I file, matched to its levels by energy (within 0.01 eV).
+  - The two resonant 1s levels radiate to the ground state at the trapped rate already used in Phase 2d (1×10⁵ s⁻¹, Kemaneci row 23).
+  - Every 2p → 1s line is reduced by Mewe's escape factor, γ = (2 − exp(−10⁻³κ₀R)) / (1 + κ₀R), with κ₀ = n_lower·A·(g_u/g_l)·(λ³/8π)·√(M/2πkT) (as written in arXiv:2402.08092, Eqs. 27–28, citing Mewe 1967). R is half the electrode gap, the shortest way out of the slab-shaped plasma; this choice is stated in the code.
+- **Losses of 1s atoms:** diffusion to the walls (Chantry's formula, Phase 2d) and, in mixtures, quenching by N₂ and O₂ (Phase 3e rates).
+- **Left out, stated in the code:** cascades from levels above 2p (3d, 2s and higher); 2p quenching by ground-state atoms (thousands of times slower than radiation at 0.1–0.5 mbar); and metastable pooling (a few per cent of 1s loss in Phase 2d). Without pooling, the balances are linear for given escape factors, which are found by repetition.
+- **Inputs:** T_e, n_e, the EEDF, the gas density and temperature, and the geometry, all from the global model. The CR model reads the plasma state; it does not change it.
+- **Tests:** populations are positive and rise with n_e; the populations satisfy every balance; switching electron collisions off leaves only the excitation sources; the escape factor is 1 in a thin plasma and below 1 in a thick one.
+
+**4b — Synthetic spectrum** (`oes/spectrum.py`)
+- **Line power:** each line emits n_upper·A·γ·hc/λ (W/m³), at its NIST air wavelength.
+- **Line shape:** a Gaussian combining the instrument function (FWHM from `envelope.toml`, default 0.005 nm) with Doppler broadening at the gas temperature, added in quadrature.
+- **Grid and noise:** the wavelength grid runs between the envelope limits, five points per FWHM. Noise is Gaussian, as a percentage of the peak, from a seeded random generator (REL-4).
+- **Tests:** the peaks sit at the NIST wavelengths; the area under each line equals its power; the same seed gives the same spectrum; recomputing takes ≤ 3 s (PER-2).
+
+**4c — Boltzmann plot** (`oes/boltzmann.py`)
+- Fit ln(Iλ/(gA)) against the upper-level energy; the slope is −1/T_exc. Report T_exc with its standard error and R².
+- **E9 rule:** a fit with fewer than 4 lines, or an energy span under 1.0 eV, is flagged as unreliable (`envelope.toml`). The 2p levels span only about 0.6 eV, so a Boltzmann plot from 2p lines alone is always flagged; this is a true property of argon, not a fault.
+- **Never mislabelled:** the result is called the excitation temperature everywhere, never T_e (exit-gate rule).
+- **Tests:** a perfect Boltzmann population gives back its own temperature; the E9 rule triggers as stated.
+
+**4d — Line-ratio T_e** (`oes/line_ratio.py`)
+- Fit T_e and n_e together by matching the CR model's normalized 2p → 1s line intensities to the spectrum's, by least squares on log intensities. Gas density, gas temperature and geometry are taken as known.
+- **Tests:** from a noise-free synthetic spectrum, the fitted T_e is within ±30 % of the model T_e (ACC-2). In fact it should come back almost exactly, and the test records how closely.
+
+**4e — Gas temperature and the N₂ band** (`oes/gas_temp.py`; rules written before 4e starts)
+- **Doppler:** the gas temperature from the extra width of an isolated line, enabled only when the instrument FWHM is no larger than the expected Doppler FWHM (E8). At 300 K the Doppler FWHM of an argon line near 750 nm is about 0.0015 nm, so at the default 0.005 nm it is disabled.
+- **N₂ rotational temperature** from the (1,0) band at 315.9 nm, with an NH overlap check, and the N₂ second positive band in the spectrum when N₂ is present.
+- **O I lines (777 and 844 nm): moved to Phase 7.** Excitation data for atomic oxygen are not in hand, and Phase 7 (underwater OES) needs them anyway. Phase 4 does not draw O I lines; changed from the original plan with this reason.
 
 **Tests** (`tests/test_cr_model.py`, `test_spectrum.py`, `test_boltzmann.py`, `test_oes_gas_temp.py`, `test_line_ratio.py`)
 - Populations are positive and increase with n_e.

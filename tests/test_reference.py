@@ -295,3 +295,16 @@ def test_every_benchmark_row_has_a_citation() -> None:
     for row in load_benchmarks():
         assert row["citation"].strip(), row
         assert row["location_in_source"].strip(), row
+
+
+@real_data("lxcat_bsr_argon")
+def test_bsr_has_collisions_from_every_1s_level() -> None:
+    """The CR model needs excitation from each 1s level up to the 2p levels (Phase 4)."""
+    from plasma_twin.reference.loaders import load_bsr_argon
+    sections = load_bsr_argon()
+    targets = {s.target for s in sections}
+    assert {"Ar", "Ar(4s[3/2]2)", "Ar(4s[3/2]1)", "Ar(4s'[1/2]0)", "Ar(4s'[1/2]1)"} <= targets
+    from_1s5 = {s.product for s in sections if s.target == "Ar(4s[3/2]2)" and s.process_type == "EXCITATION"}
+    assert "Ar(4p[1/2]1)" in from_1s5  # 2p10, the lowest 2p level
+    ground_labels = {s.product for s in sections if s.target == "Ar" and s.process_type == "EXCITATION"}
+    assert "Ar(4s[3/2]2, 3P2, 1s5)" in ground_labels  # the file itself pairs Racah and Paschen names

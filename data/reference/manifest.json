@@ -49,6 +49,18 @@
       "sha256": "11cbee6e75eeed4a88276315b31d9be9112e5340c63b7b14151eef0937eb33d5"
     },
     {
+      "id": "lxcat_bsr_argon",
+      "path": "lxcat/bsr_argon.txt",
+      "title": "Electron collisions with argon and its four 1s levels (excitation, ionization, elastic)",
+      "source": "LXCat, BSR database (B-spline R-matrix calculations by O. Zatsarinny and K. Bartschat), BSR-500 model; 177 processes for e/Ar and e/Ar(1s5, 1s4, 1s3, 1s2)",
+      "url": "https://www.lxcat.net/BSR",
+      "citation": "BSR database, www.lxcat.net, retrieved on November 2, 2026 (date in the file header). O. Zatsarinny 2006 Comp. Phys. Commun. 174, 273; O. Zatsarinny and K. Bartschat 2013 J. Phys. B: At. Mol. Opt. Phys. 46, 112001.",
+      "in_repository": false,
+      "how_to_get": "Download it yourself from www.lxcat.net (BSR database; species e and Ar, Ar(4s[3/2]2), Ar(4s[3/2]1), Ar(4s'[1/2]0), Ar(4s'[1/2]1); all processes), following data/reference/README.md, then run: python scripts/fetch_reference.py lxcat YOUR_FILE --dataset lxcat_bsr_argon",
+      "retrieved": "2026-11-03",
+      "sha256": "cadb42328585ae2fc721ace17e0ab418272e73d37bc448b0f3d47b51a2302ad9"
+    },
+    {
       "id": "diatomic_constants",
       "path": "constants/diatomic_constants.csv",
       "title": "Spectroscopic constants of N2 (C, B) and OH (A, X)",
