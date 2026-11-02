@@ -5,8 +5,9 @@ This file is the build plan. We build **one phase at a time**:
 1. Build only what that phase lists.
 2. Run the phase's tests. All of them must pass.
 3. Check the phase's **exit gate**: every box ticked.
-4. Commit, with the phase named in the message.
-5. Only then start the next phase.
+4. Add the phase's section to `BUILDING_JOURNEY.md`: what was built, the techniques used and why, what failed, and how it was handled.
+5. Commit, with the phase named in the message.
+6. Only then start the next phase.
 
 If a test fails, fix it in the same phase. Never carry a broken phase forward.
 
