@@ -168,7 +168,7 @@ Rules:
 - K(T_e) = ∫ σ(ε)·v(ε)·f(ε) dε, using the LXCat cross-sections and the chosen EEDF.
 - Tests:
   - K_iz rises steeply with T_e.
-  - The Maxwellian K_iz at 3 eV is close to the published value within the stated band.
+  - The Maxwellian K_iz at 3 eV is close to the published value within the stated band. **Changed, 2 November 2026:** it is 40 % above the published fit (Kemaneci et al. 2016) at 3 eV, but within ±30 % from 5 eV up, and the gap shrinks steadily as T_e rises. Two independent integrations agree, so the cause is the fit's form (it uses 17.44 eV where argon ionizes at 15.76 eV). The test now checks agreement at 5–10 eV and pins the low-T_e gap. The integration itself is tested against exact answers.
   - The Druyvesteyn K_iz is below the Maxwellian value.
 
 **2c — Global model** (`stage1/global_model.py`)
@@ -176,17 +176,26 @@ Rules:
 - Power balance P_abs = e·n₀·u_B·A_eff·E_T(T_e), solved for n_e.
 - Collisional sheath and edge-to-centre factors that are valid across 0.1–0.5 mbar. This range is 75–375 mTorr, much higher than the old project's 1–20 mTorr, so these forms must be chosen for it.
 - Outputs: T_e, n_e, ion flux and the power-balance shares. Every output is computed from T_e and n_e and none is set by hand.
+- As built: the high-pressure capacitive model of Lieberman's 2015 UC Berkeley short course (collisional Child law, bulk and sheath ohmic heating, stochastic heating). Edge factors use the effective length 2·s_m, following Lieberman and the PIC results of Lafleur & Chabert (2014). See the module docstring for every assumption.
 - Tests:
-  - T_e does not depend on power; n_e is proportional to power.
+  - T_e does not depend on power; n_e is proportional to power. **Changed, 2 November 2026:** with real sheaths, power changes the sheath width and so the bulk size. T_e may now move by less than 2 % over 10–100 W. Ion acceleration in the sheaths takes a growing share of power as the RF voltage rises, so n_e grows as about P^0.6–0.7; the test checks that n_e rises with a slope between 0.5 and 1.
   - The solver converges on a grid of at least 500 configurations across the envelope (REL-1).
   - The residual is below 10⁻⁸ and the power shares sum to 100 ± 0.5 % (ACC-3).
   - The same inputs give the same outputs (REL-4).
   - Out-of-range inputs are rejected (E3).
 
+**Benchmark comparison rules** (written and committed before the first comparison, ACC-4)
+- Points: Saikia et al. (2018), Table II, 50 W at 100, 200 and 300 mTorr. These are the three recorded points inside the 0.1–0.5 mbar envelope. The 400 mTorr and 73 mTorr points are outside it and are reported only for information.
+- Model settings: the defaults, Druyvesteyn EEDF (supervisor) and `edge_length = "sheath"`. Gas at 300 K. The stated 50 W is taken as absorbed power.
+- Geometry: their discharge is asymmetric (electrodes 8 and 10 cm across). Our model is symmetric, so it uses the mean radius, 4.5 cm, and their 7.5 cm gap.
+- Compared: model centre density n_0 with measured n_e (the probe sits 30 mm from the electrode, near the centre of the 75 mm gap), and model T_e (2/3 of the mean energy) with measured T_e.
+- Pass: every compared value within ±30 % (`envelope.toml`). Runs with the Maxwellian EEDF or `edge_length = "bulk"` are shown for information and cannot be used to pass.
+- If a point fails, the result is reported as it is. Settings are not changed after seeing it.
+
 **Exit gate**
-- [ ] At least three Stage 1 argon benchmark points (0.1–0.5 mbar, 13.56 MHz) are in `data/reference/constants/benchmarks.csv`, each read in its source and recorded with its citation and location. They must be committed **before** the model is first compared with them (ACC-4). Moved here from Phase 1.
-- [ ] 2a, 2b and 2c tests pass.
-- [ ] One run takes ≤ 2 s (PER-1).
+- [x] At least three Stage 1 argon benchmark points (0.1–0.5 mbar, 13.56 MHz) are in `data/reference/constants/benchmarks.csv`, each read in its source and recorded with its citation and location. They must be committed **before** the model is first compared with them (ACC-4). Moved here from Phase 1. (Commit e28c89e.)
+- [x] 2a, 2b and 2c tests pass. (116 passed, 2 November 2026.)
+- [x] One run takes ≤ 2 s (PER-1). (About 0.08 s; 0.5 s for the first run, which builds the rate tables.)
 - [ ] T_e and n_e at 3 reference points are within ±30 % of published values (ACC-1). The tolerance is fixed in `envelope.toml` before this check is run.
 
 **Commit:** `Phase 2: Stage 1 EEDF, rate coefficients and argon global model`
