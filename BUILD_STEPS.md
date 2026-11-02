@@ -205,6 +205,13 @@ Rules:
 **Second benchmark comparison rules** (fixed before the run)
 - Same points, geometry, tolerance and pass rule as the first comparison. The only change is the model: the 2d excited states, on by default. The model is committed before the comparison is run.
 
+**Third benchmark comparison rules: probe-style T_e** (fixed 2 November 2026, before any code or result)
+- Why: Saikia et al. state that their T_e "is derived from the linear part of the logarithmic electron current", so they measure an inverse slope, not the mean energy. With a non-Maxwellian EEDF the two differ. Comparing like with like means asking what their method would read from the model's own EEDF.
+- Probe-style T_e: the electron current a probe collects when held V below the plasma potential is I_e(V) ∝ ∫ v f(ε) (1 − V/ε) dε over ε > V. This holds for any convex probe with isotropic electrons (Druyvesteyn's result), so the probe's size and shape do not matter. Ion current is assumed perfectly subtracted.
+- Window: a least-squares straight line through ln I_e against V, on an even voltage grid, from the plasma potential (V = 0) to the floating potential (V = V_f, the model's own floating potential for its EEDF). Probe-style T_e = −1 / slope. Our code is `plasma_twin/probe/retardation.py`, the first piece of the Phase 5 virtual probe.
+- Compared: probe-style T_e with measured T_e; n_e is compared exactly as before. Same points, settings, geometry, tolerance and pass rule as runs 1 and 2. The half-windows (0 to V_f/2, V_f/2 to V_f) are shown for information only and cannot be used to pass.
+- The code is committed before the comparison is run.
+
 **Exit gate**
 - [x] At least three Stage 1 argon benchmark points (0.1–0.5 mbar, 13.56 MHz) are in `data/reference/constants/benchmarks.csv`, each read in its source and recorded with its citation and location. They must be committed **before** the model is first compared with them (ACC-4). Moved here from Phase 1. (Commit e28c89e.)
 - [x] 2a, 2b and 2c tests pass. (116 passed, 2 November 2026.)
