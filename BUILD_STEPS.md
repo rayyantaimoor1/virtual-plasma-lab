@@ -306,7 +306,13 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
 - **Losses of 1s atoms:** diffusion to the walls (Chantry's formula, Phase 2d) and, in mixtures, quenching by N₂ and O₂ (Phase 3e rates).
 - **Left out, stated in the code:** cascades from levels above 2p (3d, 2s and higher); 2p quenching by ground-state atoms (thousands of times slower than radiation at 0.1–0.5 mbar); and metastable pooling (a few per cent of 1s loss in Phase 2d). Without pooling, the balances are linear for given escape factors, which are found by repetition.
 - **Inputs:** T_e, n_e, the EEDF, the gas density and temperature, and the geometry, all from the global model. The CR model reads the plasma state; it does not change it.
-- **Tests:** populations are positive and rise with n_e; the populations satisfy every balance; switching electron collisions off leaves only the excitation sources; the escape factor is 1 in a thin plasma and below 1 in a thick one.
+- **Tests:** populations are positive and rise with n_e; the populations satisfy every balance (residual < 10⁻⁹); with electron collisions off nothing is excited (changed from "leaves only the excitation sources": the sources are themselves electron collisions); the escape factor is 1 in a thin plasma and falls as the plasma gets thicker.
+- **As built (3 November 2026):**
+  - **Two additions:** a second NIST download, Ar I at 1000–1400 nm, because some 2p levels also decay by infrared lines beyond 1000 nm (2p10 → 1s3 near 1047 nm). 29 lines in all.
+  - **A finding, recorded rather than hidden.** The BSR rates destroy the metastable 1s5 more slowly than the lumped published rates in the Phase 2d global model:
+    - 1s5 → other 1s levels: 3.6×10⁻¹⁴ against 3.7×10⁻¹³ m³/s;
+    - 1s5 → 2p: 5×10⁻¹³ against 9×10⁻¹³ m³/s, at T_e ≈ 3 eV.
+    - So at the defaults the CR model's 1s5 density (6.5×10¹⁷ m⁻³) is about four times the global model's lumped metastable density. The CR model reads the plasma state and does not change it, so both are reported. Switching the global model to the BSR rates would change the Phase 2 and 3 results; it is an open decision, not done here.
 
 **4b — Synthetic spectrum** (`oes/spectrum.py`)
 - **Line power:** each line emits n_upper·A·γ·hc/λ (W/m³), at its NIST air wavelength.

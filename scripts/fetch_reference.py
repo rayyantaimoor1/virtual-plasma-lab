@@ -34,6 +34,9 @@ NIST_REQUESTS = {
     "nist_ar_i": ("Ar I", 300, 1000),
     "nist_o_i": ("O I", 300, 1000),
     "nist_h_i": ("H I", 300, 1000),
+    # Infrared 2p -> 1s argon lines (for example 2p10 -> 1s3 near 1047 nm): needed so the CR model
+    # (Phase 4) includes every decay route of the 2p levels, not only the visible ones.
+    "nist_ar_i_ir": ("Ar I", 1000, 1400),
 }
 
 
