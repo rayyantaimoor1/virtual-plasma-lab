@@ -7,6 +7,9 @@ electron density n_e and the sheaths. Three balances must hold at once:
        n_g K_iz(T_e) V = u_B(T_e) A_eff
    n_g, V and A_eff do not depend on n_e, so this fixes T_e alone (Lieberman & Lichtenberg 2005,
    Ch. 10). Power only enters through the sheath width, which shrinks the bulk slightly.
+   With excited atoms (Phase 2d, on by default), ionization also runs through metastable and 4p
+   atoms whose numbers grow with n_e, so T_e and n_e are then solved together with the three
+   excited-state balances (argon_kinetics.py).
 2. Electron power balance -> n_e. The power that heats electrons (ohmic heating in the bulk and
    in the sheaths, and stochastic heating at the moving sheath edges) equals what electrons lose
    per ion created (E_c), carry to the walls (E_e) and give the ions in the presheath (T_s / 2).
@@ -71,6 +74,9 @@ from scipy.special import j1
 
 from plasma_twin.config.loader import load_envelope
 from plasma_twin.stage1.eedf import SHAPES
+from scipy.optimize import root
+
+from plasma_twin.stage1 import argon_kinetics as kin
 from plasma_twin.stage1.rates import ARGON_MASS_KG, ELECTRON_MASS_KG, RateTable, rate_table
 
 E = codata.e
@@ -102,6 +108,7 @@ class Stage1Inputs:
     gas_temperature_k: float = 300.0
     frequency_hz: float = 13.56e6
     edge_length: str = "sheath"
+    excited_states: bool = True  # Phase 2d: metastables and two-step ionization (argon_kinetics.py)
 
     @property
     def gas_density_m3(self) -> float:
@@ -194,8 +201,13 @@ class Stage1Result:
     ion_flux_radial_m2_s: float
     collisional_energy_loss_ev: float  # E_c
     absorbed_power_w: float
+    metastable_density_m3: float = 0.0
+    resonant_density_m3: float = 0.0
+    p4_density_m3: float = 0.0
+    ionization_routes: dict[str, float] = field(default_factory=dict)  # fraction of ions from each route
     heating_w: dict[str, float] = field(default_factory=dict)  # how the power enters
-    losses_w: dict[str, float] = field(default_factory=dict)  # where the power goes
+    # Where the power goes. "superelastic_return" is negative: energy excited atoms give back.
+    losses_w: dict[str, float] = field(default_factory=dict)
     residuals: dict[str, float] = field(default_factory=dict)  # relative, all must be < 1e-8
 
     def shares_percent(self, which: str) -> dict[str, float]:
@@ -319,6 +331,122 @@ class _Discharge:
         log_v = brentq(excess, low, high, xtol=1e-15, rtol=_REL_TOL, maxiter=200)
         return self.solve_sheath(np.exp(log_v))
 
+    # ---------------------------------------------------------------- the full state from all unknowns
+    def assemble(self, te: float, n0: float, sheath: float, v_rf_sheath: float,
+                 excited: kin.ExcitedDensities | None) -> dict[str, Any]:
+        """Every output, and every balance written as ln(gain / loss), from the seven unknowns.
+
+        Both solvers report through this one function, so results and residuals are always
+        computed the same way. With `excited=None` the excited-atom terms are left out (Phase 2c).
+        """
+        x, w = self.x, self.wall
+        bulk = x.electrode_gap_m - 2 * sheath
+        volume = self.area * bulk
+        h_l, h_r = self.h_factors(te, bulk, sheath)
+        u_b, t_s = self.bohm_speed(te), w.screening_ratio * te
+        nu_m = self.n_g * self.rates.momentum_transfer(te)
+        v_e = w.mean_speed_ratio * np.sqrt(E * te / ELECTRON_MASS_KG)
+        p_ohm_bulk = bulk_ohmic_power(te, v_rf_sheath, nu_m, h_l, x.electrode_gap_m, sheath, self.area, self.omega)
+        one_ohmic, one_stochastic = sheath_heating_power(nu_m, sheath, v_e, v_rf_sheath, self.area, self.omega)
+        heating_electrons = p_ohm_bulk + 2 * one_ohmic + 2 * one_stochastic  # two electrode sheaths
+
+        # Ion production (per m^3 per s) and loss (per s) must match: the particle balance.
+        if excited is None:
+            routes = {"from_ground": n0 * self.n_g * self.rates.ionization(te)}
+            excited_power = {"two_step_ionization": 0.0, "excitation_between_levels": 0.0, "superelastic_return": 0.0}
+        else:
+            routes = kin.ionization_rate(te, n0, self.n_g, excited, self.rates)
+            excited_power = kin.excited_electron_power(te, n0, excited)
+        electrode_area, radial_area = 2 * self.area * h_l, 2 * np.pi * x.electrode_radius_m * bulk * h_r
+        ions_lost = n0 * u_b * (electrode_area + radial_area)
+        ions_made = volume * sum(routes.values())
+
+        # Electron energy losses in W. Collisions with ground-state atoms cost E_c per ground ionization.
+        ground_parts = self.rates.loss_parts_ev(te)
+        ground_rate = routes["from_ground"] * volume * E
+        e_e, v_f = w.escape_energy_ratio * te, w.floating_ratio * te
+        wall_electron = E * n0 * u_b * (electrode_area + radial_area) * e_e
+        wall_ion = E * n0 * u_b * (electrode_area * t_s / 2 + radial_area * (t_s / 2 + v_f))
+        losses = {
+            "ionization": ground_rate * ground_parts["ionization"] + E * volume * excited_power["two_step_ionization"],
+            "excitation": ground_rate * ground_parts["excitation"]
+            + E * volume * excited_power["excitation_between_levels"],
+            "elastic": ground_rate * ground_parts["elastic"],
+            "superelastic_return": E * volume * excited_power["superelastic_return"],
+            "electron_kinetic_to_walls": wall_electron,
+            "ion_energy_to_walls": wall_ion,
+        }
+        if excited is None:
+            del losses["superelastic_return"]
+        electron_losses = sum(losses.values())
+
+        n_s = h_l * n0
+        v_dc = 0.78 * v_rf_sheath
+        p_ion_rf = 2 * E * n_s * u_b * self.area * v_dc
+        losses["ion_energy_to_walls"] += p_ion_rf  # ions also carry the RF-sheath energy to the electrodes
+        child_width = collisional_child_width(v_dc, self.lambda_i, n_s * u_b)
+        p_abs = heating_electrons + p_ion_rf
+
+        equations = {
+            "particle_balance": np.log(ions_made / ions_lost),
+            "electron_power_balance": np.log(heating_electrons / electron_losses),
+            "child_law": np.log(sheath / child_width),
+            "power_balance": np.log(p_abs / x.rf_power_w),
+        }
+        if excited is not None:
+            k_wall = kin.wall_loss_rate(x.electrode_gap_m, x.electrode_radius_m, self.n_g, x.gas_temperature_k)
+            for level, (gain, loss) in kin.balances(te, n0, self.n_g, excited, self.rates, k_wall).items():
+                equations[f"{level}_balance"] = np.log(gain / loss)
+        return {
+            "te": te, "t_s": t_s, "n0": n0, "n_s": n_s, "h_l": h_l, "h_r": h_r, "u_b": u_b, "sheath": sheath,
+            "v_rf_sheath": v_rf_sheath, "v_dc": v_dc, "excited": excited,
+            "routes": {k: v * volume / ions_made for k, v in routes.items()},
+            "e_c": (losses["ionization"] + losses["excitation"] + losses["elastic"]
+                    + losses.get("superelastic_return", 0.0)) / (E * ions_made),
+            "heating": {"ohmic_bulk": p_ohm_bulk, "ohmic_sheaths": 2 * one_ohmic, "stochastic": 2 * one_stochastic,
+                        "ion_acceleration_rf_sheaths": p_ion_rf},
+            "losses": losses, "p_abs": p_abs, "equations": equations,
+            "rf_current": 1.52 * self.omega * EPS0 * self.area * v_rf_sheath / sheath,
+            "flux_electrode": n_s * u_b, "flux_radial": h_r * n0 * u_b,
+        }
+
+    def solve_with_excited_states(self) -> dict[str, Any]:
+        """Solve all seven balances together, starting from the ground-state-only solution.
+
+        With two-step ionization, T_e depends on n_e (more electrons -> more excited atoms -> more
+        ionization), so the balances can no longer be solved one after another. The unknowns are
+        ln T_e, ln n_0, ln s_m, ln V~_s and the three excited densities; Powell's hybrid method
+        (scipy.optimize.root) drives every ln(gain / loss) to zero.
+        """
+        x = self.x
+        ground = self.solve()
+        k_wall = kin.wall_loss_rate(x.electrode_gap_m, x.electrode_radius_m, self.n_g, x.gas_temperature_k)
+        start = kin.solve_densities(ground["te"], ground["n0"], self.n_g, self.rates, k_wall)
+        y0 = np.log([ground["te"], ground["n0"], ground["sheath"], ground["v_rf_sheath"],
+                     start.metastable_m3, start.resonant_m3, start.p4_m3])
+        low_te, high_te = 0.56, 19.4
+        max_sheath = 0.49 * x.electrode_gap_m
+
+        def unpack(y: np.ndarray) -> tuple[float, float, float, float, kin.ExcitedDensities]:
+            te, n0, sheath, v, nm, nr, npp = np.exp(y)
+            return (float(np.clip(te, low_te, high_te)), float(n0), float(min(sheath, max_sheath)), float(v),
+                    kin.ExcitedDensities(float(nm), float(nr), float(npp)))
+
+        def residuals(y: np.ndarray) -> np.ndarray:
+            return np.array(list(self.assemble(*unpack(y))["equations"].values()))
+
+        best = None
+        for method in ("hybr", "lm"):
+            found = root(residuals, y0, method=method, options={"xtol": 1e-14} if method == "hybr" else {"xtol": 1e-15})
+            if best is None or np.max(np.abs(found.fun)) < np.max(np.abs(best.fun)):
+                best = found
+            if np.max(np.abs(best.fun)) < 1e-11:
+                break
+        te, n0, sheath, v, excited = unpack(best.x)
+        if not (low_te < te < high_te and sheath < max_sheath) or np.max(np.abs(best.fun)) > 1e-9:
+            raise SolverFailure(f"the excited-state balances did not converge (largest residual {np.max(np.abs(best.fun)):.1e})")
+        return self.assemble(te, n0, sheath, v, excited)
+
 
 def solve(inputs: Stage1Inputs, check_envelope: bool = True) -> Stage1Result:
     """Run the global model for one operating point.
@@ -329,28 +457,22 @@ def solve(inputs: Stage1Inputs, check_envelope: bool = True) -> Stage1Result:
     if check_envelope:
         validate(inputs)
     discharge = _Discharge(inputs)
-    s = discharge.solve()
-    x = inputs
-    heating = {"ohmic_bulk": s["p_ohm_bulk"], "ohmic_sheaths": s["p_ohm_sheath"],
-               "stochastic": s["p_stochastic"], "ion_acceleration_rf_sheaths": s["p_ion_rf"]}
-    losses = {"ionization": s["loss_ionization"], "excitation": s["loss_excitation"],
-              "elastic": s["loss_elastic"], "electron_kinetic_to_walls": s["loss_electron_kinetic"],
-              "ion_energy_to_walls": s["loss_ion"]}
-    bulk = x.electrode_gap_m - 2 * s["sheath"]
-    production = discharge.n_g * discharge.rates.ionization(s["te"]) * s["n0"] * discharge.area * bulk
-    lost = s["n0"] * s["u_b"] * (2 * discharge.area * s["h_l"] + 2 * np.pi * x.electrode_radius_m * bulk * s["h_r"])
-    residuals = {
-        "particle_balance": abs(production - lost) / lost,
-        "power_balance": abs(s["p_abs"] - x.rf_power_w) / x.rf_power_w,
-        "energy_accounting": abs(sum(losses.values()) - s["p_abs"]) / s["p_abs"],
-        "child_law": abs(s["sheath"] - s["child_width"]) / s["sheath"],
-    }
+    if inputs.excited_states:
+        s = discharge.solve_with_excited_states()
+    else:
+        g = discharge.solve()
+        s = discharge.assemble(g["te"], g["n0"], g["sheath"], g["v_rf_sheath"], None)
+    residuals = {name: float(abs(np.expm1(value))) for name, value in s["equations"].items()}
+    residuals["energy_accounting"] = abs(sum(s["losses"].values()) - s["p_abs"]) / s["p_abs"]
+    excited = s["excited"] or kin.ExcitedDensities(0.0, 0.0, 0.0)
     return Stage1Result(
-        inputs=x, te_ev=s["te"], screening_te_ev=s["t_s"], ne_center_m3=s["n0"], ne_sheath_edge_m3=s["n_s"],
+        inputs=inputs, te_ev=s["te"], screening_te_ev=s["t_s"], ne_center_m3=s["n0"], ne_sheath_edge_m3=s["n_s"],
         gas_density_m3=discharge.n_g, ion_mean_free_path_m=discharge.lambda_i, bohm_speed_m_s=s["u_b"],
         h_axial=s["h_l"], h_radial=s["h_r"], sheath_width_m=s["sheath"],
         rf_voltage_amplitude_v=2 * s["v_rf_sheath"], dc_sheath_voltage_v=s["v_dc"],
         rf_current_amplitude_a=s["rf_current"], ion_flux_electrode_m2_s=s["flux_electrode"],
         ion_flux_radial_m2_s=s["flux_radial"], collisional_energy_loss_ev=s["e_c"],
-        absorbed_power_w=s["p_abs"], heating_w=heating, losses_w=losses, residuals=residuals,
+        absorbed_power_w=s["p_abs"], metastable_density_m3=excited.metastable_m3,
+        resonant_density_m3=excited.resonant_m3, p4_density_m3=excited.p4_m3, ionization_routes=s["routes"],
+        heating_w=s["heating"], losses_w=s["losses"], residuals=residuals,
     )

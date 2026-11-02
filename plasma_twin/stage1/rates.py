@@ -62,6 +62,18 @@ class ArgonCrossSections:
     excitation_total: np.ndarray  # sum over all excited states
     excitation_energy_weighted: np.ndarray  # sum of threshold * sigma, for the energy lost (eV m^2)
     n_excitations: int
+    # Excitation into the three lumped levels tracked by argon_kinetics.py. Paschen names in Biagi:
+    # metastable 4s_m = 1s5 + 1s3, resonant 4s_r = 1s4 + 1s2, 4p = 2p1 ... 2p10.
+    to_metastable: np.ndarray
+    to_resonant: np.ndarray
+    to_4p: np.ndarray
+
+
+LUMPED_LEVELS = {
+    "to_metastable": ("Ar(1S5)", "Ar(1S3)"),
+    "to_resonant": ("Ar(1S4)", "Ar(1S2)"),
+    "to_4p": tuple(f"Ar(2P{i})" for i in range(1, 11)),
+}
 
 
 def _on_grid(section: CrossSection) -> np.ndarray:
@@ -85,7 +97,17 @@ def argon_cross_sections(manifest_path: Path = MANIFEST_PATH) -> ArgonCrossSecti
         excitation_total=sum(_on_grid(s) for s in excitations),
         excitation_energy_weighted=sum(s.threshold_ev * _on_grid(s) for s in excitations),
         n_excitations=len(excitations),
+        **{group: _lumped(excitations, names) for group, names in LUMPED_LEVELS.items()},
     )
+
+
+def _lumped(excitations: list[CrossSection], names: tuple[str, ...]) -> np.ndarray:
+    """Sum the cross-sections of the named levels; every name must be present in the file."""
+    found = {s.product: s for s in excitations}
+    missing = [n for n in names if n not in found]
+    if missing:
+        raise ValueError(f"Argon data lacks the levels {missing}")
+    return sum(_on_grid(found[n]) for n in names)
 
 
 def rate_coefficient(sigma_m2: np.ndarray, eedf: EEDF) -> float:
@@ -159,6 +181,7 @@ class RateTable:
             "momentum_transfer": cs.momentum_transfer,
             "excitation": cs.excitation_total,
             "excitation_energy": cs.excitation_energy_weighted,
+            **{group: getattr(cs, group) for group in LUMPED_LEVELS},
             # Elastic recoil: an electron of energy e loses on average 2 (m/M) e per momentum-
             # transfer collision (Lieberman & Lichtenberg 2005, Ch. 3), so the energy-loss rate
             # is 2 (m/M) integral(e sigma_m v f de). Gas temperature is neglected (T_gas << T_e).
@@ -182,6 +205,10 @@ class RateTable:
     def momentum_transfer(self, te_ev: float) -> float:
         """K_m in m^3/s. Times the gas density it gives the collision frequency nu_m used in heating."""
         return self._k("momentum_transfer", te_ev)
+
+    def lumped_excitation(self, group: str, te_ev: float) -> float:
+        """K for excitation from the ground state into 'to_metastable', 'to_resonant' or 'to_4p'."""
+        return self._k(group, te_ev)
 
     def excitation(self, te_ev: float) -> float:
         """Total excitation rate coefficient, summed over all excited states, in m^3/s."""

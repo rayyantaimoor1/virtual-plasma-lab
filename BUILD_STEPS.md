@@ -192,6 +192,18 @@ Rules:
 - Pass: every compared value within ±30 % (`envelope.toml`). Runs with the Maxwellian EEDF or `edge_length = "bulk"` are shown for information and cannot be used to pass.
 - If a point fails, the result is reported as it is. Settings are not changed after seeing it.
 
+**2d — Excited argon atoms and two-step ionization** (`stage1/argon_kinetics.py`; moved forward from Phase 3 by team decision, 2 November 2026)
+- Why: the first comparison showed a measured T_e (1.0–1.4 eV) too low for ionization from the ground state alone, which points to two-step ionization through excited atoms. This is a stated physical cause, not a fit to the result.
+- Fixed before any second comparison:
+  - Three lumped excited levels: metastable 4s_m (Biagi 1s5 + 1s3), resonant 4s_r (1s4 + 1s2) and 4p (2p1–2p10). Excitation from the ground state is integrated from the Biagi data with the chosen EEDF. Higher levels count only as energy loss.
+  - Processes from excited levels: Kemaneci et al., arXiv:1612.07268 (2016), Table III, rows 7–10 and 13–26 (the Gudmundsson argon set). Row 11 is left out: it has no reference and an impossible size for a collision between two atoms. Rows 12 and 27–33 are left out: charge exchange does not change the densities, and dimer ions and recombination are negligible at 10¹⁶ m⁻³. These rates are Maxwellian fits; using them with a Druyvesteyn EEDF is an approximation, stated in the code.
+  - Wall loss of excited atoms: Chantry's formula with Λ₀⁻² = (π/l)² + (2.405/R)², every atom de-excited at the wall (γ = 1). Diffusion D₀ = 0.073 cm²/s at 273 K and 1 atm, scaling as (T/T₀)^1.92 / p (Zhakhovskii & Nishihara, arXiv:physics/0507076).
+  - Excited states are on by default. `excited_states=False` keeps the ground-state-only model for comparison.
+- Tests: switching excited states off reproduces the 2c results exactly. With them on, T_e is lower than without, it falls as power rises (more electrons, more two-step ionization), all balances close below 10⁻⁸, and the solver converges over the whole envelope.
+
+**Second benchmark comparison rules** (fixed before the run)
+- Same points, geometry, tolerance and pass rule as the first comparison. The only change is the model: the 2d excited states, on by default. The model is committed before the comparison is run.
+
 **Exit gate**
 - [x] At least three Stage 1 argon benchmark points (0.1–0.5 mbar, 13.56 MHz) are in `data/reference/constants/benchmarks.csv`, each read in its source and recorded with its citation and location. They must be committed **before** the model is first compared with them (ACC-4). Moved here from Phase 1. (Commit e28c89e.)
 - [x] 2a, 2b and 2c tests pass. (116 passed, 2 November 2026.)

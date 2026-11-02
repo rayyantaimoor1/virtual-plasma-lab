@@ -57,8 +57,10 @@ def test_balances_close_and_power_shares_add_up(eedf: str) -> None:
     assert all(r < limit for r in result.residuals.values()), result.residuals
     tolerance = ENV["solver"]["power_share_tolerance_percent"]
     for which in ("heating", "losses"):
-        assert sum(result.shares_percent(which).values()) == pytest.approx(100.0, abs=tolerance)
-        assert all(v >= 0 for v in result.shares_percent(which).values())
+        shares = result.shares_percent(which)
+        assert sum(shares.values()) == pytest.approx(100.0, abs=tolerance)
+        # Only energy handed back by excited atoms (superelastic collisions) may be negative.
+        assert all(v >= 0 for k, v in shares.items() if k != "superelastic_return")
 
 
 @needs_lxcat
@@ -72,11 +74,20 @@ def test_outputs_are_derived_from_te_and_ne() -> None:
 
 @needs_lxcat
 @pytest.mark.parametrize("eedf", ["Druyvesteyn", "Maxwellian"])
-def test_te_barely_depends_on_power(eedf: str) -> None:
-    """T_e is fixed by the particle balance. Power enters only through the sheath width, which
-    takes a few mm from a 45 mm gap, so T_e may move by much less than 2 %."""
-    te = [solve(default_inputs(rf_power_w=p, eedf=eedf)).te_ev for p in (10, 40, 70, 100)]
+def test_ground_state_only_te_barely_depends_on_power(eedf: str) -> None:
+    """Without excited atoms, T_e is fixed by the particle balance. Power enters only through the
+    sheath width, which takes a few mm from a 45 mm gap, so T_e may move by much less than 2 %."""
+    te = [solve(default_inputs(rf_power_w=p, eedf=eedf, excited_states=False)).te_ev for p in (10, 40, 70, 100)]
     assert (max(te) - min(te)) / min(te) < 0.02
+
+
+@needs_lxcat
+@pytest.mark.parametrize("eedf", ["Druyvesteyn", "Maxwellian"])
+def test_with_excited_atoms_te_falls_as_power_rises(eedf: str) -> None:
+    """More power -> more electrons -> more excited atoms -> more two-step ionization, so the
+    plasma needs a slightly lower T_e."""
+    te = [solve(default_inputs(rf_power_w=p, eedf=eedf)).te_ev for p in (10, 40, 70, 100)]
+    assert np.all(np.diff(te) < 0)
 
 
 @needs_lxcat
@@ -85,7 +96,8 @@ def test_density_rises_with_power_but_less_than_proportionally(eedf: str) -> Non
     """In this CCP model the share of power spent accelerating ions in the sheaths grows with the
     RF voltage, so n_e grows more slowly than P (the simple low-voltage model gives exactly P^1)."""
     powers = np.array([10, 25, 50, 75, 100])
-    ne = np.array([solve(default_inputs(rf_power_w=p, eedf=eedf)).ne_center_m3 for p in powers])
+    ne = np.array([solve(default_inputs(rf_power_w=p, eedf=eedf, excited_states=False)).ne_center_m3
+                   for p in powers])
     assert np.all(np.diff(ne) > 0)
     slope = np.polyfit(np.log(powers), np.log(ne), 1)[0]
     assert 0.5 < slope < 1.0
@@ -103,6 +115,30 @@ def test_druyvesteyn_needs_a_higher_te_than_maxwellian() -> None:
     """With fewer fast electrons, a Druyvesteyn plasma must be hotter on average to ionize enough
     (the effect studied by Gudmundsson, Plasma Sources Sci. Technol. 10, 76, 2001)."""
     assert solve(default_inputs(eedf="Druyvesteyn")).te_ev > solve(default_inputs(eedf="Maxwellian")).te_ev
+
+
+@needs_lxcat
+@pytest.mark.parametrize(("eedf", "te", "ne"), [
+    ("Druyvesteyn", 3.076930103304118, 3.2193388222688204e16),  # recorded from commit 0b15c93
+    ("Maxwellian", 1.6657347668344424, 6.40467331691257e16),
+])
+def test_switching_excited_states_off_reproduces_phase_2c(eedf: str, te: float, ne: float) -> None:
+    result = solve(default_inputs(eedf=eedf, excited_states=False))
+    assert result.te_ev == pytest.approx(te, rel=1e-12)
+    assert result.ne_center_m3 == pytest.approx(ne, rel=1e-12)
+
+
+@needs_lxcat
+@pytest.mark.parametrize("eedf", ["Druyvesteyn", "Maxwellian"])
+def test_excited_atoms_lower_te_and_add_ionization_routes(eedf: str) -> None:
+    ground = solve(default_inputs(eedf=eedf, excited_states=False))
+    full = solve(default_inputs(eedf=eedf))
+    assert full.te_ev < ground.te_ev
+    assert sum(full.ionization_routes.values()) == pytest.approx(1.0, rel=1e-12)
+    assert full.ionization_routes["from_ground"] < 1.0
+    for density in (full.metastable_density_m3, full.resonant_density_m3, full.p4_density_m3):
+        assert 0 < density < 1e-3 * full.gas_density_m3  # excited atoms stay a small minority
+    assert full.p4_density_m3 < full.metastable_density_m3  # 4p atoms radiate within ~30 ns
 
 
 @needs_lxcat
