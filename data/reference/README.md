@@ -32,9 +32,19 @@ LXCat writes the download date into the header, so each person's file differs an
 
 **Note for the physics code:** in this file the O2 three-body attachment cross-section is "normalized to gas density in units of 1/cm3", so it is not a plain area in m². Its comment is kept in `CrossSection.comments`.
 
-## Benchmarks still needed
+## Benchmarks
 
-`constants/benchmarks.csv` is empty on purpose. A value goes in only after someone has read it in the source. Phase 2's exit gate needs at least three Stage 1 points, committed before the model is compared with them, 0.1 to 0.5 mbar, 13.56 MHz, argon (ACC-1). Papers to check, through the COMSATS library or the HEC Digital Library:
+A value goes into `constants/benchmarks.csv` only after it has been read in the source, and the values are committed before any model result is compared with them (ACC-1, ACC-4).
+
+Recorded on 2 November 2026, before the Phase 2 model existed: Saikia et al., *AIP Advances* 8, 045113 (2018), open access (CC BY 4.0). These are argon at 13.56 MHz, measured with an RF-compensated Langmuir probe:
+- Table II, 50 W at 100, 200, 300 and 400 mTorr. The first three (0.13, 0.27 and 0.40 mbar) are inside our 0.1–0.5 mbar envelope.
+- Table I, 10–50 W at 73 mTorr (0.097 mbar), just below the envelope. Recorded for trends only.
+
+Their discharge is asymmetric (8 cm and 10 cm electrodes, 7.5 cm apart), so the model is run in that geometry when it is compared with them.
+
+The publisher's page shows a human-verification check in a browser, so the values were read from the page text downloaded by a web tool. Two separate reads gave the same numbers. Anyone with library access should check them once against the PDF tables.
+
+More papers to check, through the COMSATS library or the HEC Digital Library:
 
 - V. A. Godyak, R. B. Piejak and B. M. Alexandrovich, *Plasma Sources Sci. Technol.* 1, 36 (1992). DOI: 10.1088/0963-0252/1/1/006. Argon at 13.56 MHz from 3 mTorr to 3 Torr; the most likely source.
 - *Langmuir Probe Measurements in the Gaseous Electronics Conference RF Reference Cell*, PMC article PMC4887235. Includes argon at 100 mTorr.
