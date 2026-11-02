@@ -99,9 +99,14 @@ It is written so that either of us can explain any decision to the evaluation co
 - **High RF voltage (about 1.8 kV at 50 W).** Probably because secondary-electron (γ-mode) heating is not in the model. Recorded as a known limitation.
 - **Benchmark run 1 failed.** n_e was 161–217 % high and T_e 117–137 % high. The measured T_e was too low for ground-state ionization alone, which pointed to two-step ionization through metastables.
 - **Benchmark run 2, with metastables, also failed** (n_e +159–216 %, T_e +115–136 %). Two-step ionization makes only 5–11 % of the ions, so metastables are ruled out as the main cause. We also noted openly that a test run had shown the gate still failing before the record was written. The model was not changed after that.
-- **What remains, as hypotheses:**
-  - The probe and the model may define T_e differently. A probe reads the slow electrons; the model uses the mean energy.
-  - "50 W" may be generator power rather than absorbed power (supervisor question Q3).
-  - The asymmetric electrodes, and the missing γ-mode heating.
+- **Benchmark run 3: comparing T_e the way the probe measured it.**
+  - We read the paper's method first: T_e "is derived from the linear part of the logarithmic electron current". That is a slope, not the mean energy.
+  - We built `probe/retardation.py`, the first piece of the virtual Langmuir probe. It computes the electron current a probe collects from the model's own EEDF, and fits the slope the same way. For a Maxwellian it returns exactly T_e, which the tests check.
+  - The fit window (plasma potential to floating potential) was fixed and committed before any code. The code was committed before the run. This time the test suite ran without the benchmark file, so the result stayed unseen until the run.
+  - Result: T_e dropped from about +125 % to +54–69 % off, so the definition explains about half of the T_e gap. n_e is unchanged at +159–216 %, and the gate still fails.
+- **One honest note on run 3.** For a fixed EEDF shape, the probe reading is a fixed fraction of T_e (0.713 for Druyvesteyn). That number appeared while testing the code, so the T_e outcome could be worked out before the run. Nothing was changed because of it, and the record says so.
+- **What remains:**
+  - The paper does not state its fit window. Fitted near the floating potential, the same model reads within about 30–40 %. We report this for information but do not use it, because the window was fixed beforehand.
+  - n_e is now the main gap. The likely causes are generator versus absorbed power (supervisor question Q3), the asymmetric electrodes, and the missing γ-mode heating.
 
-**Where it stands:** the model is built and well tested (131 tests pass), and the trends match the measurements. The ±30 % gate is not met, and both runs are recorded in `docs/validation/phase2_stage1_benchmarks.md`.
+**Where it stands:** the model is built and well tested (147 tests pass), and the trends match the measurements. The ±30 % gate is not met. All three runs are recorded in `docs/validation/phase2_stage1_benchmarks.md`.

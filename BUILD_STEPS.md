@@ -216,7 +216,7 @@ Rules:
 - [x] At least three Stage 1 argon benchmark points (0.1–0.5 mbar, 13.56 MHz) are in `data/reference/constants/benchmarks.csv`, each read in its source and recorded with its citation and location. They must be committed **before** the model is first compared with them (ACC-4). Moved here from Phase 1. (Commit e28c89e.)
 - [x] 2a, 2b and 2c tests pass. (116 passed, 2 November 2026.)
 - [x] One run takes ≤ 2 s (PER-1). (About 0.08 s; 0.5 s for the first run, which builds the rate tables.)
-- [ ] T_e and n_e at 3 reference points are within ±30 % of published values (ACC-1). The tolerance is fixed in `envelope.toml` before this check is run. **Failed, 2 November 2026,** on run 1 (n_e +161 to +217 %, T_e +117 to +137 %) and on run 2 with excited atoms (n_e +159 to +216 %, T_e +115 to +136 %). Record and analysis: `docs/validation/phase2_stage1_benchmarks.md`.
+- [ ] T_e and n_e at 3 reference points are within ±30 % of published values (ACC-1). The tolerance is fixed in `envelope.toml` before this check is run. **Failed, 2 November 2026,** on run 1 (n_e +161 to +217 %, T_e +117 to +137 %), on run 2 with excited atoms (n_e +159 to +216 %, T_e +115 to +136 %), and on run 3 with probe-style T_e (n_e unchanged, T_e +54 to +69 %). Record and analysis: `docs/validation/phase2_stage1_benchmarks.md`.
 
 **Commit:** `Phase 2: Stage 1 EEDF, rate coefficients and argon global model`
 

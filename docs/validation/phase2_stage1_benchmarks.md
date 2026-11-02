@@ -66,3 +66,33 @@ Two-step ionization makes 4.7 %, 7.8 % and 10.5 % of the ions at the three point
 1. **Metastables are not what separates model and measurement.** In this model, at T_e near 3 eV, ionization from the ground state still dominates. Metastables are quickly turned into resonant atoms by electron collisions (row 9 of the reaction set), so they never build up enough to take over. Hypothesis 1 of run 1 is therefore ruled out as the main cause.
 2. **The T_e gap is most likely a question of what "T_e" means.** With a Druyvesteyn EEDF, the model needs a mean energy equal to T_e ≈ 3 eV to make enough fast electrons. A probe reading T_e from the slope of its current near the floating potential sees mainly the slow electrons, and reports a lower number for the same distribution. Comparing like with like needs the probe-equivalent T_e of the model's EEDF. That is what the virtual Langmuir probe of Phase 5 computes.
 3. **The n_e gap still points to absorbed versus generator power** (SUPERVISOR_QUESTIONS.md, Q3), and to the asymmetric electrodes and missing γ-mode heating.
+
+---
+
+# Run 3: comparing T_e the way the probe measured it
+
+**Run on:** 2 November 2026, code commit `c09ba4e`; rule fixed in commit `78c2739` before any code was written.
+**What changed:** only the T_e being compared. Saikia et al. derived T_e "from the linear part of the logarithmic electron current". So the model's T_e is converted to what that slope method would read from the model's own EEDF. A straight line is fitted to ln I_e between the plasma potential and the floating potential (`plasma_twin/probe/retardation.py`). The model itself, n_e and every other setting are unchanged from run 2.
+**Openly stated:** for a fixed EEDF shape, the probe reading is a fixed fraction of the mean-energy T_e (0.713 for Druyvesteyn with the full window). This fraction was printed while testing the code, before the run, so the T_e outcome could be worked out in advance. Nothing was changed because of it. This time the full test suite was run without the benchmark file before the commit.
+
+## Result: the exit-gate check still FAILS
+
+| Point | Pressure | Quantity | Measured | Model (run 3) | Run 3 | Run 2 |
+|---|---|---|---|---|---|---|
+| 100 mTorr | 0.133 mbar | n_e (m⁻³) | 1.39 × 10¹⁶ | 3.60 × 10¹⁶ | +159 % | +159 % |
+| 100 mTorr | 0.133 mbar | T_e, probe-style (eV) | 1.37 | 2.31 | +69 % | +136 % |
+| 200 mTorr | 0.267 mbar | n_e (m⁻³) | 1.62 × 10¹⁶ | 4.87 × 10¹⁶ | +201 % | +201 % |
+| 200 mTorr | 0.267 mbar | T_e, probe-style (eV) | 1.34 | 2.13 | +59 % | +123 % |
+| 300 mTorr | 0.400 mbar | n_e (m⁻³) | 1.86 × 10¹⁶ | 5.89 × 10¹⁶ | +216 % | +216 % |
+| 300 mTorr | 0.400 mbar | T_e, probe-style (eV) | 1.33 | 2.04 | +54 % | +115 % |
+
+For information only (cannot be used to pass):
+- **Only the half of the window near the plasma potential:** T_e +111, +99, +92 %.
+- **Only the half near the floating potential:** +39, +32, +27 %.
+- **Maxwellian EEDF:** probe-style T_e equals its mean-energy T_e, giving +32, +19, +12 %.
+
+## What run 3 tells us
+
+1. **The definition of T_e explains about half of the T_e gap.** Comparing like with like brings the difference from about +125 % down to about +60 %. This was a real mismatch between model and measurement, now fixed for every future comparison.
+2. **The rest of the T_e gap depends on the EEDF shape and on where on the I-V curve the line is fitted.** The paper does not state its fit window. Fitted near the floating potential, the same model reads within about 30–40 %. We report this but do not use it, because the window was fixed beforehand as the full transition region. Both the window and the measured EEDF shape would settle it: they belong with the virtual probe (Phase 5) and the laboratory's own probe data (SUPERVISOR_QUESTIONS.md, Q1 and Q10).
+3. **n_e is now the bigger problem, and T_e changes do not touch it.** At 50 W the model's density is 2.6–3.2 times the measured one. The leading explanation is that "50 W" is generator power and the plasma absorbs much less (Q3). The asymmetric electrodes and the missing γ-mode heating also act on n_e.
