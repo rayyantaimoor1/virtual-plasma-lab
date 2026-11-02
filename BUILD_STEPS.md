@@ -256,7 +256,7 @@ Built in five small steps, each tested and committed before the next. Every new 
 **3e — N₂ and O₂ mixtures** (`stage1/mixtures.py`; rules fixed 3 November 2026, before any code)
 - Four modes (Ar, Ar+N₂, Ar+O₂, Ar+N₂+O₂). Each admixture is a percentage of the Ar flow (1–10 %, default 5 %), so its mole fraction is f / (1 + f_N₂ + f_O₂). 0 % switches the admixture off, and then the pure-argon model runs unchanged.
   - ⚠ The supervisor has not confirmed whether N₂ and O₂ go in together (SUPERVISOR_QUESTIONS.md, Q5), so all four modes are built.
-- Built in two steps, each tested and committed: **3e-1** argon + N₂ (several positive ions, no negative ions), then **3e-2** oxygen (O⁻, O atoms, O₂(a¹Δ), electronegative transport).
+- Built in two steps, each tested and committed: **3e-1** argon + N₂ (several positive ions, no negative ions), then **3e-2** oxygen (O⁻, O atoms, O₂(a¹Δ), electronegative transport). **As built:** both live in one module (`mixtures.py`) and were committed together, after argon + N₂ had been run and checked on its own first.
 - **Electron collisions with N₂ and O₂:** integrated from the Biagi cross-sections with the chosen EEDF, like argon. This covers ionization (N₂⁺, O₂⁺), all excitations as energy losses, dissociative attachment O₂ → O⁻ + O, dissociation of O₂ (the two "DISOC" states, 6.1 and 8.4 eV, each giving two O atoms), O₂(a¹Δ) excitation and N₂(C) excitation (needed for the 337 nm band in Phase 4). The O₂ three-body attachment is left out: it is normalized to gas density, and at an O₂ partial pressure of about 0.02 mbar it is negligible.
 - **Argon with the molecules** (sources read directly):
   - **Charge transfer** (Anicich, *J. Phys. Chem. Ref. Data* 22, 1469, 1993, evaluated values at 300 K, ±20 %): Ar⁺ + N₂ → N₂⁺ + Ar, 1.10×10⁻¹⁷ m³/s; Ar⁺ + O₂ → O₂⁺ + Ar, 4.60×10⁻¹⁷ m³/s. (The 2026 CCP paper below uses 1.2×10⁻¹⁷ for O₂; the evaluated compilation is preferred.)
@@ -271,6 +271,7 @@ Built in five small steps, each tested and committed before the next. Every new 
   - **Oxygen atoms are conserved:** O₂ + O₂(a) + O/2 equals the O₂ fed in.
 - **Transport with several ions:** each positive ion has its own Bohm speed and edge factor, from its own mass.
   - **With O⁻ present** (degree of electronegativity α = n₋/n_e), each edge factor is divided by (1 + α), and the Bohm speed is multiplied by √((1+α)/(1+αγ)) with γ = T_e/T_g. When attachment is faster than ambipolar diffusion the factor becomes 1 (Kemaneci et al. 2016, Eqs. 6, 7 and 11–14). O⁻ ions are held inside the plasma and are not lost to the walls.
+  - **Changed 3 November 2026, during development, before any comparison with data:** the Bohm factor now uses the electronegativity at the sheath edge, α_s = α₀ (n_e,edge/n_e,centre)^(γ−1), as Kemaneci's Eq. 11 defines it for Boltzmann negative ions. The rule above had used the centre value α₀. With γ ≈ 110 that cut the ion exit speed about threefold at only 1 % O₂ and made n_e rise with O₂, the opposite of the measured trend in Ar/O₂ CCPs. With α_s, n_e falls as O₂ is added (3.2 → 2.6 × 10¹⁶ m⁻³ at 5 % O₂).
   - **The collisional Child law** uses the flux-weighted ion mass.
 - **Left out, stated:** N₂ dissociation and N atoms (Biagi has no explicit dissociation channel); N₂⁺ dissociative recombination (a source exists only for some channels; estimated at about 10 % of N₂⁺ loss); NO, O₃ and O₂(b) as tracked species; and gas heating by dissociation.
 - **Rates at the Druyvesteyn EEDF:** rates taken from Maxwellian fits (the excited-state, O, O⁻ and O₂(a) electron reactions) are evaluated at the model's T_e. This approximation is stated, as for argon.
@@ -278,9 +279,9 @@ Built in five small steps, each tested and committed before the next. Every new 
 - **Tests:** a 0 % admixture reproduces the pure-argon result exactly; every balance closes below 10⁻⁸; charge and oxygen atoms are conserved; adding N₂ or O₂ lowers the metastable density; adding O₂ makes the plasma electronegative (α > 0); the four modes converge over the envelope.
 
 **Exit gate**
-- [ ] Tests pass.
-- [ ] The argon-only results from Phase 2 are unchanged with the new effects switched off (regression test).
-- [ ] `BUILDING_JOURNEY.md` has its Phase 3 section.
+- [x] Tests pass. (195 passed, plus the Phase 2 benchmark test still marked as an expected failure, 3 November 2026.)
+- [x] The argon-only results from Phase 2 are unchanged with the new effects switched off (regression test). (Exact-value tests in `test_global_model.py`, `test_gas_flow.py`, `test_gas_temperature.py` and `test_mixtures.py`.)
+- [x] `BUILDING_JOURNEY.md` has its Phase 3 section.
 
 **Commit:** `Phase 3: Stage 1 gas flow, gas temperature, N2/O2 mixtures, 1D profile, sweeps`
 

@@ -88,7 +88,9 @@ ELECTRON_ENERGY_CHANGE = {
 _SOURCE_LEVEL = {name: name[0] for name in ELECTRON_ENERGY_CHANGE}  # "m_...", "p_...", "r_..."
 
 
-def wall_loss_rate(gap_m: float, radius_m: float, gas_density_m3: float, gas_temperature_k: float) -> float:
+def wall_loss_rate(gap_m: float, radius_m: float, gas_density_m3: float, gas_temperature_k: float,
+                   mass_kg: float = ARGON_MASS_KG, gamma: float = WALL_DEEXCITATION_PROBABILITY,
+                   diffusion_scale: float = 1.0) -> float:
     """Rate (1/s) at which excited atoms are lost to the walls, by Chantry's formula.
 
     k = [Lambda0^2 / D + 2 V (2 - gamma) / (A v gamma)]^-1, with Lambda0^-2 = (pi/l)^2 + (2.405/R)^2.
@@ -97,13 +99,12 @@ def wall_loss_rate(gap_m: float, radius_m: float, gas_density_m3: float, gas_tem
     gap is used: neutral atoms cross the sheaths freely.
     """
     pressure_pa = gas_density_m3 * codata.k * gas_temperature_k
-    diffusion = (D0_M2_S * (D0_PRESSURE_PA / pressure_pa)
+    diffusion = (diffusion_scale * D0_M2_S * (D0_PRESSURE_PA / pressure_pa)
                  * (gas_temperature_k / D0_TEMPERATURE_K) ** D_TEMPERATURE_EXPONENT)
     inverse_lambda_sq = (np.pi / gap_m) ** 2 + (2.404825557695773 / radius_m) ** 2
     volume = np.pi * radius_m**2 * gap_m
     area = 2 * np.pi * radius_m**2 + 2 * np.pi * radius_m * gap_m
-    thermal_speed = np.sqrt(8 * codata.k * gas_temperature_k / (np.pi * ARGON_MASS_KG))
-    gamma = WALL_DEEXCITATION_PROBABILITY
+    thermal_speed = np.sqrt(8 * codata.k * gas_temperature_k / (np.pi * mass_kg))
     return float(1.0 / (1.0 / (inverse_lambda_sq * diffusion)
                         + 2 * volume * (2 - gamma) / (area * thermal_speed * gamma)))
 
@@ -116,8 +117,11 @@ class ExcitedDensities:
 
 
 def balances(te: float, ne: float, ng: float, d: ExcitedDensities, table: RateTable,
-             k_wall: float) -> dict[str, tuple[float, float]]:
-    """(gain, loss) in m^-3 s^-1 for each level. Steady state means gain = loss for all three."""
+             k_wall: float, extra_metastable_loss: float = 0.0) -> dict[str, tuple[float, float]]:
+    """(gain, loss) in m^-3 s^-1 for each level. Steady state means gain = loss for all three.
+
+    ng is the argon density. `extra_metastable_loss` (1/s) is quenching by N2 and O2 in a mixture (3e).
+    """
     k = electron_rates(te)
     nm, nr, npp = d.metastable_m3, d.resonant_m3, d.p4_m3
     gm = table.lumped_excitation("to_metastable", te)
@@ -126,7 +130,8 @@ def balances(te: float, ne: float, ng: float, d: ExcitedDensities, table: RateTa
     metastable = (
         ne * ng * gm + ne * nr * k["r_to_m"] + ne * npp * k["p_to_m"] + npp * A_4P_TO_METASTABLE,
         nm * (ne * (k["m_to_ground"] + k["m_ionization"] + k["m_to_r"] + k["m_to_p"])
-              + ng * K_GROUND_QUENCH_M + k_wall) + 2 * K_POOLING_MM * nm**2 + K_POOLING_MR * nm * nr,
+              + ng * K_GROUND_QUENCH_M + k_wall + extra_metastable_loss)
+        + 2 * K_POOLING_MM * nm**2 + K_POOLING_MR * nm * nr,
     )
     resonant = (
         ne * ng * gr + ne * nm * k["m_to_r"] + ne * npp * k["p_to_r"] + npp * A_4P_TO_RESONANT,
@@ -142,7 +147,7 @@ def balances(te: float, ne: float, ng: float, d: ExcitedDensities, table: RateTa
 
 
 def solve_densities(te: float, ne: float, ng: float, table: RateTable, k_wall: float,
-                    start: ExcitedDensities | None = None) -> ExcitedDensities:
+                    start: ExcitedDensities | None = None, extra_metastable_loss: float = 0.0) -> ExcitedDensities:
     """Steady-state excited densities for given T_e and n_e.
 
     The balances are linear except for pooling (two excited atoms meeting). Each step freezes the
@@ -156,7 +161,7 @@ def solve_densities(te: float, ne: float, ng: float, table: RateTable, k_wall: f
     gp = table.lumped_excitation("to_4p", te)
     for _ in range(200):
         out_m = (ne * (k["m_to_ground"] + k["m_ionization"] + k["m_to_r"] + k["m_to_p"]) + ng * K_GROUND_QUENCH_M
-                 + k_wall + 2 * K_POOLING_MM * d.metastable_m3 + K_POOLING_MR * d.resonant_m3)
+                 + k_wall + extra_metastable_loss + 2 * K_POOLING_MM * d.metastable_m3 + K_POOLING_MR * d.resonant_m3)
         out_r = (ne * (k["r_to_ground"] + k["r_to_m"] + k["r_to_p"]) + A_RESONANT_TRAPPED + k_wall
                  + K_POOLING_MR * d.metastable_m3)
         out_p = (ne * (k["p_ionization"] + k["p_to_r"] + k["p_to_m"] + k["p_to_ground"]) + A_4P_TO_GROUND

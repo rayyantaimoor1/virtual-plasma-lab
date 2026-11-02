@@ -13,7 +13,7 @@ import numpy as np
 from plasma_twin.config.loader import load_envelope
 from plasma_twin.stage1.global_model import InputOutOfRange, SolverFailure, Stage1Inputs, Stage1Result, solve
 
-SWEEPABLE = ("rf_power_w", "pressure_mbar", "ar_flow_sccm")  # the admixture fraction is added in 3e
+SWEEPABLE = ("rf_power_w", "pressure_mbar", "ar_flow_sccm", "n2_percent_of_ar", "o2_percent_of_ar")
 
 
 @dataclass(frozen=True)

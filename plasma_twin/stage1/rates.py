@@ -240,3 +240,64 @@ class RateTable:
 def rate_table(shape: float, manifest_path: Path = MANIFEST_PATH) -> RateTable:
     """The rate table for an EEDF shape, built once per run of the program."""
     return RateTable(shape, argon_cross_sections(manifest_path))
+
+
+# ------------------------------------------------------------------------------ N2 and O2 (Phase 3e)
+MOLECULE_MASS_KG = {"N2": 28.0134 * codata.atomic_mass, "O2": 31.998 * codata.atomic_mass}
+# Biagi products grouped by what they do in the model. The O2 "DISOC" states fall apart into two O atoms.
+_MOLECULE_GROUPS = {
+    "N2": {"to_n2_c": ("N2( C 3PI V=0-4)",)},
+    "O2": {"dissociation": ("O2( EXC A3 DISOC)", "O2( EXC B3 DISOC)"), "to_o2_a": ("O2( EXC A1(DEL)G)",)},
+}
+
+
+class MoleculeRates:
+    """Electron rate coefficients for N2 or O2 versus T_e, for one EEDF shape (same method as argon).
+
+    Columns: ionization; momentum transfer; energy lost per unit density in excitation (sum of threshold
+    x sigma over every excited state, vibrational ones included) and in elastic recoil; for O2 also
+    dissociative attachment (O- + O) and the energy the attached electrons take with them.
+    """
+
+    def __init__(self, gas: str, shape: float, manifest_path: Path = MANIFEST_PATH) -> None:
+        sections = load_cross_sections(gas, manifest_path)
+        ionization = [s for s in sections if s.process_type == "IONIZATION"]
+        elastic = [s for s in sections if s.process_type == "ELASTIC"]
+        excitations = [s for s in sections if s.process_type == "EXCITATION"]
+        if len(ionization) != 1 or len(elastic) != 1:
+            raise ValueError(f"{gas} data must hold one ionization and one elastic process")
+        self.gas = gas
+        self.ionization_threshold_ev = ionization[0].threshold_ev
+        mass_ratio = ELECTRON_MASS_KG / MOLECULE_MASS_KG[gas]
+        columns = {
+            "ionization": _on_grid(ionization[0]),
+            "momentum_transfer": _on_grid(elastic[0]),
+            "excitation_energy": sum(s.threshold_ev * _on_grid(s) for s in excitations),
+            "elastic_energy": 2 * mass_ratio * ENERGY_GRID_EV * _on_grid(elastic[0]),
+        }
+        for group, names in _MOLECULE_GROUPS[gas].items():
+            columns[group] = _lumped(excitations, names)
+        if gas == "O2":
+            # Only the two-body dissociative attachment: the three-body one is normalized to gas density
+            # and negligible at our O2 partial pressure (BUILD_STEPS.md, 3e).
+            attachment = [s for s in sections if s.process_type == "ATTACHMENT" and s.product == "O^- + O"]
+            if len(attachment) != 1:
+                raise ValueError("O2 data must hold the dissociative attachment O- + O")
+            columns["attachment"] = _on_grid(attachment[0])
+            columns["attachment_energy"] = ENERGY_GRID_EV * _on_grid(attachment[0])
+        f = np.array([EEDF(te, shape)(ENERGY_GRID_EV) for te in TABLE_TE_EV])
+        kernel = _WEIGHTS * _SPEED
+        log_te = np.log(TABLE_TE_EV)
+        self._splines = {name: CubicSpline(log_te, np.log(np.maximum(f @ (kernel * sigma), 1e-300)))
+                         for name, sigma in columns.items()}
+
+    def k(self, name: str, te_ev: float) -> float:
+        """Rate coefficient (m^3/s), or energy-weighted rate (eV m^3/s) for the *_energy columns."""
+        if not TABLE_TE_EV[0] <= te_ev <= TABLE_TE_EV[-1]:
+            raise ValueError(f"T_e = {te_ev} eV is outside the rate table")
+        return float(np.exp(self._splines[name](np.log(te_ev))))
+
+
+@lru_cache(maxsize=8)
+def molecule_table(gas: str, shape: float, manifest_path: Path = MANIFEST_PATH) -> MoleculeRates:
+    return MoleculeRates(gas, shape, manifest_path)

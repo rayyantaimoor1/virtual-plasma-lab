@@ -115,7 +115,7 @@ It is written so that either of us can explain any decision to the evaluation co
 
 ---
 
-## Phase 3: Stage 1 extensions (in progress: 3a–3d done, 3e not started)
+## Phase 3: Stage 1 extensions (complete, 3 November 2026)
 
 **What we made**
 - **3a, gas flow (`gas_flow.py`):** converts sccm to atoms per second, works out the residence time in the 40 × 40 cm chamber, and adds pumping as a loss for excited atoms.
@@ -138,4 +138,31 @@ It is written so that either of us can explain any decision to the evaluation co
 - **A line-number edit removed the wrong lines.** Spotted on inspection and repaired before anything was run or committed.
 - **The plan's 1D test was wrong for our model.** It said "the profile's average equals the 0D n_e", but the 0D n_e is the centre density. The test now checks the centre and edge values instead, with the reason in `BUILD_STEPS.md`.
 
-**What is left:** 3e, N₂ and O₂ mixtures. Its reaction set and sources must be written into `BUILD_STEPS.md` before any code.
+**3e, N₂ and O₂ mixtures (`mixtures.py`)**
+- **What it does:** four gas modes (Ar, Ar+N₂, Ar+O₂, Ar+N₂+O₂), each admixture a percentage of the argon flow. It tracks three positive ions (Ar⁺, N₂⁺, O₂⁺), and with oxygen also O⁻, O atoms and O₂(a¹Δ). It also gives the N₂(C) excitation rate needed for the 337 nm band in Phase 4.
+- **Finding the sources took most of the work.** Every rate was read in a source before the rules were written:
+  - **Electron collisions with N₂ and O₂:** the Biagi cross-sections we already had, integrated with the chosen EEDF, so they stay consistent with argon.
+  - **Charge transfer:** Anicich's evaluated compilation (NIST-hosted reprint), giving Ar⁺ + N₂ and Ar⁺ + O₂.
+  - **Argon metastables quenched by N₂:** two arXiv papers citing Le Calvé & Bourène (1973) and Pothiraja et al. (2010).
+  - **Oxygen chemistry and quenching by O₂:** a 2026 arXiv CCP Ar/O₂ global model (Dong et al.) and Kemaneci et al. (2016).
+  - **Electron affinity of O:** NIST WebBook.
+  - Several sources were blocked (Wiley, a thesis server, a human-verification check). We never took a number from a search summary.
+- **Choices flagged in writing before coding:**
+  - One source row (O⁻ + Ar⁺ recombination, 2.7×10⁻¹⁷) looks like a misprint. We did not "correct" it from memory; the analogous O₂⁺ + O⁻ value stands in for every positive ion.
+  - One quenching rate is faster than a gas-kinetic collision would suggest. It is kept as published and flagged.
+  - N₂ dissociation, O₃, NO and O₂(b) are left out, with reasons.
+- **Solver:** the 9–13 unknowns are solved together by stepping the admixture up from 0.1 % to 100 % of its value, starting from the pure-argon answer. A full run with gas heating takes under 1 s.
+
+**Problems in 3e and how we handled them**
+- **A naming mismatch** (`to_o2a` against `to_o2_a`) stopped every oxygen run. It was found at the first try and fixed.
+- **The model said adding O₂ raises n_e** (2.6 times higher at 1 % O₂), the opposite of the measured trend in Ar/O₂ CCPs. We treated this as a model fault, not a result.
+  - **Diagnosis:** the electronegative Bohm factor came out at 0.32 for only α = 0.087. Our rule had put the centre electronegativity into Kemaneci's Eq. 14. But their Eq. 11 defines it at the sheath edge, and Boltzmann negative ions (γ = T_e/T_g ≈ 110) are pushed almost entirely out of the edge.
+  - **Fix:** use α_s = α₀ (n_e,edge/n_e,centre)^(γ−1), following the source's own definition. n_e now falls as O₂ is added (3.2 → 2.6 × 10¹⁶ m⁻³ at 5 %).
+  - **Why this is not tuning:** the change was justified by the source, made before any comparison with measured data, and recorded in `BUILD_STEPS.md` as a change from the rule.
+- **Plan versus build:** the plan said 3e-1 (N₂) and 3e-2 (O₂) would be committed separately. Both ended up in one module, so they were committed together, after argon + N₂ had been run and checked alone first.
+
+**What the mixtures show (at the defaults, 50 W and 0.3 mbar, gas heating off)**
+- **5 % N₂:** n_e falls from 3.2 to 2.5 × 10¹⁶ m⁻³, because N₂ absorbs electron energy; excitation rises from 22 % to 36 % of the power. Metastables fall to 60 %. N₂⁺ makes about 14 % of the positive ions.
+- **5 % O₂:** n_e falls to 2.6 × 10¹⁶ m⁻³, and the plasma becomes electronegative (α ≈ 0.5). About a third of the oxygen is dissociated into atoms. Metastables drop about fifteenfold, because O₂ quenches them very fast.
+
+**How Phase 3 closed:** all three exit-gate items are met: 195 tests pass; with the new effects switched off, the Phase 2 argon results are reproduced exactly; and this section is written. The Phase 2 benchmark gap is still open and still waits on supervisor question Q3.

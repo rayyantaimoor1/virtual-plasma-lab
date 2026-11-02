@@ -112,6 +112,8 @@ class Stage1Inputs:
     excited_states: bool = True  # Phase 2d: metastables and two-step ionization (argon_kinetics.py)
     ar_flow_sccm: float = 0.0  # Phase 3a: 0 means no flow term (the Phase 2 model)
     gas_heating: bool = False  # Phase 3b: if True, T_gas is solved from a heat balance
+    n2_percent_of_ar: float = 0.0  # Phase 3e: N2 flow as a percentage of the Ar flow (0 = none)
+    o2_percent_of_ar: float = 0.0  # Phase 3e: O2 flow as a percentage of the Ar flow (0 = none)
     wall_temperature_k: float = 300.0
     chamber_diameter_m: float = 0.40
     chamber_height_m: float = 0.40
@@ -142,9 +144,9 @@ def sheath_heating_power(nu_m: float, sheath: float, mean_speed: float, v_rf_she
     return float(c * 0.24 * nu_m * sheath), float(c * 0.92 * mean_speed)
 
 
-def collisional_child_width(v_dc: float, lambda_i: float, ion_flux: float) -> float:
-    """s_m from the collisional Child law, given the ion flux e n_s u_B / e = n_s u_B."""
-    return float((1.68 * EPS0 * np.sqrt(2 * E / ARGON_MASS_KG) * v_dc**1.5 * np.sqrt(lambda_i)
+def collisional_child_width(v_dc: float, lambda_i: float, ion_flux: float, mass_kg: float = ARGON_MASS_KG) -> float:
+    """s_m from the collisional Child law, given the ion flux n_s u_B (and the ion mass, argon by default)."""
+    return float((1.68 * EPS0 * np.sqrt(2 * E / mass_kg) * v_dc**1.5 * np.sqrt(lambda_i)
                   / (E * ion_flux)) ** 0.4)
 
 
@@ -186,6 +188,12 @@ def validate(inputs: Stage1Inputs) -> None:
         raise InputOutOfRange("the electrode gap must be smaller than the chamber height")
     if inputs.eedf not in SHAPES:
         raise InputOutOfRange(f"EEDF must be one of {sorted(SHAPES)}")
+    mix = env["admixture_percent_of_ar"]
+    for name, value in (("N2 (% of Ar flow)", inputs.n2_percent_of_ar), ("O2 (% of Ar flow)", inputs.o2_percent_of_ar)):
+        if value != 0 and not mix["min"] <= value <= mix["max"]:
+            raise InputOutOfRange(f"{name} = {value} is outside {mix['min']}-{mix['max']}")
+    if (inputs.n2_percent_of_ar or inputs.o2_percent_of_ar) and not inputs.excited_states:
+        raise InputOutOfRange("mixtures need the excited argon states (metastables quench on N2 and O2)")
     flow = env["ar_flow_sccm"]
     if inputs.ar_flow_sccm != 0 and not flow["min"] <= inputs.ar_flow_sccm <= flow["max"]:
         raise InputOutOfRange(f"Ar flow (sccm) = {inputs.ar_flow_sccm} is outside {flow['min']}-{flow['max']}")
@@ -219,6 +227,7 @@ class Stage1Result:
     resonant_density_m3: float = 0.0
     p4_density_m3: float = 0.0
     gas_heating_w: float = 0.0  # heat put into the gas (Phase 3b); T_gas is inputs.gas_temperature_k
+    mixture: dict[str, Any] = field(default_factory=dict)  # Phase 3e: ion and molecule densities, electronegativity
     ionization_routes: dict[str, float] = field(default_factory=dict)  # fraction of ions from each route
     heating_w: dict[str, float] = field(default_factory=dict)  # how the power enters
     # Where the power goes. "superelastic_return" is negative: energy excited atoms give back.
@@ -255,17 +264,18 @@ class _Discharge:
         return (kin.wall_loss_rate(x.electrode_gap_m, x.electrode_radius_m, self.n_g, x.gas_temperature_k)
                 + gas_flow.pumping_rate_per_s(self.n_g, volume, x.ar_flow_sccm))
 
-    def bohm_speed(self, te: float) -> float:
-        return float(np.sqrt(E * self.wall.screening_ratio * te / ARGON_MASS_KG))
+    def bohm_speed(self, te: float, mass_kg: float = ARGON_MASS_KG) -> float:
+        return float(np.sqrt(E * self.wall.screening_ratio * te / mass_kg))
 
-    def ambipolar_diffusion(self, te: float) -> float:
+    def ambipolar_diffusion(self, te: float, mass_kg: float = ARGON_MASS_KG) -> float:
         """D_a = D_i (1 + T_s/T_i), with D_i = k T_i / (M nu_i) and nu_i = v_i / lambda_i."""
-        v_i = np.sqrt(8 * E * self.t_i_volt / (np.pi * ARGON_MASS_KG))
-        d_i = E * self.t_i_volt * self.lambda_i / (ARGON_MASS_KG * v_i)
+        v_i = np.sqrt(8 * E * self.t_i_volt / (np.pi * mass_kg))
+        d_i = E * self.t_i_volt * self.lambda_i / (mass_kg * v_i)
         return float(d_i * (1 + self.wall.screening_ratio * te / self.t_i_volt))
 
-    def h_factors(self, te: float, bulk: float, sheath: float) -> tuple[float, float]:
-        u_b, d_a, lam = self.bohm_speed(te), self.ambipolar_diffusion(te), self.lambda_i
+    def h_factors(self, te: float, bulk: float, sheath: float, mass_kg: float = ARGON_MASS_KG) -> tuple[float, float]:
+        """Edge-to-centre factors for an ion of the given mass (argon unless stated)."""
+        u_b, d_a, lam = self.bohm_speed(te, mass_kg), self.ambipolar_diffusion(te, mass_kg), self.lambda_i
         length = min(bulk, 2 * sheath) if self.x.edge_length == "sheath" else bulk
         h_l = 0.86 / np.sqrt(3 + length / (2 * lam) + (0.86 * length * u_b / (np.pi * d_a)) ** 2)
         r = self.x.electrode_radius_m
@@ -511,7 +521,10 @@ def solve(inputs: Stage1Inputs, check_envelope: bool = True) -> Stage1Result:
 def _solve_at_fixed_gas_temperature(inputs: Stage1Inputs) -> Stage1Result:
     """The Phase 2 model: the gas temperature is an input."""
     discharge = _Discharge(inputs)
-    if inputs.excited_states:
+    if inputs.n2_percent_of_ar or inputs.o2_percent_of_ar:
+        from plasma_twin.stage1.mixtures import MixtureModel
+        s = MixtureModel(discharge).solve(discharge.solve_with_excited_states())
+    elif inputs.excited_states:
         s = discharge.solve_with_excited_states()
     else:
         g = discharge.solve()
@@ -528,5 +541,5 @@ def _solve_at_fixed_gas_temperature(inputs: Stage1Inputs) -> Stage1Result:
         ion_flux_radial_m2_s=s["flux_radial"], collisional_energy_loss_ev=s["e_c"],
         absorbed_power_w=s["p_abs"], metastable_density_m3=excited.metastable_m3,
         resonant_density_m3=excited.resonant_m3, p4_density_m3=excited.p4_m3, ionization_routes=s["routes"],
-        heating_w=s["heating"], losses_w=s["losses"], residuals=residuals,
+        heating_w=s["heating"], losses_w=s["losses"], residuals=residuals, mixture=s.get("mixture", {}),
     )
