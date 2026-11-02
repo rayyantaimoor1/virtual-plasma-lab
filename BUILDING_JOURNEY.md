@@ -109,4 +109,4 @@ It is written so that either of us can explain any decision to the evaluation co
   - The paper does not state its fit window. Fitted near the floating potential, the same model reads within about 30–40 %. We report this for information but do not use it, because the window was fixed beforehand.
   - n_e is now the main gap. The likely causes are generator versus absorbed power (supervisor question Q3), the asymmetric electrodes, and the missing γ-mode heating.
 
-**Where it stands:** the model is built and well tested (147 tests pass), and the trends match the measurements. The ±30 % gate is not met. All three runs are recorded in `docs/validation/phase2_stage1_benchmarks.md`.
+**Where it stands:** the model is built and well tested (145 tests pass, plus the gate test marked as an expected failure), and the trends match the measurements. The ±30 % gate is not met. All three runs are recorded in `docs/validation/phase2_stage1_benchmarks.md`.
