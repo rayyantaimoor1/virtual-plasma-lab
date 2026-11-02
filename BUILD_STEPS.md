@@ -229,23 +229,39 @@ Rules:
 
 **Goal:** everything else the supervisor asked for in Stage 1 (Module 2, FE-2.3, FE-2.5, FE-2.6).
 
-**Build**
-- **Gas flow:** a residence-time term τ = pV/Q in the neutral and metastable balances (Ar 100–500 sccm).
-- **Gas temperature:** an energy balance (`stage1/gas_temperature.py`) that gives T_gas as an output.
-- **Mixtures** (`stage1/mixtures.py`): four modes (Ar, Ar+N₂, Ar+O₂, Ar+N₂+O₂), with each admixture a percentage of the Ar flow (default 5 %). Includes Ar metastables (1s₅, 1s₃), metastable–metastable ionization and stepwise ionization, and O⁻ when O₂ is present.
-  - ⚠ Before starting, confirm with the supervisor whether N₂ and O₂ are added in the same run (UNDERSTANDING.md §8, item 1).
-- **1D axial profile** (`stage1/profile1d.py`): an ambipolar-diffusion n_e profile between the electrodes.
-- **Sweeps** (`stage1/sweep.py`): up to 200 points over power, pressure, Ar flow or admixture fraction.
+Built in five small steps, each tested and committed before the next. Every new effect has a switch, and with every switch off the Phase 2 results come back exactly (regression).
 
-**Tests** (`tests/test_gas_temperature.py`, `test_mixtures.py`, `test_profile1d.py`, `test_sweep.py`)
-- T_gas rises with power and stays above room temperature.
-- A zero-percent admixture reproduces the pure-argon result exactly.
-- The 1D profile is symmetric and its average equals the 0D n_e.
-- A sweep returns the requested number of points, keeps the solved points when one fails, and finishes in ≤ 120 s for 200 points (PER-4).
+**3a — Gas flow** (`stage1/gas_flow.py`)
+- Converts sccm to atoms per second at the standard conditions sccm is defined at (0 °C, 1 atm).
+- Residence time τ = (gas atoms in the chamber) / (atoms fed per second), using the 40 × 40 cm chamber volume.
+- Excited atoms are also lost by being pumped away: loss rate 1/τ, added to the wall loss.
+- Expected from the numbers before building: in pure argon this is tiny (τ ≈ 1–5 s against wall losses of hundreds per second). Flow matters mainly in 3e, where it sets how much N₂ and O₂ enters. The test checks the effect is small, not that it is large.
+- Tests: the unit conversion; τ scales as p / Q; flow 0 reproduces Phase 2 exactly.
+
+**3b — Gas temperature** (`stage1/gas_temperature.py`)
+- T_gas is now an output. The heat put into the gas equals the heat conducted to the walls.
+- Heat into the gas: elastic electron–atom collisions (from the model's energy budget) plus the energy released when excited atoms are quenched in collisions with atoms. Ion energy gained in the sheaths is taken to reach the electrodes, carried by ions and fast neutrals, so it is not counted. This makes T_gas a lower estimate, and the code says so.
+- Heat to the walls: exact solution of steady conduction in a cylinder (radius R, length l) with uniform heating and walls at 300 K, using a series of Bessel and cosine modes. Thermal conductivity κ(T) is from NIST (`argon_thermal_conductivity.csv`). The temperature jump at the walls is neglected; the gas mean free path is much smaller than the gap.
+- T_gas sets the gas density (n_g = p / k T_gas), so the model is re-solved until T_gas stops changing.
+- Tests: the conduction series matches the exact slab result L²/12 when R is large; T_gas rises with power and stays above the wall temperature; gas heating off reproduces Phase 2.
+
+**3c — 1D axial profile** (`stage1/profile1d.py`)
+- The 0D model gives the centre density n₀ and the sheath-edge density n_s = h_l n₀. The profile between them is the cosine solution of ambipolar diffusion with uniform ionization, n(x) = n₀ cos(kx), with k fixed so that n reaches n_s at the sheath edge.
+- Tests: symmetric, peaks at n₀, equals n_s at both sheath edges. **Changed from the plan:** the plan said "its average equals the 0D n_e", but the 0D model's n_e is the centre density n₀, so the test checks the centre and edge values instead.
+
+**3d — Sweeps** (`stage1/sweep.py`)
+- Up to 200 points over power, pressure, Ar flow or admixture fraction. A point that fails is recorded with its reason and the sweep carries on.
+- Tests: the requested number of points; a failed point is kept as a failure and the others are kept; 200 points in ≤ 120 s (PER-4).
+
+**3e — N₂ and O₂ mixtures** (`stage1/mixtures.py`)
+- Four modes (Ar, Ar+N₂, Ar+O₂, Ar+N₂+O₂), each admixture a percentage of the Ar flow (default 5 %), with O⁻ when O₂ is present. Its reaction set and sources are written here before coding starts.
+  - ⚠ The supervisor has not confirmed whether N₂ and O₂ are added in the same run (SUPERVISOR_QUESTIONS.md, Q5). All four modes are built.
+- Tests: a zero-percent admixture reproduces the pure-argon result exactly.
 
 **Exit gate**
 - [ ] Tests pass.
-- [ ] The argon-only results from Phase 2 are unchanged (regression test).
+- [ ] The argon-only results from Phase 2 are unchanged with the new effects switched off (regression test).
+- [ ] `BUILDING_JOURNEY.md` has its Phase 3 section.
 
 **Commit:** `Phase 3: Stage 1 gas flow, gas temperature, N2/O2 mixtures, 1D profile, sweeps`
 

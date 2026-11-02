@@ -237,3 +237,10 @@ def load_diatomic_constants(molecule: str, state: str, manifest_path: Path = MAN
 def load_benchmarks(manifest_path: Path = MANIFEST_PATH) -> list[dict[str, str]]:
     """Return the published validation values (ACC-1). Each row must carry its own citation."""
     return _read_csv("benchmarks", manifest_path)
+
+
+def load_thermal_conductivity(manifest_path: Path = MANIFEST_PATH) -> tuple[np.ndarray, np.ndarray]:
+    """Argon thermal conductivity from NIST: (temperature in K, conductivity in W/(m K))."""
+    rows = _read_csv("argon_thermal_conductivity", manifest_path)
+    return (np.array([float(r["temperature_k"]) for r in rows]),
+            np.array([float(r["thermal_conductivity_w_per_m_k"]) for r in rows]))

@@ -69,6 +69,17 @@
       "in_repository": true,
       "retrieved": "2026-11-01",
       "sha256": "1ac474aaa5ee5d2e66714cd543d077ea9194d39855274eafc6f554bac885f6a0"
+    },
+    {
+      "id": "argon_thermal_conductivity",
+      "path": "constants/argon_thermal_conductivity.csv",
+      "title": "Thermal conductivity of argon gas, 300-1000 K",
+      "source": "NIST Chemistry WebBook, SRD 69, Thermophysical Properties of Fluid Systems",
+      "url": "https://webbook.nist.gov/chemistry/fluid/",
+      "citation": "Lemmon, E. W., Bell, I. H., Huber, M. L. and McLinden, M. O., Thermophysical Properties of Fluid Systems, in NIST Chemistry WebBook, NIST Standard Reference Database 69, eds. P. J. Linstrom and W. G. Mallard, National Institute of Standards and Technology. Argon at 0.001 MPa, isobaric data.",
+      "in_repository": true,
+      "retrieved": "2026-11-02",
+      "sha256": "3e2d9ee4456ca3bfcf1e4f35161a707dbcebac3531f4ab8718ac42a2ef32f6d6"
     }
   ]
 }

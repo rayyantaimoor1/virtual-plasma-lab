@@ -1,0 +1,19 @@
+# Thermal conductivity of argon gas at 1 kPa (dilute gas: the value does not depend on pressure here).
+# Source: NIST Chemistry WebBook, SRD 69, Thermophysical Properties of Fluid Systems (isobaric data),
+# retrieved 2 November 2026. Values copied from the downloaded table without change.
+temperature_k,thermal_conductivity_w_per_m_k
+300,0.017805
+350,0.020215
+400,0.022491
+450,0.024649
+500,0.026705
+550,0.028671
+600,0.030556
+650,0.032369
+700,0.034118
+750,0.035810
+800,0.037449
+850,0.039041
+900,0.040589
+950,0.042098
+1000,0.043570

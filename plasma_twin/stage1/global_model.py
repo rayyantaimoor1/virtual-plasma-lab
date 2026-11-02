@@ -77,6 +77,7 @@ from plasma_twin.stage1.eedf import SHAPES
 from scipy.optimize import root
 
 from plasma_twin.stage1 import argon_kinetics as kin
+from plasma_twin.stage1 import gas_flow
 from plasma_twin.stage1.rates import ARGON_MASS_KG, ELECTRON_MASS_KG, RateTable, rate_table
 
 E = codata.e
@@ -109,6 +110,9 @@ class Stage1Inputs:
     frequency_hz: float = 13.56e6
     edge_length: str = "sheath"
     excited_states: bool = True  # Phase 2d: metastables and two-step ionization (argon_kinetics.py)
+    ar_flow_sccm: float = 0.0  # Phase 3a: 0 means no flow term (the Phase 2 model)
+    chamber_diameter_m: float = 0.40
+    chamber_height_m: float = 0.40
 
     @property
     def gas_density_m3(self) -> float:
@@ -153,6 +157,9 @@ def default_inputs(**overrides: Any) -> Stage1Inputs:
         "eedf": env["options"]["eedf"][0],
         "gas_temperature_k": env["fixed"]["gas_temperature_k"],
         "frequency_hz": env["fixed"]["rf_frequency_mhz"] * 1e6,
+        "ar_flow_sccm": env["ar_flow_sccm"]["default"],
+        "chamber_diameter_m": env["geometry_cm"]["chamber_diameter"] / 100.0,
+        "chamber_height_m": env["geometry_cm"]["chamber_height"] / 100.0,
     }
     values.update(overrides)
     return Stage1Inputs(**values)
@@ -175,6 +182,9 @@ def validate(inputs: Stage1Inputs) -> None:
         raise InputOutOfRange("the electrode gap must be smaller than the chamber height")
     if inputs.eedf not in SHAPES:
         raise InputOutOfRange(f"EEDF must be one of {sorted(SHAPES)}")
+    flow = env["ar_flow_sccm"]
+    if inputs.ar_flow_sccm != 0 and not flow["min"] <= inputs.ar_flow_sccm <= flow["max"]:
+        raise InputOutOfRange(f"Ar flow (sccm) = {inputs.ar_flow_sccm} is outside {flow['min']}-{flow['max']}")
     if inputs.edge_length not in EDGE_LENGTHS:
         raise InputOutOfRange(f"edge_length must be one of {EDGE_LENGTHS}")
 
@@ -233,6 +243,13 @@ class _Discharge:
         self.area = np.pi * inputs.electrode_radius_m**2
 
     # ---------------------------------------------------------------- transport to the walls
+    def excited_loss_rate(self) -> float:
+        """Excited atoms lost per second: diffusion to the walls plus being pumped away (3a)."""
+        x = self.x
+        volume = gas_flow.chamber_volume_m3(x.chamber_diameter_m, x.chamber_height_m)
+        return (kin.wall_loss_rate(x.electrode_gap_m, x.electrode_radius_m, self.n_g, x.gas_temperature_k)
+                + gas_flow.pumping_rate_per_s(self.n_g, volume, x.ar_flow_sccm))
+
     def bohm_speed(self, te: float) -> float:
         return float(np.sqrt(E * self.wall.screening_ratio * te / ARGON_MASS_KG))
 
@@ -394,7 +411,7 @@ class _Discharge:
             "power_balance": np.log(p_abs / x.rf_power_w),
         }
         if excited is not None:
-            k_wall = kin.wall_loss_rate(x.electrode_gap_m, x.electrode_radius_m, self.n_g, x.gas_temperature_k)
+            k_wall = self.excited_loss_rate()
             for level, (gain, loss) in kin.balances(te, n0, self.n_g, excited, self.rates, k_wall).items():
                 equations[f"{level}_balance"] = np.log(gain / loss)
         return {
@@ -420,7 +437,7 @@ class _Discharge:
         """
         x = self.x
         ground = self.solve()
-        k_wall = kin.wall_loss_rate(x.electrode_gap_m, x.electrode_radius_m, self.n_g, x.gas_temperature_k)
+        k_wall = self.excited_loss_rate()
         start = kin.solve_densities(ground["te"], ground["n0"], self.n_g, self.rates, k_wall)
         y0 = np.log([ground["te"], ground["n0"], ground["sheath"], ground["v_rf_sheath"],
                      start.metastable_m3, start.resonant_m3, start.p4_m3])
