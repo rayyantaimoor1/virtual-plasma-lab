@@ -30,7 +30,7 @@ def test_model_follows_the_measured_pressure_trend() -> None:
 
 
 @needs_lxcat
-@pytest.mark.xfail(strict=True, reason="First comparison failed (2 Nov 2026): n_e +161 to +217 %, T_e +117 to "
+@pytest.mark.xfail(strict=True, reason="Runs 1 and 2 failed (2 Nov 2026): n_e +159 to +217 %, T_e +115 to "
                                         "+137 %. See docs/validation/phase2_stage1_benchmarks.md")
 def test_gate_points_agree_within_tolerance() -> None:
     failing = [(c.point, c.quantity, f"{100 * c.difference:+.0f}%") for c in compare() if c.in_gate

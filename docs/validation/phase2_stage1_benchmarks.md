@@ -40,3 +40,29 @@ No setting matches both T_e and n_e. A Maxwellian brings T_e close, but then n_e
 ## What happens next
 
 The Phase 2 exit gate is not passed. Any change to the model must be justified by physics stated in advance, not by this result. The comparison is then re-run against these same points, and this file keeps every run, so the history is visible.
+
+---
+
+# Run 2: with excited atoms and two-step ionization (Phase 2d)
+
+**Run on:** 2 November 2026, model commit `db2a982`. Same points, settings, geometry, tolerance and pass rule as run 1. The only change is the 2d excited-state kinetics, fixed in `BUILD_STEPS.md` before the run.
+**Openly stated:** while the 2d code was being tested, the full test suite also ran the gate test once, so we knew the gate still failed before this record was written. The model was not changed after that; it was committed as tested.
+
+## Result: the exit-gate check still FAILS
+
+| Point | Pressure | Quantity | Measured | Model (run 2) | Difference (run 2) | Run 1 |
+|---|---|---|---|---|---|---|
+| 100 mTorr | 0.133 mbar | n_e (m⁻³) | 1.39 × 10¹⁶ | 3.60 × 10¹⁶ | +159 % | +161 % |
+| 100 mTorr | 0.133 mbar | T_e (eV) | 1.37 | 3.24 | +136 % | +137 % |
+| 200 mTorr | 0.267 mbar | n_e (m⁻³) | 1.62 × 10¹⁶ | 4.87 × 10¹⁶ | +201 % | +202 % |
+| 200 mTorr | 0.267 mbar | T_e (eV) | 1.34 | 2.99 | +123 % | +125 % |
+| 300 mTorr | 0.400 mbar | n_e (m⁻³) | 1.86 × 10¹⁶ | 5.89 × 10¹⁶ | +216 % | +217 % |
+| 300 mTorr | 0.400 mbar | T_e (eV) | 1.33 | 2.86 | +115 % | +117 % |
+
+Two-step ionization makes 4.7 %, 7.8 % and 10.5 % of the ions at the three points, and the metastable density is 1.2–1.6 × 10¹⁷ m⁻³. With the Maxwellian EEDF (information only), T_e is +32, +19 and +12 % off and n_e +372 to +589 %.
+
+## What run 2 tells us
+
+1. **Metastables are not what separates model and measurement.** In this model, at T_e near 3 eV, ionization from the ground state still dominates. Metastables are quickly turned into resonant atoms by electron collisions (row 9 of the reaction set), so they never build up enough to take over. Hypothesis 1 of run 1 is therefore ruled out as the main cause.
+2. **The T_e gap is most likely a question of what "T_e" means.** With a Druyvesteyn EEDF, the model needs a mean energy equal to T_e ≈ 3 eV to make enough fast electrons. A probe reading T_e from the slope of its current near the floating potential sees mainly the slow electrons, and reports a lower number for the same distribution. Comparing like with like needs the probe-equivalent T_e of the model's EEDF. That is what the virtual Langmuir probe of Phase 5 computes.
+3. **The n_e gap still points to absorbed versus generator power** (SUPERVISOR_QUESTIONS.md, Q3), and to the asymmetric electrodes and missing γ-mode heating.
