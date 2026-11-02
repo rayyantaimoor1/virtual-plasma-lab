@@ -81,7 +81,7 @@
       "citation": "Huber, K. P. and Herzberg, G. (1979). Molecular Spectra and Molecular Structure IV: Constants of Diatomic Molecules. Van Nostrand Reinhold. Data prepared by Gallagher, J. W. and Johnson, R. D. III, in NIST Chemistry WebBook, NIST Standard Reference Database 69.",
       "in_repository": true,
       "retrieved": "2026-11-01",
-      "sha256": "ec007eb62390b0f5aefb8915df710bf3968b79b6ce5f3bb6114433a707c57859"
+      "sha256": "ef3ae370c7dba4cf0a051ba07dd0fae6aaf825be4ae3b8a9fb5b02cc926e319f"
     },
     {
       "id": "benchmarks",
@@ -104,6 +104,17 @@
       "in_repository": true,
       "retrieved": "2026-11-02",
       "sha256": "3e2d9ee4456ca3bfcf1e4f35161a707dbcebac3531f4ab8718ac42a2ef32f6d6"
+    },
+    {
+      "id": "n2_second_positive",
+      "path": "constants/n2_second_positive.csv",
+      "title": "N2 second positive system C-B, v'=0,1, v''=0-10: wavenumbers, Franck-Condon factors, Einstein coefficients",
+      "source": "Gilmore, Laher and Espy (1992), Table 9",
+      "url": "https://srd.nist.gov/jpcrdreprint/1.555910.pdf",
+      "citation": "F. R. Gilmore, R. R. Laher and P. J. Espy, Franck-Condon factors, r-centroids, electronic transition moments, and Einstein coefficients for many nitrogen and oxygen band systems, J. Phys. Chem. Ref. Data 21, 1005 (1992), Table 9.",
+      "in_repository": true,
+      "retrieved": "2026-11-03",
+      "sha256": "783b4a4f57166c799d7b8919cc07658555371fa212797ddeeb920ced6b6eec38"
     }
   ]
 }

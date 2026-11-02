@@ -345,6 +345,11 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
 - **N₂ rotational temperature:** least-squares fit of the model (1,0) band, through the instrument, to the spectrum between 312.0 and 316.2 nm. The fit parameters are T_rot (bounds 200–2000 K), a scale and a flat background.
 - **NH overlap check** (for measured spectra): the power in 335.8–336.2 nm (the NH A–X head) is compared with the N₂ (0,0) head window, 336.9–337.2 nm. More than 5 % is flagged. The model has no hydrogen, so its own spectra never trigger it.
 - **Tests:** Doppler is disabled at 0.005 nm (E8), and at 0.001 nm it recovers the gas temperature within 10 % from a noise-free spectrum; the Hönl–London sum rule; Kratzer against NIST; Morse against Gilmore; air wavelengths against NIST; T_rot from a noise-free band within 1 % of the gas temperature, and within 10 % with 1 % noise; N₂ bands appear only when N₂ is present.
+- **As built (3 November 2026):**
+  - **Checks passed:** Morse against Gilmore (q₀₀ 0.469 against 0.454, q₀₁ 0.324 against 0.327, q₁₀ 0.398 against 0.392); Kratzer against NIST (B within 0.9 %, X within 0.4 %); air wavelengths within 1.5×10⁻⁴ nm of NIST.
+  - **Gas temperatures recovered:** Doppler gives 301.999 K against the model's 302.00 K at 0.001 nm resolution. The noise-free N₂ rotational temperature is exact.
+  - **Changed: the NH check.** The rule above compared the raw 336 nm power with the (0,0) head. The (0,0) band itself reaches past 336 nm, so that gave a false alarm (0.17) on a spectrum with no NH. It now subtracts what the (0,0) band at the fitted temperature puts there, and flags only the excess.
+  - **Clarified: "within 10 % with 1 % noise".** Noise is a percentage of the spectrum's own peak. On a 300–900 nm acquisition that peak is the 811 nm argon line, so inside the much weaker N₂ band the noise is large, and T_rot misses by 16–29 % (three seeds). On a UV acquisition (305–340 nm), T_rot is within 0.7 %. Both results are recorded. The test uses the UV acquisition, which is how the band is measured in practice.
 - **O I lines (777 and 844 nm): moved to Phase 7.** Excitation data for atomic oxygen are not in hand, and Phase 7 (underwater OES) needs them anyway. Phase 4 does not draw O I lines; changed from the original plan with this reason.
 
 **Tests** (`tests/test_cr_model.py`, `test_spectrum.py`, `test_boltzmann.py`, `test_oes_gas_temp.py`, `test_line_ratio.py`)
@@ -356,8 +361,9 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
 - Recomputing the spectrum takes ≤ 3 s (PER-2).
 
 **Exit gate**
-- [ ] Tests pass.
-- [ ] T_exc is never labelled as T_e anywhere in the outputs.
+- [x] Tests pass. (245 passed, plus the Phase 2 benchmark test still marked as an expected failure, 3 November 2026.)
+- [x] T_exc is never labelled as T_e anywhere in the outputs. (`BoltzmannFit.excitation_temperature_ev`, checked by a test; T_e appears only where it truly is the electron temperature, as in the line-ratio fit.)
+- [x] `BUILDING_JOURNEY.md` has its Phase 4 section.
 
 **Commit:** `Phase 4: virtual OES - CR model, spectrum, Boltzmann plot, gas temperature`
 

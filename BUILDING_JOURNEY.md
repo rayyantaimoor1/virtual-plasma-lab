@@ -166,3 +166,39 @@ It is written so that either of us can explain any decision to the evaluation co
 - **5 % O₂:** n_e falls to 2.6 × 10¹⁶ m⁻³, and the plasma becomes electronegative (α ≈ 0.5). About a third of the oxygen is dissociated into atoms. Metastables drop about fifteenfold, because O₂ quenches them very fast.
 
 **How Phase 3 closed:** all three exit-gate items are met: 195 tests pass; with the new effects switched off, the Phase 2 argon results are reproduced exactly; and this section is written. The Phase 2 benchmark gap is still open and still waits on supervisor question Q3.
+
+---
+
+## Phase 4: virtual OES (complete, 3 November 2026)
+
+**What we made**
+- **4a, CR model (`oes/cr_model.py`):** the populations of the four argon 1s and ten 2p levels from the plasma state, and from them 29 emission lines (2p → 1s), including radiation trapping.
+- **4b, spectrum (`oes/spectrum.py`):** the lines as a spectrometer would record them, with instrument width, Doppler width, an area-true line shape and seeded noise. A full 300–900 nm spectrum takes under 1 s.
+- **4c, Boltzmann plot (`oes/boltzmann.py`):** the excitation temperature with its error and R², and the E9 reliability rule.
+- **4d, line-ratio T_e (`oes/line_ratio.py`):** the CR model run backwards to fit T_e and n_e to the line pattern.
+- **4e, gas temperature (`oes/n2_band.py`, `oes/gas_temp.py`):** the N₂ second positive bands; the N₂ rotational temperature from the (1,0) band; the Doppler temperature with the E8 rule; and an NH overlap check.
+
+**New data:** the LXCat **BSR** database (electron collisions from each argon 1s level; downloaded with your agreement to LXCat's terms, kept local), NIST Ar I lines at 1000–1400 nm, N₂ ground-state constants, and Gilmore et al.'s (1992) N₂ band table, all with checksums and citations.
+
+**Techniques and why**
+- **Every rate from cross-sections, the reverse ones too.** De-excitation rates come from the same cross-sections through detailed balance on the cross-section (Klein–Rosseland), so they stay right for a Druyvesteyn EEDF, not only a Maxwellian.
+- **Names and energies taken from the data, not from memory.** The Racah-to-Paschen mapping is read from the BSR file's own labels, and each NIST line is matched to its levels by energy within 4 meV.
+- **Trapping by Mewe's escape factor,** found in an open paper (arXiv:2402.08092) that writes it out. The CCP papers that use it cite only paywalled sources.
+- **Methods proven before use.**
+  - The Franck–Condon factors from Morse potentials had to reproduce Gilmore's published factors within 5 % (they did, within 1–3.4 %) before being used for the excitation split.
+  - The Kratzer relation was checked against two NIST values.
+  - The vacuum-to-air formula was checked against NIST's argon lines.
+- **Excitation temperature never called T_e:** checked by a test, and required by the exit gate.
+
+**Problems and how we handled them**
+- **The CR model's 1s5 density is about four times the global model's metastable density.** Diagnosed, not hidden: BSR destroys 1s5 ten times more slowly through 1s mixing (3.6×10⁻¹⁴ against the published lumped 3.7×10⁻¹³ m³/s). Both are reported. Switching the global model to BSR rates would change Phases 2–3, so it is left as an open decision.
+- **The visible NIST file stops at 1000 nm,** but some 2p levels also decay by infrared lines (2p10 → 1s3 near 1047 nm). We added a second NIST download to 1400 nm, so every decay route is included.
+- **A weak balance test** only checked that radiation was positive. It was replaced by an exact check that every level's gains equal its losses (residual < 10⁻⁹).
+- **The line-ratio fit is exact without noise and about 1 % off at 1 % noise, but fails at 5 % noise.** Weak lines dominate an unweighted log fit. Uncertainty weighting is the standard fix, but it is a change of method, so it is recorded as future work.
+- **The NH check gave a false alarm,** because N₂'s own (0,0) band reaches past 336 nm. It was fixed to flag only the excess beyond the N₂ prediction, and recorded as a change to the rule.
+- **N₂ rotational temperature at 1 % noise:** on a full 300–900 nm acquisition it misses by 16–29 %, because the 811 nm argon line sets the noise level. On a UV acquisition it is within 0.7 %. Both are recorded, and the lesson is practical: measure T_rot with a separate UV acquisition.
+- **O I lines moved to Phase 7,** where the excitation data for atomic oxygen are needed anyway.
+
+**What the virtual OES shows at the defaults:** the brightest line is 811.5 nm, as in real argon. T_exc is about 0.5 eV with R² = 0.05, flagged unreliable, against T_e = 3.06 eV. That is the known behaviour of low-pressure argon: its 2p levels are not in equilibrium with the electrons.
+
+**How Phase 4 closed:** all three exit-gate items are met: 245 tests pass, T_exc is never labelled T_e, and this section is written.

@@ -249,3 +249,10 @@ def load_thermal_conductivity(manifest_path: Path = MANIFEST_PATH) -> tuple[np.n
 def load_bsr_argon(manifest_path: Path = MANIFEST_PATH) -> list[CrossSection]:
     """BSR (Zatsarinny & Bartschat) electron collisions with Ar and its four 1s levels (Phase 4)."""
     return read_lxcat(verified_path("lxcat_bsr_argon", manifest_path))
+
+
+def load_n2_second_positive(manifest_path: Path = MANIFEST_PATH) -> list[dict[str, float]]:
+    """Gilmore et al. (1992) Table 9 rows for the N2 C -> B bands (Phase 4e)."""
+    return [{"v_upper": int(r["v_upper"]), "v_lower": int(r["v_lower"]), "wavenumber_cm1": float(r["wavenumber_cm1"]),
+             "franck_condon": float(r["franck_condon"]), "a_per_s": float(r["a_per_s"]),
+             "limited_accuracy": r["limited_accuracy"] == "true"} for r in _read_csv("n2_second_positive", manifest_path)]

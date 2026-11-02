@@ -73,8 +73,12 @@ class Spectrum:
 
 
 def build_spectrum(line_power_w_m3: dict[float, float], gas_temperature_k: float, settings: SpectrometerSettings,
-                   mass_kg: float = ARGON_MASS_KG) -> Spectrum:
-    """Draw every line inside the window as a Gaussian of the right area, then add seeded noise."""
+                   mass_kg: float = ARGON_MASS_KG, masses_kg: dict[float, float] | None = None) -> Spectrum:
+    """Draw every line inside the window as a Gaussian of the right area, then add seeded noise.
+
+    `masses_kg` gives the emitter mass of particular lines (N2 lines are lighter than argon, so their
+    Doppler width differs); other lines use `mass_kg`.
+    """
     settings.validate()
     step = settings.fwhm_nm / 5
     grid = np.arange(settings.start_nm, settings.end_nm + step / 2, step)
@@ -83,7 +87,8 @@ def build_spectrum(line_power_w_m3: dict[float, float], gas_temperature_k: float
     for wavelength, power in line_power_w_m3.items():
         if not settings.start_nm <= wavelength <= settings.end_nm or power <= 0:
             continue
-        width = np.hypot(settings.fwhm_nm, doppler_fwhm_nm(wavelength, gas_temperature_k, mass_kg))
+        mass = masses_kg.get(wavelength, mass_kg) if masses_kg else mass_kg
+        width = np.hypot(settings.fwhm_nm, doppler_fwhm_nm(wavelength, gas_temperature_k, mass))
         sigma = width * FWHM_TO_SIGMA
         lo = max(int((wavelength - 8 * sigma - settings.start_nm) / step), 0)
         hi = min(int((wavelength + 8 * sigma - settings.start_nm) / step) + 2, len(grid))
@@ -99,5 +104,14 @@ def build_spectrum(line_power_w_m3: dict[float, float], gas_temperature_k: float
 def spectrum_for(result, settings: SpectrometerSettings | None = None) -> Spectrum:
     """The spectrum of a solved global-model point (Stage1Result): CR model, then the spectrometer."""
     from plasma_twin.oes.cr_model import solve_cr_for
+    from plasma_twin.oes.n2_band import N2_MASS_KG, n2_lines
     cr = solve_cr_for(result)
-    return build_spectrum(cr.line_emission_w_m3, result.inputs.gas_temperature_k, settings or SpectrometerSettings.defaults())
+    lines = dict(cr.line_emission_w_m3)
+    masses = {}
+    production = result.mixture.get("n2c_excitation_m3_s", 0.0)
+    if production > 0:  # N2 second positive bands, only when N2 is present (4e)
+        for wl, power in n2_lines(production, result.inputs.gas_temperature_k).items():
+            lines[wl] = lines.get(wl, 0.0) + power
+            masses[wl] = N2_MASS_KG
+    return build_spectrum(lines, result.inputs.gas_temperature_k, settings or SpectrometerSettings.defaults(),
+                          masses_kg=masses)
