@@ -64,7 +64,7 @@ Every output is computed from T_e, n_e and the sheath solution; none is set by h
 """
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from typing import Any
 
 import numpy as np
@@ -77,7 +77,7 @@ from plasma_twin.stage1.eedf import SHAPES
 from scipy.optimize import root
 
 from plasma_twin.stage1 import argon_kinetics as kin
-from plasma_twin.stage1 import gas_flow
+from plasma_twin.stage1 import gas_flow, gas_temperature
 from plasma_twin.stage1.rates import ARGON_MASS_KG, ELECTRON_MASS_KG, RateTable, rate_table
 
 E = codata.e
@@ -111,6 +111,8 @@ class Stage1Inputs:
     edge_length: str = "sheath"
     excited_states: bool = True  # Phase 2d: metastables and two-step ionization (argon_kinetics.py)
     ar_flow_sccm: float = 0.0  # Phase 3a: 0 means no flow term (the Phase 2 model)
+    gas_heating: bool = False  # Phase 3b: if True, T_gas is solved from a heat balance
+    wall_temperature_k: float = 300.0
     chamber_diameter_m: float = 0.40
     chamber_height_m: float = 0.40
 
@@ -160,6 +162,8 @@ def default_inputs(**overrides: Any) -> Stage1Inputs:
         "ar_flow_sccm": env["ar_flow_sccm"]["default"],
         "chamber_diameter_m": env["geometry_cm"]["chamber_diameter"] / 100.0,
         "chamber_height_m": env["geometry_cm"]["chamber_height"] / 100.0,
+        "gas_heating": True,
+        "wall_temperature_k": env["fixed"]["wall_temperature_k"],
     }
     values.update(overrides)
     return Stage1Inputs(**values)
@@ -214,6 +218,7 @@ class Stage1Result:
     metastable_density_m3: float = 0.0
     resonant_density_m3: float = 0.0
     p4_density_m3: float = 0.0
+    gas_heating_w: float = 0.0  # heat put into the gas (Phase 3b); T_gas is inputs.gas_temperature_k
     ionization_routes: dict[str, float] = field(default_factory=dict)  # fraction of ions from each route
     heating_w: dict[str, float] = field(default_factory=dict)  # how the power enters
     # Where the power goes. "superelastic_return" is negative: energy excited atoms give back.
@@ -465,14 +470,44 @@ class _Discharge:
         return self.assemble(te, n0, sheath, v, excited)
 
 
+def gas_heating_power(result: "Stage1Result") -> float:
+    """Heat put into the gas (W): elastic collisions plus metastable quenching by atoms (3b)."""
+    x = result.inputs
+    bulk_volume = np.pi * x.electrode_radius_m**2 * (x.electrode_gap_m - 2 * result.sheath_width_m)
+    quenching = (kin.K_GROUND_QUENCH_M * result.gas_density_m3 * result.metastable_density_m3
+                 * kin.E_METASTABLE * E * bulk_volume)
+    return result.losses_w["elastic"] + quenching
+
+
 def solve(inputs: Stage1Inputs, check_envelope: bool = True) -> Stage1Result:
     """Run the global model for one operating point.
 
+    With `gas_heating`, T_gas is found by repetition: solve the plasma at a trial T_gas, compute the
+    heat it puts into the gas, compute the T_gas that heat produces, and repeat until T_gas stops
+    changing. The feedback is weak (a few kelvin), so a handful of repetitions are enough.
     `check_envelope=False` is only for reproducing published cases outside our envelope (tests and
     validation); everything the user runs goes through the envelope check (E3).
     """
     if check_envelope:
         validate(inputs)
+    if not inputs.gas_heating:
+        fixed = _solve_at_fixed_gas_temperature(inputs)
+        return replace(fixed, gas_heating_w=gas_heating_power(fixed))
+    trial = inputs.wall_temperature_k
+    for _ in range(100):
+        result = _solve_at_fixed_gas_temperature(replace(inputs, gas_temperature_k=trial))
+        heat = gas_heating_power(result)
+        new = gas_temperature.mean_gas_temperature(heat, inputs.electrode_radius_m, inputs.electrode_gap_m,
+                                                   inputs.wall_temperature_k)
+        if abs(new - trial) <= 1e-10 * trial:
+            residuals = dict(result.residuals, gas_temperature=abs(new - trial) / trial)
+            return replace(result, residuals=residuals, gas_heating_w=heat)
+        trial = new
+    raise SolverFailure("the gas temperature did not settle")
+
+
+def _solve_at_fixed_gas_temperature(inputs: Stage1Inputs) -> Stage1Result:
+    """The Phase 2 model: the gas temperature is an input."""
     discharge = _Discharge(inputs)
     if inputs.excited_states:
         s = discharge.solve_with_excited_states()

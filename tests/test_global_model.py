@@ -21,6 +21,11 @@ needs_lxcat = pytest.mark.skipif(check_reference_data()["lxcat_cross_sections"] 
 ENV = load_envelope()
 
 
+def phase2_inputs(**overrides):
+    """The Phase 2 model: no gas flow and a fixed gas temperature (Phase 3 effects switched off)."""
+    return default_inputs(**{"ar_flow_sccm": 0.0, "gas_heating": False, **overrides})
+
+
 # ------------------------------------------------------------------ formulas against Lieberman's own example
 def test_heating_and_sheath_formulas_reproduce_the_published_example() -> None:
     """M. A. Lieberman, UC Berkeley short course 2015, slides 284-285: 1 Torr argon, gap 2 cm,
@@ -45,14 +50,14 @@ def test_heating_and_sheath_formulas_reproduce_the_published_example() -> None:
 ])
 def test_out_of_range_inputs_are_refused(override: dict) -> None:
     with pytest.raises(InputOutOfRange):
-        solve(default_inputs(**override))
+        solve(phase2_inputs(**override))
 
 
 # ------------------------------------------------------------------ the solution itself
 @needs_lxcat
 @pytest.mark.parametrize("eedf", ["Druyvesteyn", "Maxwellian"])
 def test_balances_close_and_power_shares_add_up(eedf: str) -> None:
-    result = solve(default_inputs(eedf=eedf))
+    result = solve(phase2_inputs(eedf=eedf))
     limit = ENV["solver"]["residual_limit"]
     assert all(r < limit for r in result.residuals.values()), result.residuals
     tolerance = ENV["solver"]["power_share_tolerance_percent"]
@@ -65,7 +70,7 @@ def test_balances_close_and_power_shares_add_up(eedf: str) -> None:
 
 @needs_lxcat
 def test_outputs_are_derived_from_te_and_ne() -> None:
-    r = solve(default_inputs())
+    r = solve(phase2_inputs())
     assert r.ne_sheath_edge_m3 == pytest.approx(r.h_axial * r.ne_center_m3, rel=1e-12)
     assert r.ion_flux_electrode_m2_s == pytest.approx(r.ne_sheath_edge_m3 * r.bohm_speed_m_s, rel=1e-12)
     assert r.ion_flux_radial_m2_s == pytest.approx(r.h_radial * r.ne_center_m3 * r.bohm_speed_m_s, rel=1e-12)
@@ -77,7 +82,7 @@ def test_outputs_are_derived_from_te_and_ne() -> None:
 def test_ground_state_only_te_barely_depends_on_power(eedf: str) -> None:
     """Without excited atoms, T_e is fixed by the particle balance. Power enters only through the
     sheath width, which takes a few mm from a 45 mm gap, so T_e may move by much less than 2 %."""
-    te = [solve(default_inputs(rf_power_w=p, eedf=eedf, excited_states=False)).te_ev for p in (10, 40, 70, 100)]
+    te = [solve(phase2_inputs(rf_power_w=p, eedf=eedf, excited_states=False)).te_ev for p in (10, 40, 70, 100)]
     assert (max(te) - min(te)) / min(te) < 0.02
 
 
@@ -86,7 +91,7 @@ def test_ground_state_only_te_barely_depends_on_power(eedf: str) -> None:
 def test_with_excited_atoms_te_falls_as_power_rises(eedf: str) -> None:
     """More power -> more electrons -> more excited atoms -> more two-step ionization, so the
     plasma needs a slightly lower T_e."""
-    te = [solve(default_inputs(rf_power_w=p, eedf=eedf)).te_ev for p in (10, 40, 70, 100)]
+    te = [solve(phase2_inputs(rf_power_w=p, eedf=eedf)).te_ev for p in (10, 40, 70, 100)]
     assert np.all(np.diff(te) < 0)
 
 
@@ -96,7 +101,7 @@ def test_density_rises_with_power_but_less_than_proportionally(eedf: str) -> Non
     """In this CCP model the share of power spent accelerating ions in the sheaths grows with the
     RF voltage, so n_e grows more slowly than P (the simple low-voltage model gives exactly P^1)."""
     powers = np.array([10, 25, 50, 75, 100])
-    ne = np.array([solve(default_inputs(rf_power_w=p, eedf=eedf, excited_states=False)).ne_center_m3
+    ne = np.array([solve(phase2_inputs(rf_power_w=p, eedf=eedf, excited_states=False)).ne_center_m3
                    for p in powers])
     assert np.all(np.diff(ne) > 0)
     slope = np.polyfit(np.log(powers), np.log(ne), 1)[0]
@@ -105,7 +110,7 @@ def test_density_rises_with_power_but_less_than_proportionally(eedf: str) -> Non
 
 @needs_lxcat
 def test_te_falls_and_density_rises_with_pressure() -> None:
-    results = [solve(default_inputs(pressure_mbar=p)) for p in (0.1, 0.2, 0.3, 0.4, 0.5)]
+    results = [solve(phase2_inputs(pressure_mbar=p)) for p in (0.1, 0.2, 0.3, 0.4, 0.5)]
     assert np.all(np.diff([r.te_ev for r in results]) < 0)
     assert np.all(np.diff([r.ne_center_m3 for r in results]) > 0)
 
@@ -114,7 +119,7 @@ def test_te_falls_and_density_rises_with_pressure() -> None:
 def test_druyvesteyn_needs_a_higher_te_than_maxwellian() -> None:
     """With fewer fast electrons, a Druyvesteyn plasma must be hotter on average to ionize enough
     (the effect studied by Gudmundsson, Plasma Sources Sci. Technol. 10, 76, 2001)."""
-    assert solve(default_inputs(eedf="Druyvesteyn")).te_ev > solve(default_inputs(eedf="Maxwellian")).te_ev
+    assert solve(phase2_inputs(eedf="Druyvesteyn")).te_ev > solve(phase2_inputs(eedf="Maxwellian")).te_ev
 
 
 @needs_lxcat
@@ -123,7 +128,7 @@ def test_druyvesteyn_needs_a_higher_te_than_maxwellian() -> None:
     ("Maxwellian", 1.6657347668344424, 6.40467331691257e16),
 ])
 def test_switching_excited_states_off_reproduces_phase_2c(eedf: str, te: float, ne: float) -> None:
-    result = solve(default_inputs(eedf=eedf, excited_states=False))
+    result = solve(phase2_inputs(eedf=eedf, excited_states=False))
     assert result.te_ev == pytest.approx(te, rel=1e-12)
     assert result.ne_center_m3 == pytest.approx(ne, rel=1e-12)
 
@@ -131,8 +136,8 @@ def test_switching_excited_states_off_reproduces_phase_2c(eedf: str, te: float, 
 @needs_lxcat
 @pytest.mark.parametrize("eedf", ["Druyvesteyn", "Maxwellian"])
 def test_excited_atoms_lower_te_and_add_ionization_routes(eedf: str) -> None:
-    ground = solve(default_inputs(eedf=eedf, excited_states=False))
-    full = solve(default_inputs(eedf=eedf))
+    ground = solve(phase2_inputs(eedf=eedf, excited_states=False))
+    full = solve(phase2_inputs(eedf=eedf))
     assert full.te_ev < ground.te_ev
     assert sum(full.ionization_routes.values()) == pytest.approx(1.0, rel=1e-12)
     assert full.ionization_routes["from_ground"] < 1.0
@@ -143,13 +148,13 @@ def test_excited_atoms_lower_te_and_add_ionization_routes(eedf: str) -> None:
 
 @needs_lxcat
 def test_same_inputs_give_identical_outputs() -> None:
-    assert solve(default_inputs()).as_dict() == solve(default_inputs()).as_dict()  # REL-4
+    assert solve(phase2_inputs()).as_dict() == solve(phase2_inputs()).as_dict()  # REL-4
 
 
 @needs_lxcat
 def test_one_run_takes_at_most_two_seconds() -> None:
     start = time.perf_counter()
-    solve(default_inputs(rf_power_w=73, pressure_mbar=0.37))
+    solve(phase2_inputs(rf_power_w=73, pressure_mbar=0.37))
     assert time.perf_counter() - start <= 2.0  # PER-1
 
 
@@ -161,7 +166,7 @@ def test_solver_converges_across_the_whole_envelope() -> None:
     for eedf in ("Druyvesteyn", "Maxwellian"):
         for power in np.linspace(10, 100, 10):
             for pressure in np.linspace(0.1, 0.5, 25):
-                result = solve(default_inputs(rf_power_w=power, pressure_mbar=pressure, eedf=eedf))
+                result = solve(phase2_inputs(rf_power_w=power, pressure_mbar=pressure, eedf=eedf))
                 assert max(result.residuals.values()) < limit, (eedf, power, pressure)
                 count += 1
     assert count >= 500

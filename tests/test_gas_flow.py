@@ -41,8 +41,8 @@ def test_flow_outside_the_envelope_is_refused() -> None:
 
 @needs_lxcat
 def test_no_flow_reproduces_the_phase_2_model_exactly() -> None:
-    with_flow_off = solve(default_inputs(ar_flow_sccm=0.0))
-    phase2 = solve(default_inputs(ar_flow_sccm=0.0, eedf="Druyvesteyn"))
+    with_flow_off = solve(default_inputs(ar_flow_sccm=0.0, gas_heating=False))
+    phase2 = solve(default_inputs(ar_flow_sccm=0.0, gas_heating=False, eedf="Druyvesteyn"))
     assert with_flow_off.as_dict() == phase2.as_dict()
     assert with_flow_off.te_ev == pytest.approx(3.060017, abs=1e-6)  # Phase 2d value at the defaults
 
@@ -50,7 +50,7 @@ def test_no_flow_reproduces_the_phase_2_model_exactly() -> None:
 @needs_lxcat
 def test_flow_effect_on_pure_argon_is_small() -> None:
     """Pumping takes seconds; diffusion to the walls takes milliseconds. Stated before building."""
-    still, flowing = solve(default_inputs(ar_flow_sccm=0.0)), solve(default_inputs(ar_flow_sccm=500))
+    still, flowing = solve(default_inputs(ar_flow_sccm=0.0, gas_heating=False)), solve(default_inputs(ar_flow_sccm=500, gas_heating=False))
     assert flowing.metastable_density_m3 < still.metastable_density_m3  # more loss, fewer metastables
     assert flowing.metastable_density_m3 == pytest.approx(still.metastable_density_m3, rel=0.01)
     assert flowing.ne_center_m3 == pytest.approx(still.ne_center_m3, rel=0.01)

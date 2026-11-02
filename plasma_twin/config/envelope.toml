@@ -24,7 +24,8 @@ power_share_tolerance_percent = 0.5   # power shares must sum to 100 ± 0.5 % (A
 # ----------------------------------------------------------------- Stage 1: low-pressure argon CCP
 [stage1.fixed]
 rf_frequency_mhz = 13.56              # FR2.3
-gas_temperature_k = 300               # Phase 2 only: fixed at room temperature. Phase 3 computes it.
+gas_temperature_k = 300               # used when gas heating is off (the Phase 2 model)
+wall_temperature_k = 300              # Phase 3b: walls and electrodes; the gas is heated above this
 
 [stage1.rf_power_w]                   # FR2.1
 min = 10
