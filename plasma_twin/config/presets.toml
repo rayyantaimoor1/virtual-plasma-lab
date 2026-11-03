@@ -1,0 +1,31 @@
+# Named example experiments (FR1.2, FR2.9). Values are in the screen's units; anything left out
+# takes the envelope default. A test checks every preset against envelope.toml.
+
+[default]
+title = "Default argon (50 W, 0.3 mbar)"
+description = "Pure argon at the envelope defaults: the run behind the Home screen's one-click button."
+
+[supervisor_mixture]
+title = "Argon with 5 % N2 and 5 % O2"
+description = "The supervisor's Stage 1 gas: N2 and O2 each 5 % of the argon flow (SUPERVISOR_QUESTIONS.md, Q5)."
+mixture = "Ar+N2+O2"
+n2_percent = 5
+o2_percent = 5
+
+[argon_nitrogen]
+title = "Argon with 5 % N2 (gas temperature from the N2 band)"
+description = "Adds the N2 second positive band, so OES can measure the gas temperature."
+mixture = "Ar+N2"
+n2_percent = 5
+
+[low_power]
+title = "Low power (10 W, 0.1 mbar)"
+description = "The gentlest corner of the envelope."
+rf_power_w = 10
+pressure_mbar = 0.1
+
+[high_power]
+title = "High power (100 W, 0.5 mbar)"
+description = "The most intense corner of the envelope."
+rf_power_w = 100
+pressure_mbar = 0.5

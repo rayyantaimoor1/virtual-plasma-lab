@@ -171,7 +171,7 @@ def compare(result, probe_settings=None, spectrometer_settings=None, fit_oes_ne:
     }
     t_exc = boltzmann.excitation_temperature_ev if boltzmann.excitation_temperature_ev != float("inf") else None
     return DiagnosticsReport(quantities, t_exc,
-                             "excitation temperature: the 2p levels are not in Boltzmann equilibrium with the electrons, so "
+                             "the 2p levels are not in Boltzmann equilibrium with the electrons, so "
                              "it is not an electron temperature and is excluded (FR7.5)",
                              approximate, assumptions,
                              probe.slope_temperature_ev if probe else None,

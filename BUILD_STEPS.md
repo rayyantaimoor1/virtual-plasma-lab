@@ -465,7 +465,7 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
   - Screens live in `app/` and contain no physics.
   - An application-service layer, `plasma_twin/services/stage1.py`, turns screen values into model inputs. It runs the model, the OES and the probe, turns results into plain JSON for storage, and writes CSV exports.
   - `plasma_twin/` still never imports Streamlit.
-- **Sessions (`storage/sessions.py`):** every SQL statement uses `?` placeholders (SEC-4); text search escapes `%` and `_` so they match literally. IDs are shown as S-0001 from the AUTOINCREMENT key, so a deleted ID is never reused (FR3.9). `delete_sessions` refuses to act unless it is called with `confirmed=True`, and the screen only passes that after a second click. Comparison takes 2–5 sessions of the same stage (FR11.2). Each session stores the model version (`plasma_twin.__version__`); reopening a session from another version says so and offers a re-run (FR11.3).
+- **Sessions (`storage/sessions.py`):** every SQL statement uses `?` placeholders (SEC-4). **Changed while building:** text search now runs in Python on the note and the configuration *values*, so typed text never reaches SQL and searching "power" does not match every session's field names. The first version, a SQL LIKE with `%`/`_` escaped, matched the JSON field names. IDs are shown as S-0001 from the AUTOINCREMENT key, so a deleted ID is never reused (FR3.9). `delete_sessions` refuses to act unless it is called with `confirmed=True`, and the screen only passes that after a second click. Comparison takes 2–5 sessions of the same stage (FR11.2). Each session stores the model version (`plasma_twin.__version__`); reopening a session from another version says so and offers a re-run (FR11.3).
 - **Example experiments (FR1.2, FR2.9):** named presets in `plasma_twin/config/presets.toml`, each checked against the envelope by a test. The Home screen has one button, "Run the default experiment", which runs the model and opens the Results screen: one click (USE-1, ≤ 2).
 - **Caching (PER-1):** every model, OES and probe run is cached by the SHA-256 of its inputs written as sorted JSON, the same hash stored as `config_hash`.
 - **Charts:** Plotly, with a symbol and an SI unit on every axis (USE-4). The 300–900 nm spectrum has about 600,000 points at 0.005 nm, too many to draw. It is drawn reduced to about 4,000 bins, keeping each bin's highest value so no line peak is lost; the export keeps every point.
@@ -474,6 +474,18 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
 - **M11 here is basic:** list, filter, search, open, compare and delete, with CSV export. The PDF report and the non-citable-data rule (FR11.5, E19) come with imports in Phase 8.
 - **Checks:** unit tests for sessions and the service layer. Every screen is smoke-run headless with Streamlit's own `AppTest` (no exceptions, key elements present). The full M1 → M7 workflow is then clicked through in the browser.
 
+**As built (3 November 2026)**
+- **Screens:** `app/Home.py` (M1) and `app/pages/1_…` to `7_…` (M2–M7, M11 basic), with shared glue in `app/common.py`. Services are in `plasma_twin/services/stage1.py`, sessions in `plasma_twin/storage/sessions.py`, and presets in `plasma_twin/config/presets.toml`.
+- **Browser check of the full workflow, by clicking:** Home → one-click default experiment → Results → Virtual OES → OES analysis → Comparison → Langmuir probe → save a session → Sessions. A session saved there survived a full page reload. The test session was then removed.
+- **Fixed during the check:**
+  - Four metrics per row cut long values off in a narrow window, so metrics are now two per row.
+  - On the probe screen, an unreliable EEPF's T_eff and n_e are labelled "UNRELIABLE (noise)".
+  - "excitation temperature:" was repeated on the comparison screen.
+  - Some envelope limits are whole numbers, and Streamlit refuses mixed number types, so they are now cast to float.
+- **A development note:** the running server keeps imported modules, so after editing `app/common.py` it must be restarted. Page scripts reload by themselves.
+- **Speed-up, no change to results:** each gas-temperature repetition now starts from the previous repetition's solution, with the cold start as a fallback. The answer must still close every balance to 10⁻¹¹. Pure argon with gas heating dropped from about 0.8 s to 0.09 s per run.
+- **Timing tests and power:** run them with the laptop plugged in. On battery, Windows throttled the processor and the same unchanged code ran up to 5 times slower within seconds (four Phase 2 runs: 0.31 s, then 1.6 s). That made the 200-point sweep test fail once at 191 s (limit 120 s) before the warm start. With the warm start it passes even throttled (96 s).
+
 **Tests** (`tests/test_sessions.py` plus manual checks in the app)
 - Sessions survive a restart.
 - Deleting a session asks for confirmation.
@@ -481,9 +493,10 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
 - Each FR1.x–FR7.x requirement is checked by hand against its mockup.
 
 **Exit gate**
-- [ ] A new user runs the default experiment in ≤ 2 clicks (USE-1).
-- [ ] The full M1→M7 workflow works in the browser.
-- [ ] All tests pass.
+- [x] A new user runs the default experiment in ≤ 2 clicks (USE-1). (One click: the Home quick-start button opens Results; `test_quick_start_is_one_click_to_results`, and checked in the browser.)
+- [x] The full M1→M7 workflow works in the browser. (Clicked through on 3 November 2026; see "As built".)
+- [x] All tests pass. (315 passed, plus the Phase 2 benchmark test still marked as an expected failure.)
+- [x] `BUILDING_JOURNEY.md` has its Phase 6 section.
 
 **Commit:** `Phase 6: Stage 1 dashboard (M1-M7) and session management`
 

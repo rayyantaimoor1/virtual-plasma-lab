@@ -442,7 +442,7 @@ class _Discharge:
             "flux_electrode": n_s * u_b, "flux_radial": h_r * n0 * u_b,
         }
 
-    def solve_with_excited_states(self) -> dict[str, Any]:
+    def solve_with_excited_states(self, warm_start: np.ndarray | None = None) -> dict[str, Any]:
         """Solve all seven balances together, starting from the ground-state-only solution.
 
         With two-step ionization, T_e depends on n_e (more electrons -> more excited atoms -> more
@@ -451,11 +451,6 @@ class _Discharge:
         (scipy.optimize.root) drives every ln(gain / loss) to zero.
         """
         x = self.x
-        ground = self.solve()
-        k_wall = self.excited_loss_rate()
-        start = kin.solve_densities(ground["te"], ground["n0"], self.n_g, self.rates, k_wall)
-        y0 = np.log([ground["te"], ground["n0"], ground["sheath"], ground["v_rf_sheath"],
-                     start.metastable_m3, start.resonant_m3, start.p4_m3])
         low_te, high_te = 0.56, 19.4
         max_sheath = 0.49 * x.electrode_gap_m
 
@@ -467,17 +462,34 @@ class _Discharge:
         def residuals(y: np.ndarray) -> np.ndarray:
             return np.array(list(self.assemble(*unpack(y))["equations"].values()))
 
-        best = None
-        for method in ("hybr", "lm"):
-            found = root(residuals, y0, method=method, options={"xtol": 1e-14} if method == "hybr" else {"xtol": 1e-15})
-            if best is None or np.max(np.abs(found.fun)) < np.max(np.abs(best.fun)):
-                best = found
-            if np.max(np.abs(best.fun)) < 1e-11:
-                break
+        def cold_start() -> np.ndarray:
+            ground = self.solve()
+            start = kin.solve_densities(ground["te"], ground["n0"], self.n_g, self.rates, self.excited_loss_rate())
+            return np.log([ground["te"], ground["n0"], ground["sheath"], ground["v_rf_sheath"],
+                           start.metastable_m3, start.resonant_m3, start.p4_m3])
+
+        def attempt(y0: np.ndarray):
+            best = None
+            for method in ("hybr", "lm"):
+                found = root(residuals, y0, method=method, options={"xtol": 1e-14} if method == "hybr" else {"xtol": 1e-15})
+                if best is None or np.max(np.abs(found.fun)) < np.max(np.abs(best.fun)):
+                    best = found
+                if np.max(np.abs(best.fun)) < 1e-11:
+                    break
+            return best
+
+        # WARM START (Phase 6 speed-up): a nearby solution, such as the previous gas-temperature
+        # repetition, is an excellent first guess. The answer must still close every balance to 1e-11;
+        # if it does not, the cold start from the ground-state solution is used instead.
+        best = attempt(warm_start) if warm_start is not None else None
+        if best is None or np.max(np.abs(best.fun)) >= 1e-11:
+            best = attempt(cold_start())
         te, n0, sheath, v, excited = unpack(best.x)
         if not (low_te < te < high_te and sheath < max_sheath) or np.max(np.abs(best.fun)) > 1e-9:
             raise SolverFailure(f"the excited-state balances did not converge (largest residual {np.max(np.abs(best.fun)):.1e})")
-        return self.assemble(te, n0, sheath, v, excited)
+        state = self.assemble(te, n0, sheath, v, excited)
+        state["solution_vector"] = best.x
+        return state
 
 
 def gas_heating_power(result: "Stage1Result") -> float:
@@ -506,8 +518,9 @@ def solve(inputs: Stage1Inputs, check_envelope: bool = True) -> Stage1Result:
     # Start from the given gas temperature (300 K by default; a sweep passes the previous point's
     # value, which saves repetitions). It must not start below the wall temperature.
     trial = max(inputs.gas_temperature_k, inputs.wall_temperature_k)
+    warm: dict[str, np.ndarray] = {}  # each repetition starts from the previous one's solution
     for _ in range(100):
-        result = _solve_at_fixed_gas_temperature(replace(inputs, gas_temperature_k=trial))
+        result = _solve_at_fixed_gas_temperature(replace(inputs, gas_temperature_k=trial), warm)
         heat = gas_heating_power(result)
         new = gas_temperature.mean_gas_temperature(heat, inputs.electrode_radius_m, inputs.electrode_gap_m,
                                                    inputs.wall_temperature_k)
@@ -518,14 +531,28 @@ def solve(inputs: Stage1Inputs, check_envelope: bool = True) -> Stage1Result:
     raise SolverFailure("the gas temperature did not settle")
 
 
-def _solve_at_fixed_gas_temperature(inputs: Stage1Inputs) -> Stage1Result:
-    """The Phase 2 model: the gas temperature is an input."""
+def _solve_at_fixed_gas_temperature(inputs: Stage1Inputs, warm: dict[str, np.ndarray] | None = None) -> Stage1Result:
+    """The Phase 2 model: the gas temperature is an input.
+
+    `warm` carries solution vectors between calls (gas-temperature repetitions) and is updated in place.
+    """
     discharge = _Discharge(inputs)
+    warm = {} if warm is None else warm
     if inputs.n2_percent_of_ar or inputs.o2_percent_of_ar:
         from plasma_twin.stage1.mixtures import MixtureModel
-        s = MixtureModel(discharge).solve(discharge.solve_with_excited_states())
+        model = MixtureModel(discharge)
+        s = None
+        if "mixture" in warm:
+            try:
+                s = model.solve(None, start=warm["mixture"])
+            except SolverFailure:
+                s = None
+        if s is None:
+            s = model.solve(discharge.solve_with_excited_states(warm.get("argon")))
+        warm["mixture"] = s["solution_vector"]
     elif inputs.excited_states:
-        s = discharge.solve_with_excited_states()
+        s = discharge.solve_with_excited_states(warm.get("argon"))
+        warm["argon"] = s["solution_vector"]
     else:
         g = discharge.solve()
         s = discharge.assemble(g["te"], g["n0"], g["sheath"], g["v_rf_sheath"], None)

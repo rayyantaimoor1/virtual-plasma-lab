@@ -246,3 +246,42 @@ It is written so that either of us can explain any decision to the evaluation co
 - **A finding for the supervisor (added to Q9):** taking OES n_e from the probe makes the OES T_e very sensitive to it, about 30 % per 10 % error in n_e.
 
 **How Phase 5 closed:** all exit-gate items are met: 280 tests pass, results with O₂ are flagged approximate and never counted, and this section is written.
+
+---
+
+## Phase 6: Stage 1 dashboard and sessions (complete, 3 November 2026)
+
+**What we made**
+- **Eight screens:** Home (M1), Chamber configuration (M2), Results (M3), Virtual OES (M4), OES analysis (M5), Langmuir probe (M6), Comparison (M7) and a basic Sessions list (M11).
+- **Sessions:** save, list, search, open, compare (2–5) and delete with confirmation. They are stored in SQLite with IDs S-0001, S-0002, … that are never reused.
+- **Five example experiments,** including the supervisor's argon + 5 % N₂ + 5 % O₂ mixture, plus a one-click quick start.
+
+**Techniques and why**
+- **Three layers.**
+  - The screens (`app/`) only display things.
+  - A service layer (`plasma_twin/services/stage1.py`) turns screen values into model inputs, checks them field by field, runs the model and turns results into plain JSON.
+  - The physics never imports Streamlit.
+  - This keeps every rule testable without a browser.
+- **Safety:** every SQL statement uses placeholders, so typed text is data, never code. Six injection-style strings are tested, and the tables survive them. Deleting needs `confirmed=True`, which the screen passes only after a second click.
+- **Caching:** every model, spectrum and probe run is cached by its inputs, so moving between screens never re-solves the plasma.
+- **Readable charts:** every axis has a symbol and an SI unit, and every status message has words as well as colour. The 600,000-point spectrum is drawn reduced to 4,000 points, keeping every bin's peak. A test checks that no line peak is lost.
+- **Tested two ways:**
+  - Streamlit's own `AppTest` runs every screen headless: one-click quick start, live validation, save → list → delete.
+  - The full workflow was clicked through in the built-in browser.
+
+**Problems and how we handled them**
+- **Search matched the stored configuration's field names** (a search for "_" matched every session). The first version searched the JSON with SQL LIKE. It now matches the note and the configuration values in Python, so typed text never reaches SQL.
+- **The browser check found four display problems,** fixed and recorded:
+  - cut-off metric values;
+  - an unreliable probe value shown as if trustworthy;
+  - a repeated phrase on the comparison screen;
+  - a crash from mixing whole-number and decimal limits.
+- **A screen crashed after editing the shared module.** The running server keeps imported modules, and a restart fixed it. It is recorded as a development note.
+- **The 200-point sweep test failed once (191 s, limit 120 s).**
+  - **Profiling** showed each gas-temperature repetition restarting the solver from scratch, so each now starts from the previous solution. That is a speed-up only: the answer must still close every balance to 10⁻¹¹.
+  - **Measuring again** showed the real cause of the swings: the laptop was on battery and Windows throttled the CPU, with the same unchanged code up to 5 times slower within seconds. So timing tests need the laptop plugged in. With the speed-up the sweep passes even throttled (96 s).
+- **A test session I saved during the browser check** was deleted afterwards, so your session database starts empty.
+
+**Left for Phase 8,** as planned: overlaying and analysing imported measured data (FR4.6, FR5.1, FR6.9), PDF reports, and the non-citable-data rule (FR11.5).
+
+**How Phase 6 closed:** all exit-gate items are met: one-click quick start, the M1→M7 workflow working in the browser, 315 tests passing, and this section written.
