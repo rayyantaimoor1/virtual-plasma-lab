@@ -598,6 +598,33 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
 - **Stage 1 O I lines (777/844 nm):** these need e–O excitation cross-sections, which are not downloaded. They stay disabled, and this is recorded as pending data.
 - **Speed:** one 1 min run takes ≤ 10 s (PER-5).
 
+**As built (4 November 2026)**
+- **Code:**
+  - `plasma_twin/stage2/`: `pulse.py`, `bubble_model.py`, `liquid.py`, `hom.py` and `uw_oes.py`.
+  - `plasma_twin/services/stage2.py`.
+  - Screens `app/pages/8_Underwater_configuration.py` (M8) and `9_Underwater_results.py` (M9).
+  - Sessions and Home now handle Stage 2.
+- **Data:** every number is read from `data/reference/constants/stage2_constants.csv`: 75 rows, each with its source and page, checksummed in the manifest. The LXCat Itikawa H₂O file is registered (private).
+- **CHANGED WHILE BUILDING: the share of power that reaches the bubble gas.**
+  - **What went wrong:** the first run put all 100 W into 100 sccm of O₂, about 14 eV per molecule. Every pulse split all the O₂, and no ozone came out. So the rule "all power into the gas, as an upper limit" does not give an upper limit: it breaks the model.
+  - **Why:** real underwater discharges put most of their energy into the water. No published value for our device was found.
+  - **What changed:** the share is now a visible input (envelope 0.01–1). Its default, 0.076, is the largest share that splits at most 10 % of the O₂ per pulse at the default operating point. That is the validity limit of the reaction set, which has no O + O + M. It is computed by `default_power_share()`, and a test keeps the envelope value equal to it.
+  - **How it is shown:** M9 plots the log reduction and ozone against the share. Supervisor question Q19 asks for a measured value.
+  - **Decision:** taken by Claude after the student said "complete it", following the recommendation offered.
+- **Other choices made while building, each stated in its module:**
+  - **Itikawa rows:** the "Total Ionization" row is used for ionization and the momentum-transfer row for elastic losses. The emission rows go only into the spectrum, not the energy balance. OH(X) dissociation has no threshold in the file, so its first tabulated energy (10 eV) is used.
+  - **Hydrogen balance:** H₂ was added as a species, because H + HO₂ → H₂ + O₂ made the hydrogen balance leak 0.2 %.
+  - **H-alpha acquisition:** H-alpha gets its own 650–663 nm acquisition, like the N₂ band in Stage 1. On the full range the OH peak sets the noise, and H-alpha (about 1,600 times weaker) is lost.
+  - **Stark tolerance:** the noisy-Stark test tolerance (5 % at 1 % noise) was set after one look at three seeds (−2.2 to +0.9 %). Recorded here.
+  - **O I:** Stage 1 O I lines stay disabled. They need e–O excitation data, which is not downloaded.
+- **Results at the defaults:**
+  - **Plasma:** T_e = 2.20 eV; n_e = 6.6×10¹⁹ m⁻³ in the channel, and 6.7×10¹⁹ m⁻³ back from the Stark fit.
+  - **Chemistry:** ozone yield about 1 g/kWh; water vapour's HOₓ cycles destroy most O atoms (in dry O₂, 99 % become ozone). Dissolved O₃ is 0.6 mg/L after 1 min.
+  - **Disinfection:** the log reduction hits the one-cell cap (7.9) and is flagged as extrapolated, because Hunt & Mariñas measured 6–41 µg/L and up to 33 s.
+  - **Water:** temperature rises 2.9 °C.
+  - **Speed:** one run takes 0.25 s (PER-5 allows 10 s).
+- **Browser check:** M8 → run → M9, all sections present and the Stark n_e shown.
+
 **Tests** (`tests/test_pulse.py`, `test_bubble_model.py`, `test_liquid.py`, `test_hom.py`, `test_uw_oes.py`)
 - 100 µs at 10 kHz is blocked.
 - 10 µs at 5 kHz gives a duty cycle of 5 % and 20 mJ per pulse.
@@ -607,9 +634,9 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
 - One run takes ≤ 10 s (PER-5).
 
 **Exit gate**
-- [ ] Tests pass.
+- [x] Tests pass. (Phase 7: 24 unit tests and 2 screen tests; full-suite count in BUILDING_JOURNEY.md.)
 - [ ] The log reduction is within ±30 % of the published reference at 1 or more points (ACC-1, BO-4). **Left open by team decision (4 November 2026):** no published experiment matches the device; waits for Q13.
-- [ ] Each part matches its own published data (Hunt & Mariñas k reproduced; H₂O₂ order of magnitude against Li et al. 2020 shown, not gated; Stark inversion; energy balance).
+- [x] Each part matches its own published data: Hunt & Mariñas first-order kinetics and Arrhenius reproduced exactly; Stark relation inverts exactly, and the fitted spectrum gives n_e within 0.1 % (no noise) and 5 % (1 % noise); temperature rise equals energy ÷ (m c); O and H atoms conserved in the afterglow; ionization balances attachment; energy shares sum to 1. (Li et al. 2020's H₂O₂ is context only: their sparks at 1 Hz are outside our envelope.)
 
 **Commit:** `Phase 7: Stage 2 underwater bubble plasma, liquid chemistry, Hom model, underwater OES`
 

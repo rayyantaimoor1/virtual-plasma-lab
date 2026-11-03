@@ -55,7 +55,7 @@ t = st.columns(3)
 show = {"Ar I": t[0].checkbox("Ar I", value=True),
         "N2 second positive": t[1].checkbox("N₂ second positive", value="N2 second positive" in parts,
                                             disabled="N2 second positive" not in parts),
-        "O I": t[2].checkbox("O I", value=False, disabled=True, help="O I lines (777, 844 nm) come with the oxygen data in Phase 7.")}
+        "O I": t[2].checkbox("O I", value=False, disabled=True, help="O I lines (777, 844 nm) need electron-impact excitation data for O atoms, not downloaded yet (pending data, BUILD_STEPS.md Phase 7).")}
 # Hiding a species subtracts its noise-free part, so the noise stays as it was.
 shown_intensity = spectrum.intensity - sum((part for name, part in parts.items() if not show[name]), np.zeros_like(spectrum.intensity))
 x, y = svc.downsample_peaks(spectrum.wavelength_nm, shown_intensity)

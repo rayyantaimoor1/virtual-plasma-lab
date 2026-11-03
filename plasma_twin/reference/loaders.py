@@ -256,3 +256,13 @@ def load_n2_second_positive(manifest_path: Path = MANIFEST_PATH) -> list[dict[st
     return [{"v_upper": int(r["v_upper"]), "v_lower": int(r["v_lower"]), "wavenumber_cm1": float(r["wavenumber_cm1"]),
              "franck_condon": float(r["franck_condon"]), "a_per_s": float(r["a_per_s"]),
              "limited_accuracy": r["limited_accuracy"] == "true"} for r in _read_csv("n2_second_positive", manifest_path)]
+
+
+def load_itikawa_h2o(manifest_path: Path = MANIFEST_PATH) -> list[CrossSection]:
+    """Itikawa (Itikawa & Mason 2005) electron collisions with water vapour (Phase 7)."""
+    return read_lxcat(verified_path("lxcat_itikawa_h2o", manifest_path))
+
+
+def load_stage2_constants(manifest_path: Path = MANIFEST_PATH) -> dict[str, float]:
+    """Every Stage 2 constant by name, each read from the source named on its row (Phase 7)."""
+    return {r["name"]: float(r["value"]) for r in _read_csv("stage2_constants", manifest_path)}

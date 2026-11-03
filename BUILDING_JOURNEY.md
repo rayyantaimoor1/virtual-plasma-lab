@@ -22,7 +22,7 @@ It is written so that either of us can explain any decision to the evaluation co
 **Decisions and why**
 - **A new repository.** The supervisor redirected the project in October 2026 (three stages: low-pressure argon plasma with OES, underwater oxygen plasma, Langmuir probe). The old project stays untouched, and the new one lives in `virtual-plasma-lab`.
 - **Two core modules.** Digital Twin (all the physics) and AI. AI was "optional" in the supervisor's answers, but the team made it core.
-- **The supervisor's answers are authoritative.** Where he left something blank, we used published literature and labelled it as such (`docs/UNDERSTANDING.md`).
+- **The supervisor's answers are authoritative.** Where the supervisor left something blank, we used published literature and labelled it as such (`docs/UNDERSTANDING.md`).
 
 **Problems and how we handled them**
 - **Word hung while exporting PDF.** Fixed by saving a copy with `SaveAs2` instead of `ExportAsFixedFormat`.
@@ -81,11 +81,11 @@ It is written so that either of us can explain any decision to the evaluation co
 - **2c, global model (`global_model.py`):** a 0D model of a 13.56 MHz argon CCP, using Lieberman's high-pressure capacitive model. It includes a collisional sheath, bulk and sheath ohmic heating, and stochastic heating.
 - **2d, excited atoms (`argon_kinetics.py`):** metastable, resonant and 4p argon atoms, two-step ionization, and losses to the walls.
 - **Validation:** `benchmark.py` compares the model with published measurements, and `docs/validation/` holds the record.
-- **`SUPERVISOR_QUESTIONS.md`:** 18 questions, each with the default we use until he answers.
+- **`SUPERVISOR_QUESTIONS.md`:** 18 questions, each with the default we use until the supervisor answers.
 
 **Techniques and why**
 - **Benchmarks recorded before any model existed.** Values come from Saikia et al., *AIP Advances* 8, 045113 (2018), open access, argon at 13.56 MHz and 100–400 mTorr. They were committed first, so nobody can say they were chosen to fit.
-- **Lieberman's 2015 course model.** At 0.1–0.5 mbar an ion's mean free path is about 0.1 mm, much shorter than the sheath, so the usual low-pressure textbook sheath does not apply. I read the formulas from his slides as images, and a test reproduces his own worked example (1.2 W, 6.3 W, 0.33 cm).
+- **Lieberman's 2015 course model.** At 0.1–0.5 mbar an ion's mean free path is about 0.1 mm, much shorter than the sheath, so the usual low-pressure textbook sheath does not apply. I read the formulas from the course slides as images, and a test reproduces the slides' own worked example (1.2 W, 6.3 W, 0.33 cm).
 - **Edge factors with length 2·s_m.** Particle-in-cell simulations (Lafleur & Chabert 2014) show that in a CCP at these pressures, ions are lost faster than the textbook formula says. Lieberman's correction was used, and the textbook form is kept as an option.
 - **Root finding.** `brentq` for one unknown at a time. Once excited atoms tie T_e to n_e, Powell's hybrid method (`scipy.optimize.root`) solves all seven balances together, started from the simpler solution.
 - **Exact checks of the maths.** Integrals are tested against cases with known answers: a constant cross-section, a step at threshold, and the Maxwellian wall values.
@@ -109,7 +109,7 @@ It is written so that either of us can explain any decision to the evaluation co
   - The paper does not state its fit window. Fitted near the floating potential, the same model reads within about 30–40 %. We report this for information but do not use it, because the window was fixed beforehand.
   - n_e is now the main gap. The likely causes are generator versus absorbed power (supervisor question Q3), the asymmetric electrodes, and the missing γ-mode heating.
 
-**How Phase 2 closed (2 November 2026).** By team decision, Phase 2 closed with one gate item unmet: agreement with the measured n_e and T_e within ±30 %. Every other item passed. We chose not to keep adding physics while the most likely remaining cause, generator versus absorbed power, waits on the supervisor (Q3). Without his answer, each new change would risk tuning the model to the data. When Q3 is answered, the same comparison is re-run as run 4.
+**How Phase 2 closed (2 November 2026).** By team decision, Phase 2 closed with one gate item unmet: agreement with the measured n_e and T_e within ±30 %. Every other item passed. We chose not to keep adding physics while the most likely remaining cause, generator versus absorbed power, waits on the supervisor (Q3). Without that answer, each new change would risk tuning the model to the data. When Q3 is answered, the same comparison is re-run as run 4.
 
 **Where it stands:** the model is built and well tested (145 tests pass, plus the gate test marked as an expected failure), and the trends match the measurements. The ±30 % gate is not met. All three runs are recorded in `docs/validation/phase2_stage1_benchmarks.md`.
 
@@ -219,7 +219,7 @@ It is written so that either of us can explain any decision to the evaluation co
   - **Also:** the O₂ "approximate" flag, and a list of each method's assumptions.
 
 **Techniques and why**
-- **Formulas read in the source, not remembered:** the OML ion current is Chen's Eq. 22, from his open lecture notes. Chen gives the Druyvesteyn method only as a proportionality, so we derived the exact constant from the same retarding-current integral the curve generator uses, and checked it against the textbook form.
+- **Formulas read in the source, not remembered:** the OML ion current is Chen's Eq. 22, from Chen's open lecture notes. Chen gives the Druyvesteyn method only as a proportionality, so we derived the exact constant from the same retarding-current integral the curve generator uses, and checked it against the textbook form.
 - **The probe sees exactly the model's plasma,** so a noise-free curve must give the model's values back. That turns the probe into a test of the analysis chain before it is ever used on measured data.
 - **Every new rule checked by an exact test:**
   - the Maxwellian exponential;
@@ -301,3 +301,60 @@ It is written so that either of us can explain any decision to the evaluation co
   - The full list is in `docs/validation/phase6_fr_checklist.md`.
 
 **How Phase 6 closed:** all exit-gate items are met: one-click quick start, the M1→M7 workflow working in the browser, 315 tests passing, and this section written. After the requirement check: 329 tests passing.
+
+## Phase 7: Stage 2 underwater plasma disinfection (built 4 November 2026; end-to-end check open)
+
+**What we made**
+- **Two screens:** M8, the underwater configuration (pulsed DC supply, O₂ bubbles, water, organism), and M9, the results (log reduction, D-value, energy yield, reactive species against time, survival curve, underwater spectrum with Stark n_e, water before and after). Saved Stage 2 sessions appear in the Sessions list and on Home.
+- **A chain of five models, each in its own file:**
+  - **pulse:** duty cycle and energy per pulse; overlapping pulses are blocked.
+  - **bubble plasma:** T_e, the radicals made per joule, n_e, and the afterglow chemistry.
+  - **water:** ozone transfer, H₂O₂, OH and temperature.
+  - **Hom survival.**
+  - **underwater spectrum:** OH, H-alpha and O lines.
+- **Every number from a named source.** A new file, `stage2_constants.csv`, holds 75 values, each with its source and page:
+  - NASA's JPL 19-5 kinetics evaluation;
+  - Buxton et al. 1988 for water chemistry;
+  - Hunt & Mariñas 1997 for E. coli and ozone;
+  - NIST for water;
+  - Briels 2008 for the streamer size;
+  - van der Horst 2012 and Gigosos 2003 for Stark broadening.
+
+**Techniques and why**
+- **Electron energy branching (G-values):** each electron collision takes its share of the pulse energy, so the radicals per joule come out without knowing the discharge volume. The volume is uncertain, so the chemistry should not depend on it.
+- **Disinfection by dissolved ozone:** we chose (with the student) the measured ozone kinetics of E. coli, which is the Hom model with n = m = 1. No open paper had survival over time for a device like ours.
+- **Each part tested against its own physics:**
+  - atoms are conserved in the chemistry;
+  - ionization balances attachment;
+  - the Stark width inverts back to the n_e that made it;
+  - the temperature rise equals energy ÷ (mass × heat capacity);
+  - the ozone kinetics reproduce Hunt & Mariñas exactly.
+
+**Problems and how we handled them**
+- **Finding published data was the hardest part.** We read eight papers. None measured E. coli survival over time in a device like ours (pin-to-pin, 5–10 kHz, O₂ bubbles):
+  - the COMSATS capillary paper had only before/after counts;
+  - a spark paper gave no time course;
+  - an MDPI paper used mixed microbes;
+  - a Scientific Reports paper used air;
+  - Li et al. 2020 used 35 kV sparks at 1 Hz, killing mainly by UV.
+  - So the ±30 % end-to-end check is **left open** and waits for the supervisor's data (Q13), as Phase 2's benchmark did.
+- **Two publisher pages showed "verify you are human" checks.** The student cleared one of them. The other would not load, so we found a different open source (MATEC 2018) instead.
+- **All the power into the bubble gas destroyed all the ozone.**
+  - **The problem:** 100 W into 100 sccm of O₂ is about 14 eV per molecule. Every pulse split all the O₂, so no ozone could form.
+  - **What it means:** real underwater discharges lose most of their energy to the water, and that share is the main unknown of Stage 2.
+  - **The fix:** it is now a visible input, with a default at the model's validity limit (7.6 %) and a sensitivity plot on M9. Supervisor question Q19 asks for a measured value.
+- **Water vapour kills the ozone, and that is real chemistry.** In dry O₂, 99 % of the O atoms become ozone. With 3 % water vapour, O(¹D) + H₂O makes OH, and the HOₓ cycles destroy O and O₃; the same reactions act in the atmosphere.
+- **H-alpha drowned in noise on the full 300–900 nm range.** It is about 1,600 times weaker than the OH band, which sets the noise level. Like the N₂ band in Stage 1, it now gets its own 650–663 nm acquisition. There the Stark n_e comes back within 2 % at 1 % noise.
+- **Two small bugs, found by tests:**
+  - 100 µs × 10 kHz came out as 0.9999999999999999 in floating point, so overlapping pulses were not blocked. It now uses a tiny tolerance.
+  - The hydrogen balance leaked 0.2 % because H₂ was not tracked. H₂ was added.
+- **Sending an email to a lookup service:** while looking up an open copy of a paper, I sent the student's email address to the Unpaywall API (it asks for one). The student was told, and later lookups used services that need no email.
+
+**Left open or for later**
+- The end-to-end ±30 % check (Q13).
+- The measured power share (Q19).
+- COD ozone demand: no published constant was found, so the ozone is an upper limit for waste water.
+- O I lines in Stage 1 (needs e–O data).
+- S. aureus and spores (no parameters, LI-6).
+
+**How Phase 7 closed:** all tests pass: 355, plus the Phase 2 benchmark still marked as an expected failure. Each part matches its own published data. The end-to-end ±30 % check is open by team decision, waiting on Q13. Version 0.7.0.

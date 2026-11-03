@@ -128,6 +128,14 @@ def sheath_regime(result) -> tuple[bool, str]:
                    "model's sheath law; treat the sheath values with care")
 
 
+def session_summary(stage: int, config: dict[str, Any]) -> str:
+    """One line describing a saved configuration of either stage (Home, Sessions)."""
+    if stage == 2:
+        return (f"{config.get('bubble_gas', '')}, {config.get('power_w', '')} W, {config.get('frequency_khz', '')} kHz, "
+                f"{config.get('o2_flow_sccm', '')} sccm")
+    return f"{config.get('mixture', '')}, {config.get('rf_power_w', '')} W, {config.get('pressure_mbar', '')} mbar"
+
+
 def config_hash(config: dict[str, Any]) -> str:
     """SHA-256 of the configuration written as sorted JSON: the cache key and the stored config_hash (E2)."""
     return hashlib.sha256(json.dumps(config, sort_keys=True).encode("utf-8")).hexdigest()

@@ -154,3 +154,38 @@ def test_probe_screen_reports_oml_density_type_and_smoothing() -> None:
     assert "n_e (OML ion current)" in text_of(at)
     assert at.selectbox[0].value == "Single cylindrical probe"
     assert "Savitzky-Golay" in " ".join(c.value for c in at.caption)
+
+
+@needs_data
+def test_underwater_configuration_blocks_overlapping_pulses() -> None:
+    """FR8.4, E5: 100 us at 10 kHz cannot run."""
+    at = open_screen("pages/8_Underwater_configuration.py", has_run=False)
+    assert "Every parameter is inside the operating envelope" in text_of(at)
+    next(n for n in at.number_input if n.label == "Repetition frequency (kHz)").set_value(10.0).run()
+    next(n for n in at.number_input if n.label == "Pulse width (µs)").set_value(100.0).run()
+    assert "overlap" in text_of(at)
+    assert next(b for b in at.button if "Run disinfection simulation" in b.label).disabled
+
+
+@needs_data
+def test_underwater_results_show_disinfection_and_save_a_stage2_session() -> None:
+    """FR9.1-FR9.6."""
+    at = streamlit_testing.AppTest.from_file(str(APP / "pages/9_Underwater_results.py"), default_timeout=300)
+    at.session_state["has_run2"] = True
+    at.run()
+    assert not at.exception, [e.value for e in at.exception]
+    labels = text_of(at)
+    assert "Log reduction at the treatment time" in labels and "n_e from the H-alpha Stark width" in labels
+    headings = " ".join(h.value for h in at.subheader)
+    for part in ("Reactive species in the water", "Survival curve (Hom model)", "Underwater emission spectrum",
+                 "Water before and after treatment"):
+        assert part in headings
+    at.text_input[0].input("underwater run").run()
+    next(b for b in at.button if "Save as session" in b.label).click().run()
+    saved = text_of(at)
+    assert "Saved as S-" in saved  # the cached store may hold earlier tests' sessions, so the number is not fixed
+    session_id = saved.split("Saved as ")[1][:6]
+    sessions = open_screen("pages/7_Sessions.py", has_run=False)
+    assert not sessions.exception
+    table = sessions.dataframe[0].value
+    assert table.loc[table["Session"] == session_id, "Stage"].tolist() == [2]

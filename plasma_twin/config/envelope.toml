@@ -153,6 +153,11 @@ min = 100
 default = 100
 max = 300
 
+[stage2.power_share]                  # Phase 7 (changed while building): share of the power that reaches the bubble gas
+min = 0.01                            # not measured for this device; the default is bubble_model.default_power_share()
+default = 0.076                       # rounded down (a test checks it): at most 10 % of the O2 split per pulse
+max = 1.0
+
 [stage2.pulse_rules]                  # FR8.4, E5. Duty cycle = pulse width x frequency.
 default_width_us = 10.0
 duty_cycle_block_at = 1.0

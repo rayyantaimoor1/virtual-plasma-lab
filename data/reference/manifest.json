@@ -127,6 +127,17 @@
       "in_repository": true,
       "retrieved": "2026-11-03",
       "sha256": "783b4a4f57166c799d7b8919cc07658555371fa212797ddeeb920ced6b6eec38"
+    },
+    {
+      "id": "stage2_constants",
+      "path": "constants/stage2_constants.csv",
+      "title": "Stage 2 constants: gas and liquid rate constants, Henry constants, disinfection kinetics, Stark and streamer data",
+      "source": "One named source per row (JPL 19-5, Buxton et al. 1988, Hunt & Marinas 1997, NIST WebBook, and others); see the file header",
+      "url": "https://science.jpl.nasa.gov/projects/data-evaluation",
+      "citation": "See the source and where columns of each row.",
+      "in_repository": true,
+      "retrieved": "2026-11-04",
+      "sha256": "5905cc06752d9fa9c2b2d73839779a62e26e703ee7b91c3333f23b2dddee4975"
     }
   ]
 }

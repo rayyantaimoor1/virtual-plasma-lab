@@ -1,0 +1,81 @@
+# Stage 2 constants (Phase 7). Every value was read in the source named on its row, on 2026-11-04.
+# JPL 19-5 = Burkholder et al., Chemical Kinetics and Photochemical Data for Use in Atmospheric Studies, Evaluation No. 19, JPL Publication 19-5 (2019), https://science.jpl.nasa.gov/documents/1487/NASA-JPL_Evaluation_19-5.pdf
+#   Bimolecular: k = A exp(-(E/R)/T). Termolecular: k0 = k0_298 (T/298)^-n [cm6 s-1], kinf = kinf_298 (T/298)^-m [cm3 s-1], falloff with Fc = 0.6 (Eq. 2.3); k0 is for air as third body.
+# Buxton 1988 = Buxton, Greenstock, Helman, Ross, J. Phys. Chem. Ref. Data 17, 513 (1988), Table 2 (NIST reprint srd.nist.gov/jpcrdreprint/1.555805.pdf). For X + X, the table gives 2k.
+# Henry: JPL 19-5 Table 5-4, ln H = A + B/T + C ln T, H in M atm-1.
+name,value,unit,source,where
+jpl_o_o3_A,8.0e-12,cm3 s-1,JPL 19-5,Table 1A Ox reactions (p. 1-6) O + O3 -> O2 + O2
+jpl_o_o3_E_R,2060,K,JPL 19-5,Table 1A Ox reactions (p. 1-6)
+jpl_o1d_o2_A,3.3e-11,cm3 s-1,JPL 19-5,Table 1A O(1D) reactions (p. 1-7) O(1D) + O2 total loss; products O(3P) + O2
+jpl_o1d_o2_E_R,-55,K,JPL 19-5,Table 1A O(1D) reactions (p. 1-7)
+jpl_o1d_h2o_A,1.63e-10,cm3 s-1,JPL 19-5,Table 1A O(1D) reactions (p. 1-7) O(1D) + H2O total loss; OH + OH branching 1.0 (O(3P) < 0.003; O2 + H2 0.006)
+jpl_o1d_h2o_E_R,-60,K,JPL 19-5,Table 1A O(1D) reactions (p. 1-7)
+jpl_o_oh_A,1.8e-11,cm3 s-1,JPL 19-5,Table 1B HOx reactions (p. 1-53) O + OH -> O2 + H
+jpl_o_oh_E_R,-180,K,JPL 19-5,Table 1B (p. 1-53)
+jpl_o_ho2_A,3.0e-11,cm3 s-1,JPL 19-5,Table 1B (p. 1-53) O + HO2 -> OH + O2
+jpl_o_ho2_E_R,-200,K,JPL 19-5,Table 1B (p. 1-53)
+jpl_o_h2o2_A,1.4e-12,cm3 s-1,JPL 19-5,Table 1B (p. 1-53) O + H2O2 -> OH + HO2
+jpl_o_h2o2_E_R,2000,K,JPL 19-5,Table 1B (p. 1-53)
+jpl_h_o3_A,1.4e-10,cm3 s-1,JPL 19-5,Table 1B (p. 1-53) H + O3 -> OH + O2
+jpl_h_o3_E_R,470,K,JPL 19-5,Table 1B (p. 1-53)
+jpl_h_ho2_2oh_A,7.2e-11,cm3 s-1,JPL 19-5,Table 1B (p. 1-53) H + HO2 -> 2 OH
+jpl_h_ho2_o_h2o_A,1.6e-12,cm3 s-1,JPL 19-5,Table 1B (p. 1-53) H + HO2 -> O + H2O
+jpl_h_ho2_h2_o2_A,6.9e-12,cm3 s-1,JPL 19-5,Table 1B (p. 1-53) H + HO2 -> H2 + O2
+jpl_oh_o3_A,1.7e-12,cm3 s-1,JPL 19-5,Table 1B (p. 1-53) OH + O3 -> HO2 + O2
+jpl_oh_o3_E_R,940,K,JPL 19-5,Table 1B (p. 1-53)
+jpl_oh_oh_h2o_o_A,1.8e-12,cm3 s-1,JPL 19-5,Table 1B (p. 1-53) OH + OH -> H2O + O (E/R = 0)
+jpl_oh_ho2_A,4.8e-11,cm3 s-1,JPL 19-5,Table 1B (p. 1-53) OH + HO2 -> H2O + O2
+jpl_oh_ho2_E_R,-250,K,JPL 19-5,Table 1B (p. 1-53)
+jpl_oh_h2o2_k,1.8e-12,cm3 s-1,JPL 19-5,Note B11 (p. 1-59) temperature independent 200-300 K
+jpl_ho2_o3_A,1.0e-14,cm3 s-1,JPL 19-5,Table 1B (p. 1-53) HO2 + O3 -> OH + 2 O2
+jpl_ho2_o3_E_R,490,K,JPL 19-5,Table 1B (p. 1-53)
+jpl_ho2_ho2_A,3.0e-13,cm3 s-1,JPL 19-5,Table 1B (p. 1-53) HO2 + HO2 -> H2O2 + O2 bimolecular part
+jpl_ho2_ho2_E_R,-460,K,JPL 19-5,Table 1B (p. 1-53)
+jpl_ho2_ho2_M_A,2.1e-33,cm6 s-1,JPL 19-5,Table 1B (p. 1-53) termolecular part (times [M])
+jpl_ho2_ho2_M_E_R,-920,K,JPL 19-5,Table 1B (p. 1-53)
+jpl_o_o2_k0_298,6.1e-34,cm6 s-1,JPL 19-5,Table 2-1 (p. 2-5) O + O2 + M -> O3
+jpl_o_o2_n,2.4,1,JPL 19-5,Table 2-1 (p. 2-5) no high-pressure limit given
+jpl_h_o2_k0_298,5.3e-32,cm6 s-1,JPL 19-5,Table 2-1 (p. 2-5) H + O2 + M -> HO2
+jpl_h_o2_n,1.8,1,JPL 19-5,Table 2-1 (p. 2-5)
+jpl_h_o2_kinf_298,9.5e-11,cm3 s-1,JPL 19-5,Table 2-1 (p. 2-5)
+jpl_h_o2_m,-0.4,1,JPL 19-5,Table 2-1 (p. 2-5)
+jpl_oh_oh_k0_298,6.9e-31,cm6 s-1,JPL 19-5,Table 2-1 (p. 2-5) OH + OH + M -> H2O2
+jpl_oh_oh_n,1.0,1,JPL 19-5,Table 2-1 (p. 2-5)
+jpl_oh_oh_kinf_298,2.6e-11,cm3 s-1,JPL 19-5,Table 2-1 (p. 2-5)
+jpl_oh_oh_m,0,1,JPL 19-5,Table 2-1 (p. 2-5)
+jpl_falloff_fc,0.6,1,JPL 19-5,Section 2.1 Eq. 2.3
+henry_o3_A,-14.08,1,JPL 19-5,Table 5-4 (p. 5-162); valid 273-333 K
+henry_o3_B,2830,K,JPL 19-5,Table 5-4 (p. 5-162)
+henry_h2o2_A,-13.08,1,JPL 19-5,Table 5-4 (p. 5-162); valid 278-303 K
+henry_h2o2_B,7290,K,JPL 19-5,Table 5-4 (p. 5-162)
+henry_oh_298,39,M atm-1,JPL 19-5,Table 5-4 (p. 5-162) 298 K only
+buxton_oh_oh_2k,1.1e10,L mol-1 s-1,Buxton 1988,Table 2 (p. 518) OH + OH -> H2O2 (2k)
+buxton_oh_h2o2,2.7e7,L mol-1 s-1,Buxton 1988,Table 2 (p. 518) OH + H2O2 -> H2O + HO2
+buxton_oh_ho2,6e9,L mol-1 s-1,Buxton 1988,Table 2 (p. 518) OH + HO2 -> H2O + O2
+o3_oh_minus,70,L mol-1 s-1,Staehelin & Hoigne 1982 (Environ. Sci. Technol. 16 p. 676) as quoted in the abstract of Merenyi et al. 2010 (Chem. Eur. J. 16 p. 1372; PubMed 20013772),O3 + OH- initiation of ozone decomposition
+hunt_k_20c,130,L mg-1 s-1,Hunt & Marinas 1997 (Water Res. 31 p. 1355),abstract: second-order rate constant for E. coli inactivation by dissolved O3 at 20 C
+hunt_ea,37100,J mol-1,Hunt & Marinas 1997,abstract: activation energy
+hunt_o3_min,6,ug L-1,Hunt & Marinas 1997,abstract: lowest O3 concentration studied
+hunt_o3_max,41,ug L-1,Hunt & Marinas 1997,abstract: highest O3 concentration studied
+hunt_t_min,1.8,s,Hunt & Marinas 1997,abstract: shortest contact time
+hunt_t_max,33,s,Hunt & Marinas 1997,abstract: longest contact time
+antoine_water_A_273_303,5.40221,1,NIST Chemistry WebBook (water; Bridgeman and Aldrich 1964),log10(P/bar) = A - B/(T + C); 273-303 K
+antoine_water_B_273_303,1838.675,K,NIST Chemistry WebBook,273-303 K
+antoine_water_C_273_303,-31.737,K,NIST Chemistry WebBook,273-303 K
+antoine_water_A_304_333,5.20389,1,NIST Chemistry WebBook (water; Bridgeman and Aldrich 1964),304-333 K
+antoine_water_B_304_333,1733.926,K,NIST Chemistry WebBook,304-333 K
+antoine_water_C_304_333,-39.485,K,NIST Chemistry WebBook,304-333 K
+li2020_h2o2_o2_60min,0.19,mmol L-1,Li et al. 2020 (AIP Adv. 10 art. 025207),Sec. III B and Fig. 9: H2O2 after 60 min of 35 kV sparks at 1 Hz with O2 bubbling (context only; outside our envelope)
+kla_gao_100mlmin,2.95e-3,s-1,Gao et al. 2005 (Sep. Purif. Technol. 42) as quoted by Ratnawati et al. 2018 (MATEC Web Conf. 156 art. 02015; CC BY),Sec. 3.3: ozone kLa at gas flow 100 mL/min (Gao used a Karman-type contactor; not a plain column)
+kla_gao_600mlmin,7.47e-3,s-1,Gao et al. 2005 as quoted by Ratnawati et al. 2018,Sec. 3.3: ozone kLa at gas flow 600 mL/min
+kla_ratnawati_2lmin_ph7,0.4e-3,s-1,Ratnawati et al. 2018 (MATEC Web Conf. 156 art. 02015),Sec. 3.3 / Fig. 5: bubble column 1.5 L KI solution at 28 C pH 7 and 2 L/min (context only)
+kla_ratnawati_4lmin_ph7,1.45e-3,s-1,Ratnawati et al. 2018,Sec. 3.3 / Fig. 5: as above at 4 L/min (context only)
+stark_halpha_coeff,8.33e-3,nm,van der Horst et al. 2012 (arXiv:1403.5259; J. Phys. D 45 345201) from the tables of Gigosos et al. 2003 (Spectrochim. Acta B 58 p. 1489),Eq. 1: FWHM_Stark = coeff (n_e / 1e20 m-3)^(2/3) for Te = 10000 K and mu* = 10 (Tg = 1000 K)
+stark_halpha_exponent,0.6666666667,1,van der Horst et al. 2012,Eq. 1 (exponent 2/3)
+streamer_p_dmin,0.20,mm bar,Briels et al. 2008 (arXiv:0805.1364; J. Phys. D 41 234008),abstract: minimal streamer diameter times pressure in air (+/- 0.02); assumption for the bubble channel
+water_cp_molar,75.38,J mol-1 K-1,NIST-JANAF (Chase 1998) via NIST Chemistry WebBook,liquid water Cp at 298 K
+water_molar_mass,18.0153,g mol-1,NIST Chemistry WebBook,water
+e0_o3_o2,2.076,V,CRC Handbook of Chemistry and Physics 84th ed. (2004) as reproduced by Saylor Academy open textbook Appendix E,O3 + 2H+ + 2e- -> O2 + H2O
+water_density_298,997.048,kg m-3,NIST Chemistry WebBook fluid properties (IAPWS-95; Wagner & Pruss 2002),liquid water at 298.15 K and 1 atm
+hunt_temp_min_c,5,C,Hunt & Marinas 1997,abstract: lowest temperature studied
+hunt_temp_max_c,25,C,Hunt & Marinas 1997,abstract: highest temperature studied

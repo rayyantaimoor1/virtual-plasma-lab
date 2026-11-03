@@ -1,6 +1,6 @@
 # Questions for Dr. Majid Iqbal
 
-Questions we need the supervisor to answer. Until he does, the project uses the default shown under **Until answered**, so work does not stop. When an answer arrives, write it under **Answer** with the date, then change the code or documents that depend on it.
+Questions we need the supervisor to answer. Until they are answered, the project uses the default shown under **Until answered**, so work does not stop. When an answer arrives, write it under **Answer** with the date, then change the code or documents that depend on it.
 
 The most urgent questions come first. Background for each one is in `docs/UNDERSTANDING.md`.
 
@@ -101,6 +101,12 @@ The Hom model needs survival counts at several treatment times, not just one cou
 
 **Until answered:** we fit the Hom model to published time-resolved *E. coli* data and say so clearly.
 **Finding (4 November 2026):** no open-access paper matches our device (pin-to-pin, 5–10 kHz, O₂ bubbles) with survival at several times. So we use the published ozone kinetics of E. coli (Hunt & Mariñas 1997: first order, k = 130 L mg⁻¹ s⁻¹ at 20 °C, which is the Hom model with n = m = 1). The end-to-end ±30 % check waits for your survival data at, say, 0, 0.5, 1, 2 and 5 min.
+**Answer:**
+
+### Q19. How much of the power reaches the gas in the bubbles?
+Our model sends only a share of the 100 W into the gas inside the bubbles; the rest heats the water. With all 100 W in the gas, every O₂ molecule would be split and no ozone would form. Do you have a measured ozone production (g/h or g/kWh), or the current through the water, for your set-up?
+
+**Until answered:** the share is a visible input. Its default is 7.6 %, the largest share for which our chemistry stays valid (at most 10 % of the O₂ split per pulse). The results screen shows how much the answer depends on it.
 **Answer:**
 
 ### Q14. Waste-water properties

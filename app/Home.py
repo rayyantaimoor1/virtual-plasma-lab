@@ -30,7 +30,8 @@ with c1:
         st.switch_page(PAGES["chamber"])
 with c2:
     st.markdown("**Stage 2: underwater plasma**")
-    status("info", "Built in Phase 7.")
+    if st.button("Configure the disinfection"):
+        st.switch_page(PAGES["underwater"])
 with c3:
     st.markdown("**Diagnostics & data**")
     if st.button("Virtual OES"):
@@ -47,8 +48,7 @@ with c4:
 st.subheader("Recent sessions")
 recent = store().list(limit=3)  # FR1.3: at most three, newest first
 if recent:
-    st.dataframe([{"Session": r.session_id, "Stage": r.stage, "Configuration":
-                   f"{r.config.get('mixture', '')}, {r.config.get('rf_power_w', '')} W, {r.config.get('pressure_mbar', '')} mbar",
+    st.dataframe([{"Session": r.session_id, "Stage": r.stage, "Configuration": svc.session_summary(r.stage, r.config),
                    "Saved": r.created_at, "Note": r.note} for r in recent], hide_index=True, use_container_width=True)
     if st.button("View all sessions"):
         st.switch_page(PAGES["sessions"])

@@ -18,6 +18,7 @@ import streamlit as st  # noqa: E402
 
 from plasma_twin import __version__  # noqa: E402
 from plasma_twin.services import stage1 as svc  # noqa: E402
+from plasma_twin.services import stage2 as svc2  # noqa: E402
 from plasma_twin.storage.sessions import SessionStore  # noqa: E402
 
 ROLES = ("Student", "Researcher")
@@ -30,6 +31,8 @@ PAGES = {
     "probe": "pages/5_Langmuir_probe.py",
     "compare": "pages/6_Comparison.py",
     "sessions": "pages/7_Sessions.py",
+    "underwater": "pages/8_Underwater_configuration.py",
+    "underwater_results": "pages/9_Underwater_results.py",
 }
 
 
@@ -38,6 +41,8 @@ def page_setup(title: str) -> None:
     st.set_page_config(page_title=f"{title} - Plasma Digital Twin", layout="wide")
     if "config" not in st.session_state:
         st.session_state["config"] = svc.default_config()
+    if "config2" not in st.session_state:
+        st.session_state["config2"] = svc2.default_config()
     st.session_state.setdefault("role", ROLES[0])
     with st.sidebar:
         st.session_state["role"] = st.radio("Role", ROLES, index=ROLES.index(st.session_state["role"]),
@@ -163,3 +168,24 @@ def metric_grid(items: list[tuple[str, str, str]], per_row: int = 2) -> None:
         columns = st.columns(per_row)
         for column, (label, value, help_text) in zip(columns, items[start:start + per_row]):
             column.metric(label, value, help=help_text or None)
+
+
+# ------------------------------------------------------------------ Stage 2 (Phase 7)
+@st.cache_data(show_spinner="Simulating the underwater discharge...", max_entries=32)
+def cached_stage2(config_text: str, settings_text: str):
+    """Stage 2 run (pulse -> bubbles -> water -> survival -> spectrum), cached by configuration and spectrometer."""
+    from plasma_twin.oes.spectrum import SpectrometerSettings
+    return svc2.run(json.loads(config_text), SpectrometerSettings(**json.loads(settings_text)))
+
+
+@st.cache_data(show_spinner="Varying the power share...", max_entries=16)
+def cached_power_share(config_text: str):
+    return svc2.power_share_sensitivity(json.loads(config_text))
+
+
+def run_stage2_and_open(config: dict) -> None:
+    """Store the Stage 2 configuration, mark it as run and open its results screen (FR8.13)."""
+    st.session_state["config2"] = dict(config)
+    st.session_state["has_run2"] = True
+    st.session_state.pop("session_id2", None)
+    st.switch_page(PAGES["underwater_results"])

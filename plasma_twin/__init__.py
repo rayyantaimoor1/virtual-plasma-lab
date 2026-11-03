@@ -3,4 +3,4 @@
 __version__ is stored with every saved session (REL-4, FR11.3), so a session reopened after the
 model has changed says so and offers a re-run. The minor number follows the build phase.
 """
-__version__ = "0.6.0"
+__version__ = "0.7.0"

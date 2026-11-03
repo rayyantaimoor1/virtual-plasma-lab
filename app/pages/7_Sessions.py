@@ -1,5 +1,5 @@
 """M11 Sessions, basic (FR11.1-FR11.4): list, search, open, compare and delete saved runs."""
-from common import PAGES, __version__, axis, page_setup, sci, status, store, svc  # noqa: I001
+from common import PAGES, __version__, axis, page_setup, sci, status, store, svc, svc2  # noqa: I001
 
 import csv
 import io
@@ -23,10 +23,12 @@ if not records:
 
 
 def row(r):
-    state = r.results.get("plasma_state", {})
-    return {"Session": r.session_id, "Stage": r.stage,
-            "Configuration": f"{r.config.get('mixture', '')}, {r.config.get('rf_power_w', '')} W, {r.config.get('pressure_mbar', '')} mbar",
-            "T_e (eV)": f"{state.get('te_ev', float('nan')):.2f}", "n_e (m⁻³)": sci(state.get("ne_center_m3", float("nan"))),
+    state = r.results.get("plasma_state") or r.results.get("stage2", {})
+    ne = state.get("ne_center_m3", state.get("ne_channel_m3", float("nan")))
+    reduction = state.get("log_reduction")
+    return {"Session": r.session_id, "Stage": r.stage, "Configuration": svc.session_summary(r.stage, r.config),
+            "T_e (eV)": f"{state.get('te_ev', float('nan')):.2f}", "n_e (m⁻³)": sci(ne),
+            "Log reduction": f"{reduction:.2f}" if reduction is not None else "-",
             "Saved": r.created_at, "Note": r.note, "Model version": r.model_version}
 
 
@@ -41,6 +43,13 @@ if c1.button("Open selected", disabled=len(chosen) != 1):
     if record.model_version != __version__:
         status("warn", f"{record.session_id} was saved with model version {record.model_version}; this is {__version__}. "
                        "Its configuration is reopened and re-run with the current model.")
+    if record.stage == 2:
+        st.session_state["config2"] = {**svc2.default_config(), **record.config}
+        st.session_state["has_run2"] = True
+        st.session_state["session_id2"] = record.session_id
+        for key in [k for k in st.session_state if k.startswith("u_")]:
+            del st.session_state[key]
+        st.switch_page(PAGES["underwater_results"])
     st.session_state["config"] = {**svc.default_config(), **record.config}
     st.session_state["has_run"] = True
     st.session_state["session_id"] = record.session_id
@@ -52,6 +61,11 @@ if c1.button("Open selected", disabled=len(chosen) != 1):
 if c2.button("Compare selected", disabled=not 2 <= len(chosen) <= 5):
     try:
         group = store().compare(chosen)
+        if group[0].stage == 2:
+            fig = go.Figure([go.Bar(name=r.session_id, x=["log reduction"], y=[r.results.get("stage2", {}).get("log_reduction")])
+                             for r in group])
+            st.plotly_chart(axis(fig, "Quantity", "Log reduction log₁₀(N₀/N) (dimensionless)"), use_container_width=True)
+            st.stop()
         fig = go.Figure()
         for r in group:
             state = r.results.get("plasma_state", {})
