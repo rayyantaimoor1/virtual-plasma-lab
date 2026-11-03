@@ -35,6 +35,15 @@ The virtual spectrometer needs electron collisions that start from argon's excit
 3. Select all three data groups and all 177 processes, accept the terms of use if you agree, and save the **TXT** output.
 4. Run `python scripts/fetch_reference.py lxcat YOUR_FILE --dataset lxcat_bsr_argon`.
 
+### The third LXCat file: Itikawa water (Phase 7)
+
+The underwater bubble plasma needs electron collisions with water vapour. Downloaded on 3 November 2026 (LXCat's header date):
+
+1. Choose **Scattering cross sections**, then in the database list keep only **Itikawa database**.
+2. Choose species **H2O**, all data groups and all processes (28).
+3. Accept the terms as above and save the **TXT** output.
+4. Run `python scripts/fetch_reference.py lxcat YOUR_FILE --dataset lxcat_itikawa_h2o`.
+
 Reports must cite the database, www.lxcat.net and the retrieval date, as [LXCat requires](https://nl.lxcat.net/instructions/how_reference.php). The citation recorded in `manifest.json` comes from the file's header, including the MAGBOLTZ version Biagi asks to be named.
 
 LXCat writes the download date into the header, so each person's file differs and will not match the recorded checksum. Before accepting a teammate's file, compare it with the recorded one, ignoring the date line.

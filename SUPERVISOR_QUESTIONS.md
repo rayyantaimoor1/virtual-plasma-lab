@@ -100,6 +100,7 @@ Is it pure O₂, or O₂ with water vapour? Water vapour is needed to form OH, H
 The Hom model needs survival counts at several treatment times, not just one count after 1 minute. Can the laboratory measure survival at, say, 0, 0.5, 1, 2 and 5 minutes? Or which published data do you recommend?
 
 **Until answered:** we fit the Hom model to published time-resolved *E. coli* data and say so clearly.
+**Finding (4 November 2026):** no open-access paper matches our device (pin-to-pin, 5–10 kHz, O₂ bubbles) with survival at several times. So we use the published ozone kinetics of E. coli (Hunt & Mariñas 1997: first order, k = 130 L mg⁻¹ s⁻¹ at 20 °C, which is the Hom model with n = m = 1). The end-to-end ±30 % check waits for your survival data at, say, 0, 0.5, 1, 2 and 5 min.
 **Answer:**
 
 ### Q14. Waste-water properties

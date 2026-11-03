@@ -73,6 +73,18 @@
       "sha256": "cadb42328585ae2fc721ace17e0ab418272e73d37bc448b0f3d47b51a2302ad9"
     },
     {
+      "id": "lxcat_itikawa_h2o",
+      "path": "lxcat/itikawa_h2o.txt",
+      "title": "Electron collisions with water vapour (elastic, excitation, dissociation, ionization, attachment)",
+      "source": "LXCat, Itikawa database (recommended cross sections from experiment); 28 processes for e/H2O",
+      "url": "https://www.lxcat.net/Itikawa",
+      "citation": "Itikawa database, www.lxcat.net, retrieved on November 3, 2026 (date in the file header). Y. Itikawa and N. Mason 2005 J. Phys. Chem. Ref. Data 34, 1 (doi:10.1063/1.1799251).",
+      "in_repository": false,
+      "how_to_get": "Download it yourself from www.lxcat.net (Itikawa database; species e and H2O; all processes), following data/reference/README.md, then run: python scripts/fetch_reference.py lxcat YOUR_FILE --dataset lxcat_itikawa_h2o",
+      "retrieved": "2026-11-04",
+      "sha256": "ffa1125b999a33e44813ddd318cf06fc439d45864e7bddc163ca94803d457535"
+    },
+    {
       "id": "diatomic_constants",
       "path": "constants/diatomic_constants.csv",
       "title": "Spectroscopic constants of N2 (C, B) and OH (A, X)",

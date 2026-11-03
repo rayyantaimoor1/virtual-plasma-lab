@@ -545,6 +545,59 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
 - `stage2/uw_oes.py`: OH at 309 nm, H-alpha at 656.3 nm and O I at 777/844 nm, with n_e from the H-alpha Stark width (Gigosos relation).
 - Streamlit pages M8 and M9.
 
+**Rules** (fixed 4 November 2026, before any Phase 7 code)
+
+*Decisions taken with the student on 4 November 2026:*
+- **Disinfection kinetics:** dissolved ozone, from Hunt & Mariñas (1997, *Water Research* 31, 1355). E. coli inactivation is first-order in both dissolved O₃ and live cells. The rate constant is 130 L mg⁻¹ s⁻¹ at 20 °C, with activation energy 37,100 J mol⁻¹. In Hom form log₁₀(N/N₀) = −k Cⁿ tᵐ, this is n = 1 and m = 1. Because C changes with time, the model uses the integral: log₁₀(N/N₀) = −(k_T / ln 10) ∫C dt.
+  - k_T is k at the water temperature, from the Arrhenius law.
+  - Their data covered O₃ = 6–41 µg/L and t = 1.8–33 s. Outside that range the result is flagged as extrapolated.
+  - S. aureus and spores stay unavailable (LI-6).
+- **Validation:** no open-access experiment matches our device (pin-to-pin, 1–10 kV, 5–10 kHz, O₂ bubbles). The papers searched, and why each was rejected, are recorded in BUILDING_JOURNEY.md. So:
+  - **Part checks:** each part is checked against its own published data (below).
+  - **End-to-end gate (ACC-1/BO-4):** stays **open**, waiting for the supervisor's time-resolved survival data (SUPERVISOR_QUESTIONS.md, Q13). This is the same treatment as Phase 2's open benchmark item.
+  - **Li et al. 2020 (AIP Advances 10, 025207):** 35 kV sparks at 1 Hz, killing mainly by UV. It is outside our envelope and our mechanism, so it is shown as context only. Its H₂O₂ value is a sanity check: 0.19 mmol/L after 60 min with O₂ bubbling.
+- **Electron–water data:** LXCat Itikawa H₂O set (Itikawa & Mason 2005), downloaded 3 November 2026. It is private, like the other LXCat files.
+
+*Every number used in Stage 2 is read from a named source into `data/reference/constants/stage2_constants.csv` (value, unit, source, page or table) before it is used. No value is typed into the code from memory.*
+
+- **Pulse (`stage2/pulse.py`):**
+  - duty = width × frequency. The run is blocked at duty ≥ 1 (E5), with a warning above 0.5.
+  - Energy per pulse = P/f.
+  - Power during the pulse = P/duty.
+- **Bubble gas:**
+  - O₂ saturated with water vapour at the water temperature. The vapour pressure comes from the NIST WebBook Antoine coefficients for water.
+  - "O₂ only" mode has no water. It disables OH, H₂O₂, H-alpha and the Stark n_e (FR8.9).
+- **Bubble plasma (`stage2/bubble_model.py`), 0D, Maxwellian, 1 atm:**
+  - **T_e:** during the pulse, T_e is where electron production equals electron loss by attachment. Production is ionization of O₂ (Biagi) and H₂O (Itikawa). Loss is dissociative attachment of O₂ (Biagi) and H₂O (Itikawa). At 1 atm the pulse sits at this balance (the attachment–ionization limit). Recombination and three-body attachment are not in the balance, and this is stated.
+  - **Energy branching (G-values):** each electron process takes a share n_g k_j ε_j / Σ of the pulse energy. That gives the radicals made per joule: O(³P), O(¹D), OH, H, and ions. This needs no discharge volume.
+    - O₂ dissociation channels follow the Biagi/Phelps convention: the 6.0 eV and 8.4 eV excitations dissociate to O+O and O+O(¹D).
+    - OH comes from Itikawa's "OH(X)" neutral-dissociation cross-section.
+  - **n_e (for Stark broadening only):** P_pulse = n_e V Σ n_g k_j ε_j e. V is a channel of length = gap and diameter from the measured minimal streamer diameter at 1 bar (Briels et al. 2008). The diameter is an assumption, stated with its source; n_e depends on it and a sensitivity is shown.
+- **Afterglow gas chemistry:**
+  - The radicals from one pulse react for one period (1/f), at the gas temperature.
+  - The set is O, O(¹D), O₃, OH, H, HO₂, H₂O₂, O₂ and H₂O. Each rate comes from NASA JPL Publication 19-5 (open). O(¹D) + H₂O → 2 OH is included.
+  - Output: O₃ and H₂O₂ molecules per pulse, hence per second (× f).
+- **Liquid (`stage2/liquid.py`):**
+  - **H₂O₂:** it is very soluble (Sander 2023 Henry constant), so all gas-phase H₂O₂ dissolves.
+  - **O₃:** it dissolves through a two-film transfer, dC/dt = k_La (H p_O₃ − C) − k_d C.
+    - H is the Sander 2023 Henry constant for O₃.
+    - p_O₃ is the outlet-gas partial pressure: production ÷ O₂ flow.
+    - k_d is ozone decay in water, from Staehelin & Hoigné, depending on pH.
+    - k_La is the empirical part. It is read from a published bubble-column ozonation measurement before coding, and its source is shown in the app. If no source can be read, the rule is reported and the student decides.
+  - **OH in the liquid:** steady state between the OH flux into the water and its reactions (OH + OH, OH + H₂O₂; Buxton et al. 1988 rate constants).
+  - **COD:** COD is recorded. Its ozone demand is used only if a published first-order ozone-demand constant for municipal waste water can be read. Otherwise the model is stated as valid for low-organic water.
+  - **Temperature rise** = deposited energy ÷ (water mass × specific heat), as the test says (FR9.5).
+  - **pH and conductivity:** from the ions formed (H⁺, HO₂⁻). With O₂ only and no N₂, little acid forms. That is physics, and the screen says so.
+  - **ORP:** shown as the Nernst potential of the O₃/O₂ couple. It is labelled a thermodynamic estimate: real ORP electrodes read lower.
+- **Underwater OES (`stage2/uw_oes.py`):**
+  - **Emission rates** use the Itikawa *emission* cross-sections: OH(A) 309 nm, H Balmer alpha, and O 777/844 nm from H₂O.
+  - **O I from O₂ dissociative excitation** needs e–O₂ emission data we do not have. It is left out and stated.
+  - **OH band shape:** the (0,0) band uses the OH constants already in `diatomic_constants.csv`, at the gas temperature. It is marked approximate (no spin splitting).
+  - **H-alpha:** a Stark Lorentzian (Gigosos et al. 2003 FWHM–n_e relation), Doppler and the instrument.
+  - **Stark n_e:** found by fitting the width, removing Doppler and the instrument, and inverting the relation. Only when the instrument FWHM < Stark FWHM (FR9.4).
+- **Stage 1 O I lines (777/844 nm):** these need e–O excitation cross-sections, which are not downloaded. They stay disabled, and this is recorded as pending data.
+- **Speed:** one 1 min run takes ≤ 10 s (PER-5).
+
 **Tests** (`tests/test_pulse.py`, `test_bubble_model.py`, `test_liquid.py`, `test_hom.py`, `test_uw_oes.py`)
 - 100 µs at 10 kHz is blocked.
 - 10 µs at 5 kHz gives a duty cycle of 5 % and 20 mJ per pulse.
@@ -555,7 +608,8 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
 
 **Exit gate**
 - [ ] Tests pass.
-- [ ] The log reduction is within ±30 % of the published reference at 1 or more points (ACC-1, BO-4).
+- [ ] The log reduction is within ±30 % of the published reference at 1 or more points (ACC-1, BO-4). **Left open by team decision (4 November 2026):** no published experiment matches the device; waits for Q13.
+- [ ] Each part matches its own published data (Hunt & Mariñas k reproduced; H₂O₂ order of magnitude against Li et al. 2020 shown, not gated; Stark inversion; energy balance).
 
 **Commit:** `Phase 7: Stage 2 underwater bubble plasma, liquid chemistry, Hom model, underwater OES`
 
