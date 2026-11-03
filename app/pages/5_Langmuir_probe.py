@@ -1,5 +1,5 @@
 """M6 Virtual Langmuir probe (FR6.1-FR6.10): simulate and analyse an I-V curve."""
-from common import PAGES, axis, cached_probe, config_json, metric_grid, need_result, page_setup, sci, status  # noqa: I001
+from common import PAGES, axis, cached_probe, config_json, metric_grid, need_result, page_setup, sci, status, svc  # noqa: I001
 
 import csv
 import io
@@ -10,6 +10,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from plasma_twin.config.loader import load_envelope
+from plasma_twin.probe.eepf import SAVGOL_ORDER, SAVGOL_WINDOW
 from plasma_twin.probe.iv_model import ProbeSettings, ProbeSettingsOutOfRange
 from plasma_twin.stage1.eedf import EEDF, MAXWELLIAN_SHAPE
 
@@ -21,7 +22,9 @@ saved = json.loads(st.session_state["probe_settings"]) if st.session_state.get("
 
 # ------------------------------------------------------------------ settings (FR6.1-FR6.4)
 with st.form("probe"):
-    st.markdown("**Probe:** cylindrical tungsten tip (FR6.1)")
+    t1, t2 = st.columns(2)
+    t1.selectbox("Probe type (FR6.1)", ["Single cylindrical probe"], help="The COMSATS laboratory probe; the only type modelled.")
+    t2.text_input("Tip material", "Tungsten", disabled=True)
     c = st.columns(5)
     radius = c[0].number_input("Tip radius r_p (mm)", float(env["tip_radius_mm"]["min"]), float(env["tip_radius_mm"]["max"]), float(saved["tip_radius_mm"]), format="%.3f")
     length = c[1].number_input("Exposed length L (mm)", float(env["exposed_length_mm"]["min"]), float(env["exposed_length_mm"]["max"]), float(saved["exposed_length_mm"]))
@@ -56,12 +59,16 @@ if analysis is None:
     st.stop()
 st.subheader("Analysis")
 flag = "" if analysis.eepf_reliable else " - UNRELIABLE (noise)"
+o2 = result.inputs.o2_percent_of_ar > 0
+oml_text = f"{sci(analysis.ion_density_m3)} m⁻³" if np.isfinite(analysis.ion_density_m3) else "not available"
 metric_grid([
     ("Floating potential V_f", f"{analysis.floating_potential_v:.2f} V", ""),
     ("Plasma potential V_p", f"{analysis.plasma_potential_v:.2f} V", ""),
     ("T_eff (EEPF)" + flag, f"{analysis.effective_temperature_ev:.2f} eV", "Two-thirds of the mean energy: the model's definition of T_e"),
     ("n_e (EEPF)" + flag, f"{sci(analysis.electron_density_m3)} m⁻³", ""),
     ("Slope T_e", f"{analysis.slope_temperature_ev:.2f} eV", "Inverse slope of ln I_e between V_f and V_p"),
+    ("n_e (OML ion current)" + (" - approximate (O₂)" if o2 else ""), oml_text,
+     "n_i from the slope of I_i² (Chen Eq. 22), = n_e by quasi-neutrality; not available when noise spoils the I² fit"),
     ("n_e (saturation)", f"{sci(analysis.saturation_density_m3)} m⁻³", "Robust to noise"),
     ("Debye length λ_D", f"{1e3 * analysis.debye_length_m:.3f} mm", ""),
     ("r_p / λ_D", f"{analysis.radius_over_debye:.2f}", "OML needs at most 1"),
@@ -71,6 +78,8 @@ if analysis.oml_valid:
     status("ok", "r_p/λ_D ≤ 1: OML theory applies (FR6.7).")
 for warning in analysis.warnings:
     status("warn", warning)
+if o2:
+    status("warn", "O₂ is present: negative ions change the ion current, so the probe values are approximate (LI-4).")
 
 # ------------------------------------------------------------------ EEPF (FR6.8)
 st.subheader("Electron energy probability function")
@@ -84,9 +93,14 @@ if analysis.eepf_reliable and len(e.energy_ev):
     st.plotly_chart(axis(fig, "Electron energy ε (eV)", "EEPF g_p(ε) (eV⁻³ᐟ²)", log_y=True), use_container_width=True)
 else:
     status("warn", "The EEPF is not drawn: noise makes the second derivative untrustworthy. Lower the noise to see it.")
+step_v = float(curve.voltage_v[1] - curve.voltage_v[0])
+st.caption(f"Druyvesteyn method. Smoothing window: Savitzky-Golay, {SAVGOL_WINDOW} points ({SAVGOL_WINDOW * step_v:g} V), "
+           f"polynomial order {SAVGOL_ORDER} (FR6.8).")
 
 # ------------------------------------------------------------------ export and next (FR6.10)
 buffer = io.StringIO()
+buffer.write(svc.export_header(st.session_state.get("session_id"), probe_settings=settings_text,
+                                smoothing=f"Savitzky-Golay {SAVGOL_WINDOW} points, order {SAVGOL_ORDER}"))
 writer = csv.writer(buffer)
 writer.writerow(["V_volt", "I_ampere"])
 writer.writerows(zip(curve.voltage_v, curve.current_a))
@@ -94,7 +108,8 @@ writer.writerow([])
 writer.writerow(["quantity", "value", "unit"])
 for name, value, unit in (("V_f", analysis.floating_potential_v, "V"), ("V_p", analysis.plasma_potential_v, "V"),
                           ("T_eff", analysis.effective_temperature_ev, "eV"), ("T_slope", analysis.slope_temperature_ev, "eV"),
-                          ("n_e_EEPF", analysis.electron_density_m3, "m^-3"), ("n_e_saturation", analysis.saturation_density_m3, "m^-3"),
+                          ("n_e_EEPF", analysis.electron_density_m3, "m^-3"), ("n_e_OML_ion", analysis.ion_density_m3, "m^-3"),
+                          ("n_e_saturation", analysis.saturation_density_m3, "m^-3"),
                           ("lambda_D", analysis.debye_length_m, "m"), ("EEPF_reliable", analysis.eepf_reliable, "")):
     writer.writerow([name, value, unit])
 c1, c2 = st.columns(2)

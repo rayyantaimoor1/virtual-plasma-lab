@@ -23,27 +23,34 @@ with st.expander("Other example experiments"):
 
 # ------------------------------------------------------------------ entry points (FR1.1)
 st.subheader("Stages")
-c1, c2, c3 = st.columns(3)
+c1, c2, c3, c4 = st.columns(4)
 with c1:
-    st.markdown("**Stage 1: low-pressure argon plasma**")
+    st.markdown("**Stage 1: low-pressure plasma**")
     if st.button("Configure the chamber"):
         st.switch_page(PAGES["chamber"])
 with c2:
-    st.markdown("**Stage 2: underwater plasma disinfection**")
+    st.markdown("**Stage 2: underwater plasma**")
     status("info", "Built in Phase 7.")
 with c3:
-    st.markdown("**Stage 3: Langmuir probe on the Stage 1 plasma**")
-    if st.button("Open the virtual probe"):
+    st.markdown("**Diagnostics & data**")
+    if st.button("Virtual OES"):
+        st.switch_page(PAGES["oes"])
+    if st.button("Langmuir probe (Stage 3)"):
         st.switch_page(PAGES["probe"])
+    if st.button("Model vs diagnostics"):
+        st.switch_page(PAGES["compare"])
+with c4:
+    st.markdown("**AI module**")
+    status("info", "Built in Phases 9-13.")
 
 # ------------------------------------------------------------------ recent sessions (FR1.3)
 st.subheader("Recent sessions")
-recent = store().list(limit=5)
+recent = store().list(limit=3)  # FR1.3: at most three, newest first
 if recent:
     st.dataframe([{"Session": r.session_id, "Stage": r.stage, "Configuration":
                    f"{r.config.get('mixture', '')}, {r.config.get('rf_power_w', '')} W, {r.config.get('pressure_mbar', '')} mbar",
                    "Saved": r.created_at, "Note": r.note} for r in recent], hide_index=True, use_container_width=True)
-    if st.button("Open the session list"):
+    if st.button("View all sessions"):
         st.switch_page(PAGES["sessions"])
 else:
     st.caption("No saved sessions yet. Save one from the Results screen.")
@@ -54,7 +61,9 @@ states = check_reference_data()
 manifest = load_manifest()
 words = {DataStatus.OK: "loaded", DataStatus.MISSING: "MISSING", DataStatus.CORRUPT: "CHANGED (checksum mismatch)"}
 st.dataframe([{"Data set": manifest[name]["title"], "Status": words[state], "Source": manifest[name]["source"]}
-              for name, state in states.items()], hide_index=True, use_container_width=True)
+              for name, state in states.items()]
+             + [{"Data set": "AI models (surrogate, inverse, anomaly)", "Status": "not built yet (Phases 9-13)", "Source": "-"}],
+             hide_index=True, use_container_width=True)
 if all(s is DataStatus.OK for s in states.values()):
     status("ok", "All reference data sets are present and match their recorded checksums.")
 else:

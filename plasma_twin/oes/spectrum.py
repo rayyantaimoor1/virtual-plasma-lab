@@ -16,7 +16,7 @@ RULES (BUILD_STEPS.md, Phase 4b, fixed before this code):
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 from scipy import constants as codata
@@ -99,6 +99,24 @@ def build_spectrum(line_power_w_m3: dict[float, float], gas_temperature_k: float
         rng = np.random.default_rng(settings.seed)
         intensity = intensity + rng.normal(0.0, settings.noise_percent / 100 * intensity.max(), size=intensity.shape)
     return Spectrum(grid, intensity, drawn, settings, gas_temperature_k)
+
+
+def species_contributions(result, settings: SpectrometerSettings | None = None) -> dict[str, np.ndarray]:
+    """FR4.2: the noise-free part of the spectrum from each species, on the same grid as spectrum_for.
+
+    Hiding a species means subtracting its part from the full spectrum, so the noise stays exactly as it was.
+    """
+    from plasma_twin.oes.cr_model import solve_cr_for
+    from plasma_twin.oes.n2_band import N2_MASS_KG, n2_lines
+    quiet = replace(settings or SpectrometerSettings.defaults(), noise_percent=0.0)
+    temperature = result.inputs.gas_temperature_k
+    parts = {"Ar I": build_spectrum(dict(solve_cr_for(result).line_emission_w_m3), temperature, quiet).intensity}
+    production = result.mixture.get("n2c_excitation_m3_s", 0.0)
+    if production > 0:
+        lines = n2_lines(production, temperature)
+        parts["N2 second positive"] = build_spectrum(lines, temperature, quiet,
+                                                     masses_kg={wl: N2_MASS_KG for wl in lines}).intensity
+    return parts
 
 
 def spectrum_for(result, settings: SpectrometerSettings | None = None) -> Spectrum:

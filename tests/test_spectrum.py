@@ -79,3 +79,16 @@ def test_full_spectrum_from_the_plasma_in_at_most_three_seconds() -> None:
     assert len(spectrum.wavelength_nm) > 500_000
     peak = spectrum.wavelength_nm[np.argmax(spectrum.intensity)]
     assert peak == pytest.approx(811.531, abs=0.005)
+
+
+@needs_data
+def test_species_contributions_add_up_to_the_noise_free_spectrum() -> None:
+    """FR4.2: hiding a species subtracts exactly its part."""
+    from plasma_twin.services import stage1 as svc
+    from plasma_twin.oes.spectrum import species_contributions
+    result = svc.run({**svc.default_config(), "mixture": "Ar+N2"})
+    settings = SpectrometerSettings.defaults(noise_percent=0.0, start_nm=300, end_nm=420)  # N2 bands and Ar I 4xx nm
+    parts = species_contributions(result, settings)
+    assert set(parts) == {"Ar I", "N2 second positive"}
+    full = spectrum_for(result, settings).intensity
+    assert np.max(np.abs(full - sum(parts.values()))) <= 1e-12 * full.max()

@@ -85,3 +85,21 @@ def test_point_noise_sees_noise_but_not_smooth_misfit() -> None:
     x = np.linspace(0, 1, 2000)
     assert point_noise(1e-3 * x**2 + 5e-4 * np.sin(3 * x)) < 1e-6
     assert point_noise(rng.normal(0, 2e-5, 2000)) == pytest.approx(2e-5, rel=0.05)
+
+
+@needs_lxcat
+def test_oml_ion_density_agrees_with_the_model_within_the_comparison_tolerance(model) -> None:
+    """FR6.6: n_e from the OML ion current. Judged by the project's +/-30 % agreement rule (Phase 5)."""
+    from plasma_twin.compare.diagnostics import within_tolerance
+    result, plasma = model
+    for noise in (0.0, ProbeSettings.defaults().noise_percent):
+        a = analyse_curve(generate(plasma, ProbeSettings.defaults(noise_percent=noise)))
+        assert within_tolerance((a.ion_density_m3 - result.ne_center_m3) / result.ne_center_m3), noise
+
+
+@needs_lxcat
+def test_noise_free_oml_ion_density_inverts_the_ion_current(model) -> None:
+    """Same 10 % bound as the other noise-free checks above; the mixture mass is the OML-equivalent one."""
+    result, plasma = model
+    a = analyse_curve(generate(plasma, ProbeSettings.defaults(noise_percent=0.0)))
+    assert a.ion_density_m3 == pytest.approx(result.ne_center_m3, rel=0.10)

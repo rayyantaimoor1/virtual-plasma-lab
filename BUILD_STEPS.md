@@ -486,16 +486,40 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
 - **Speed-up, no change to results:** each gas-temperature repetition now starts from the previous repetition's solution, with the cold start as a fallback. The answer must still close every balance to 10⁻¹¹. Pure argon with gas heating dropped from about 0.8 s to 0.09 s per run.
 - **Timing tests and power:** run them with the laptop plugged in. On battery, Windows throttled the processor and the same unchanged code ran up to 5 times slower within seconds (four Phase 2 runs: 0.31 s, then 1.6 s). That made the 200-point sweep test fail once at 191 s (limit 120 s) before the warm start. With the warm start it passes even throttled (96 s).
 
+**Requirement check, FR1.1–FR7.6 (3 November 2026, before the push)**
+- **What was checked:** every requirement was compared with its SRS text and acceptance criterion. 16 gaps were found and fixed:
+  - **Home:** FR1.1 (Diagnostics & data and AI entry points), FR1.3 (three recent sessions, "View all"), FR1.5 (AI model status).
+  - **Chamber screen:** FR2.5 (disabled zero fields, flows in sccm), FR2.10 (model-regime note, plus a λ_i < s_m check on Results), FR2.12 (admixture sweep).
+  - **Results:** FR3.10 (CSV header with session ID and version).
+  - **OES screen:**
+    - FR4.2: the toggles subtract the species' noise-free part, from `oes.spectrum.species_contributions`.
+    - FR4.3: integration time.
+    - FR4.5: E_k, g_k A_ki, relative intensity, and "in Boltzmann plot".
+    - FR4.7: export header.
+  - **OES analysis:**
+    - FR5.4: populations against Boltzmann at T_e, from `oes.boltzmann.populations_vs_boltzmann`. A level counts as in equilibrium within a factor 2.
+    - FR5.6: T_gas method choice.
+  - **Probe:** FR6.1 (probe type and tip material), FR6.6 (OML n_e), FR6.8 (smoothing window shown).
+- **The OML n_e (FR6.6):**
+  - **Method:** n_i = (π b / (A e)) √(M / 2e). b is fitted linearly to the ion current, I_i = −b √(V_p − V), on the same fit points as the ion fit, with the final V_p. M is the OML-equivalent mass of the ion mixture, (Σn / Σ n M^−½)².
+  - **Changed while building:** the first version took the slope of the I² fit. At the default 1 % noise that fit falls back (noise is as large as the ion current), so the value was not available on the default screen. The linear fit does not square the noise.
+  - **Result:** within 1 % of the model with no noise. At 1 % noise it is 15–22 % off: the scatter of about 16 noisy points, inside ±30 %.
+  - **The M7 comparison is unchanged:** the OML n_e is shown, not counted, because the Phase 5 rules are fixed.
+- **Kept, with a note:**
+  - **FR5.6:** Doppler uses 750.4 nm, not the SRS's 811.5 nm (self-absorption on 1s5, Phase 4e). The SRS text should follow.
+  - **FR3.2:** the metastables are lumped in the global model.
+- **Phase 8:** FR4.6, FR5.1 (imported), FR6.9.
+
 **Tests** (`tests/test_sessions.py` plus manual checks in the app)
 - Sessions survive a restart.
 - Deleting a session asks for confirmation.
 - Injection strings typed into notes and search do nothing.
-- Each FR1.x–FR7.x requirement is checked by hand against its mockup.
+- Each FR1.x–FR7.x requirement is checked by hand against its mockup. (Done 3 November 2026: `docs/validation/phase6_fr_checklist.md`.)
 
 **Exit gate**
 - [x] A new user runs the default experiment in ≤ 2 clicks (USE-1). (One click: the Home quick-start button opens Results; `test_quick_start_is_one_click_to_results`, and checked in the browser.)
 - [x] The full M1→M7 workflow works in the browser. (Clicked through on 3 November 2026; see "As built".)
-- [x] All tests pass. (315 passed, plus the Phase 2 benchmark test still marked as an expected failure.)
+- [x] All tests pass. (315 passed, plus the Phase 2 benchmark test still marked as an expected failure. After the requirement check: 329 passed plus the same expected failure; one old CSV test was updated for the new export header and re-run.)
 - [x] `BUILDING_JOURNEY.md` has its Phase 6 section.
 
 **Commit:** `Phase 6: Stage 1 dashboard (M1-M7) and session management`

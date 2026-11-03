@@ -69,7 +69,8 @@ def test_run_summarise_and_export_round_trip() -> None:
     assert json.loads(json.dumps(summary)) == summary  # plain JSON, so it can be stored
     assert summary["te_ev"] == pytest.approx(result.te_ev)
     assert summary["ne_volume_mean_m3"] < summary["ne_center_m3"]
-    rows = list(csv.reader(io.StringIO(svc.results_csv(summary, config))))
+    text = svc.results_csv(summary, config)
+    rows = list(csv.reader(line for line in io.StringIO(text) if not line.startswith("#")))  # skip the FR3.10 header
     assert rows[0] == ["section", "quantity", "value", "unit"]
     assert ["result", "te_ev", str(summary["te_ev"]), "eV"] in rows
     assert any("RF power taken as power absorbed" in a for a in svc.assumptions(result))
@@ -79,3 +80,23 @@ def test_invalid_configuration_is_not_run() -> None:
     from plasma_twin.stage1.global_model import InputOutOfRange
     with pytest.raises(InputOutOfRange):
         svc.run({**svc.default_config(), "rf_power_w": 500.0})
+
+
+def test_admixture_flows_are_a_share_of_the_argon_flow_and_zero_when_not_chosen() -> None:
+    config = {**svc.default_config(), "mixture": "Ar+N2", "ar_flow_sccm": 200.0, "n2_percent": 5.0, "o2_percent": 7.0}
+    assert svc.admixture_flows_sccm(config) == {"N2": pytest.approx(10.0), "O2": 0.0}
+
+
+def test_regime_note_gives_the_ion_mean_free_path_and_flags_oxygen() -> None:
+    notes = svc.regime_notes(svc.default_config())
+    assert "0.138 mm" in notes[0]  # kT / (p sigma) at 0.3 mbar, 300 K, sigma = 1e-18 m^2
+    assert any("LI-4" in n for n in svc.regime_notes({**svc.default_config(), "mixture": "Ar+O2"}))
+
+
+@needs_lxcat
+def test_default_run_has_a_collisional_sheath_and_the_csv_names_its_session() -> None:
+    from plasma_twin import __version__
+    result = svc.run(svc.default_config())
+    assert svc.sheath_regime(result)[0]
+    text = svc.results_csv(svc.summarise(result), svc.default_config(), "S-0007")
+    assert text.startswith(f"# session: S-0007\n# software version: {__version__}\n")

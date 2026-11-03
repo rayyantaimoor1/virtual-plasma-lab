@@ -97,3 +97,32 @@ def integrated_intensities(spectrum, lines, half_width_fwhm: float = 3.0) -> lis
         area = float(np.trapezoid(spectrum.intensity[inside] - background, wl[inside]))
         points.append(LinePoint(line.wavelength_nm, area, line.g_upper, line.a_per_s, line.upper_energy_ev))
     return points
+
+
+# FR5.4: a level counts as in Boltzmann equilibrium with the electrons when its density is within this factor
+# of g_k n_0 exp(-E_k / T_e) (ground state g_0 = 1). Any wider gap means the plasma is not in equilibrium.
+EQUILIBRIUM_FACTOR = 2.0
+
+
+@dataclass(frozen=True)
+class LevelPopulation:
+    level: str
+    energy_ev: float
+    weight: int
+    density_m3: float  # from the CR model
+    boltzmann_m3: float  # what Boltzmann equilibrium at T_e with the ground state would give
+
+    @property
+    def ratio(self) -> float:
+        return self.density_m3 / self.boltzmann_m3
+
+
+def populations_vs_boltzmann(cr, ground_density_m3: float, te_ev: float) -> tuple[list[LevelPopulation], bool]:
+    """FR5.4: each CR-model level against a Boltzmann distribution at T_e, and whether all of them are in it."""
+    from plasma_twin.oes.cr_model import level_data
+    data = level_data()
+    rows = [LevelPopulation(name, data.energy_ev[name], data.weight[name], density,
+                            data.weight[name] * ground_density_m3 * float(np.exp(-data.energy_ev[name] / te_ev)))
+            for name, density in cr.populations_m3.items()]
+    in_equilibrium = all(1 / EQUILIBRIUM_FACTOR <= r.ratio <= EQUILIBRIUM_FACTOR for r in rows)
+    return sorted(rows, key=lambda r: r.energy_ev), in_equilibrium

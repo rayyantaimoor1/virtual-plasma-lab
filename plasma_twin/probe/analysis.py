@@ -14,6 +14,7 @@ from scipy import constants as codata
 
 from plasma_twin.config.loader import load_envelope
 from plasma_twin.probe.eepf import EEPF, derivatives, druyvesteyn, second_derivative_noise_gain
+from plasma_twin.stage1.rates import ARGON_MASS_KG
 
 E, EPS0, M_E = codata.e, codata.epsilon_0, codata.m_e
 # The EEPF is trusted only if the noise it picks up adds at most this fraction to n_e and to the mean energy.
@@ -44,6 +45,9 @@ class ProbeResult:
     oml_valid: bool  # r_p / lambda_D <= limit (E12)
     eepf: EEPF
     warnings: tuple[str, ...] = field(default_factory=tuple)
+    # FR6.6: n_i from the OML ion current (Chen Eq. 22) = n_e by quasi-neutrality. NaN only if the fitted ion
+    # current is not negative. Approximate with negative ions (LI-4).
+    ion_density_m3: float = float("nan")
 
 
 def point_noise(residual: np.ndarray) -> float:
@@ -56,8 +60,9 @@ def point_noise(residual: np.ndarray) -> float:
     return float(np.std(second) / np.sqrt(6.0))
 
 
-def analyse(voltage: np.ndarray, current: np.ndarray, tip_radius_mm: float, exposed_length_mm: float) -> ProbeResult:
-    """Run every step on one I-V curve (electron current positive)."""
+def analyse(voltage: np.ndarray, current: np.ndarray, tip_radius_mm: float, exposed_length_mm: float,
+            ion_mass_kg: float = ARGON_MASS_KG) -> ProbeResult:
+    """Run every step on one I-V curve (electron current positive). ion_mass_kg is used only for the OML n_i."""
     area = 2 * np.pi * tip_radius_mm * 1e-3 * exposed_length_mm * 1e-3
     warnings: list[str] = []
 
@@ -119,6 +124,13 @@ def analyse(voltage: np.ndarray, current: np.ndarray, tip_radius_mm: float, expo
         noise_sigma = point_noise(current[fit_points] - ion[fit_points])
         v_p, second = find_plasma_potential(electron)
 
+    # n_i from the OML ion current (FR6.6): I_i = -b sqrt(V_p - V) with b = A e n_i (sqrt 2 / pi) sqrt(e / M), so
+    # n_i = (pi b / (A e)) sqrt(M / (2 e)). b is fitted to the CURRENT, not to I^2, by linear least squares with
+    # the final V_p: squaring would turn noise as large as the ion current into a bias (1 % noise, the default).
+    root = np.sqrt(np.clip(v_p - voltage[fit_points], 0.0, None))
+    b = -float(np.sum(current[fit_points] * root) / np.sum(root**2))
+    ion_density = float(np.pi * b / (area * E) * np.sqrt(ion_mass_kg / (2 * E))) if b > 0 else float("nan")
+
     step = STEPS[3]
     eepf = druyvesteyn(voltage, second, v_p, area)
     if not eepf.density_m3 > 0:
@@ -156,10 +168,17 @@ def analyse(voltage: np.ndarray, current: np.ndarray, tip_radius_mm: float, expo
     if not oml_valid:
         warnings.append(f"r_p / lambda_D = {ratio:.1f} exceeds {limit}: OML theory is outside its range (E12)")
     return ProbeResult(v_f, v_p, eepf.density_m3, float(saturation_density), noise_sigma / i_at_vp, eepf_reliable,
-                       eepf.effective_temperature_ev, t_slope, debye, ratio, oml_valid, eepf, tuple(warnings))
+                       eepf.effective_temperature_ev, t_slope, debye, ratio, oml_valid, eepf, tuple(warnings), ion_density)
 
 
 def analyse_curve(curve) -> ProbeResult:
     """Analyse an IVCurve from iv_model.generate."""
     s = curve.settings
-    return analyse(curve.voltage_v, curve.current_a, s.tip_radius_mm, s.exposed_length_mm)
+    return analyse(curve.voltage_v, curve.current_a, s.tip_radius_mm, s.exposed_length_mm, mean_ion_mass(curve.plasma))
+
+
+def mean_ion_mass(plasma) -> float:
+    """The single mass that gives the same OML current as the ion mixture: M = (sum n_k / sum n_k M_k^-1/2)^2."""
+    total = sum(plasma.ion_densities_m3.values())
+    weighted = sum(n / np.sqrt(plasma.ion_masses_kg[k]) for k, n in plasma.ion_densities_m3.items())
+    return float((total / weighted) ** 2) if weighted > 0 else ARGON_MASS_KG

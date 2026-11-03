@@ -73,3 +73,23 @@ def test_argon_2p_plot_from_the_model_spectrum_is_flagged_and_far_below_te() -> 
     boltzmann = fit(points)
     assert not boltzmann.reliable  # 2p levels span ~0.6 eV (E9)
     assert boltzmann.energy_span_ev < 1.0
+
+
+class _FakeCR:
+    def __init__(self, populations: dict[str, float]) -> None:
+        self.populations_m3 = populations
+
+
+@needs_data
+def test_boltzmann_populations_are_recognised_and_the_model_plasma_is_not_in_equilibrium() -> None:
+    """FR5.4: exact Boltzmann populations pass; the low-pressure model plasma is far from equilibrium."""
+    from plasma_twin.oes.boltzmann import populations_vs_boltzmann
+    from plasma_twin.oes.cr_model import level_data, solve_cr_for
+    from plasma_twin.services import stage1 as svc
+    data, ground, te = level_data(), 1e21, 2.0
+    exact = {k: data.weight[k] * ground * np.exp(-data.energy_ev[k] / te) for k in data.energy_ev}
+    assert populations_vs_boltzmann(_FakeCR(exact), ground, te)[1]
+    result = svc.run(svc.default_config())
+    rows, in_equilibrium = populations_vs_boltzmann(solve_cr_for(result), result.gas_density_m3, result.te_ev)
+    assert not in_equilibrium
+    assert all(r.ratio < 1 for r in rows if r.level.startswith("2p"))  # under-populated: corona-like

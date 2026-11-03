@@ -98,3 +98,59 @@ def test_save_then_list_then_delete_with_confirmation() -> None:
     next(b for b in sessions.button if "Yes, delete" in b.label).click().run()
     assert not sessions.exception
     assert "No sessions match" in text_of(sessions)
+
+
+@needs_data
+def test_home_has_four_entry_points_and_ai_status() -> None:
+    """FR1.1, FR1.5."""
+    at = open_screen("Home.py", has_run=False)
+    markdown = text_of(at)
+    for entry in ("Stage 1", "Stage 2", "Diagnostics & data", "AI module"):
+        assert entry in markdown
+    assert any(b.label == "View all sessions" for b in at.button) or "No saved sessions yet" in " ".join(c.value for c in at.caption)
+
+
+@needs_data
+def test_admixture_field_is_disabled_outside_the_mixture_and_flow_is_shown() -> None:
+    """FR2.5, FR2.10, FR2.12."""
+    at = open_screen("pages/1_Chamber_configuration.py", has_run=False)
+    n2 = next(n for n in at.number_input if n.label.startswith("N₂ flow"))
+    assert n2.disabled and n2.value == 0.0
+    assert "N₂ 0.0 sccm" in " ".join(c.value for c in at.caption)
+    assert "Model regime" in text_of(at)
+    at.radio[0].set_value("Ar+N2").run()
+    assert not next(n for n in at.number_input if n.label.startswith("N₂ flow")).disabled
+    assert "N₂ 15.0 sccm" in " ".join(c.value for c in at.caption)
+    assert "N₂ admixture (% of Ar flow)" in at.selectbox[-1].options
+
+
+@needs_data
+def test_oes_screen_lists_line_details_and_toggles_species() -> None:
+    """FR4.2, FR4.5."""
+    at = streamlit_testing.AppTest.from_file(str(APP / "pages/3_Virtual_OES.py"), default_timeout=300)
+    at.session_state["has_run"] = True
+    at.run()
+    assert not at.exception
+    assert {"E_k (eV)", "g_k A_ki (s⁻¹)", "Relative intensity", "In Boltzmann plot"} <= set(at.dataframe[0].value.columns)
+    o_i = next(c for c in at.checkbox if c.label == "O I")
+    assert o_i.disabled  # no oxygen lines yet; only species in the mixture can be shown
+    next(c for c in at.checkbox if c.label == "Ar I").uncheck().run()
+    assert not at.exception
+
+
+@needs_data
+def test_oes_analysis_shows_populations_and_gas_temperature() -> None:
+    """FR5.4, FR5.6."""
+    at = open_screen("pages/4_OES_analysis.py")
+    headings = " ".join(h.value for h in at.subheader)
+    assert "Level populations against a Boltzmann distribution" in headings and "Gas temperature" in headings
+    assert "Not in equilibrium" in text_of(at)
+
+
+@needs_data
+def test_probe_screen_reports_oml_density_type_and_smoothing() -> None:
+    """FR6.1, FR6.6, FR6.8."""
+    at = open_screen("pages/5_Langmuir_probe.py")
+    assert "n_e (OML ion current)" in text_of(at)
+    assert at.selectbox[0].value == "Single cylindrical probe"
+    assert "Savitzky-Golay" in " ".join(c.value for c in at.caption)

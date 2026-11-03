@@ -4,12 +4,15 @@ from common import (PAGES, axis, cached_probe, cached_spectrum, config_json, nee
 
 import csv
 import io
+import json
 
 import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
 
-from plasma_twin.oes.boltzmann import fit, integrated_intensities
+from plasma_twin.oes.boltzmann import EQUILIBRIUM_FACTOR, fit, integrated_intensities, populations_vs_boltzmann
+from plasma_twin.oes.gas_temp import DOPPLER_LINE_NM, doppler_temperature, n2_rotational_temperature
+from plasma_twin.oes.spectrum import SpectrometerSettings
 from plasma_twin.oes.line_ratio import fit_spectrum_points
 
 page_setup("OES analysis")
@@ -31,6 +34,7 @@ labels = {f"{p.wavelength_nm:.3f} nm": p for p in points}
 chosen = st.multiselect("Lines in the fit (FR5.8)", list(labels), default=list(labels))
 used = [labels[k] for k in chosen]
 excluded = [k for k in labels if k not in chosen]
+st.session_state["oes_excluded_nm"] = [round(labels[k].wavelength_nm, 3) for k in excluded]  # shown on M4 (FR4.5)
 
 # ------------------------------------------------------------------ Boltzmann plot (FR5.2, FR5.3)
 st.subheader("Boltzmann plot")
@@ -54,6 +58,54 @@ if len(used) >= 2:
         status("warn", "Unreliable fit (E9): " + "; ".join(bfit.reasons) + ". The argon 2p levels span only about 0.6 eV.")
 else:
     status("error", "Choose at least two lines.")
+
+# ------------------------------------------------------------------ level populations (FR5.4)
+st.subheader("Level populations against a Boltzmann distribution")
+ground = result.mixture.get("argon_density_m3", result.gas_density_m3)
+levels, in_equilibrium = populations_vs_boltzmann(cr, ground, result.te_ev)
+energies = np.array([0.0] + [r.energy_ev for r in levels])
+fig = go.Figure(go.Scatter(x=energies, y=[ground] + [r.density_m3 / r.weight for r in levels], mode="markers",
+                           text=["ground"] + [r.level for r in levels], name="CR model"))
+grid = np.linspace(0.0, energies.max(), 50)
+fig.add_trace(go.Scatter(x=grid, y=ground * np.exp(-grid / result.te_ev), mode="lines", line=dict(dash="dot"),
+                         name=f"Boltzmann at T_e = {result.te_ev:.2f} eV"))
+st.plotly_chart(axis(fig, "Level energy E_k (eV)", "Density per state n_k / g_k (m⁻³)", log_y=True), use_container_width=True)
+if in_equilibrium:
+    status("ok", f"Every level is within a factor {EQUILIBRIUM_FACTOR:g} of Boltzmann equilibrium at T_e.")
+else:
+    low = min(r.ratio for r in levels if r.level.startswith("2p"))
+    high = max(r.ratio for r in levels if r.level.startswith("2p"))
+    status("warn", f"Not in equilibrium: the 2p levels hold only {low:.1e} to {high:.1e} of their Boltzmann population at T_e "
+                   "(they are filled by electron impact and emptied by radiation). So T_exc from the Boltzmann plot is "
+                   "not the electron temperature.")
+
+# ------------------------------------------------------------------ gas temperature (FR5.6)
+st.subheader("Gas temperature")
+has_n2 = result.mixture.get("n2c_excitation_m3_s", 0.0) > 0
+methods = [f"Doppler width of Ar I {DOPPLER_LINE_NM:.1f} nm"] + (["N₂ rotational temperature, (1,0) band at 315.9 nm"] if has_n2 else [])
+method = st.radio("Method", methods, horizontal=True)
+if not has_n2:
+    st.caption("The N₂ rotational method needs nitrogen in the mixture.")
+if method.startswith("Doppler"):
+    doppler = doppler_temperature(spectrum)
+    if doppler.enabled:
+        st.metric("T_gas (Doppler)", f"{doppler.gas_temperature_k:.0f} K")
+    else:
+        status("warn", f"Doppler method not available: {doppler.reason}. Lower the FWHM on the OES screen.")
+    st.caption(f"The {DOPPLER_LINE_NM:.1f} nm line (2p1 → 1s2) is used, not 811.5 nm: 811.5 nm ends on the metastable 1s5, "
+               "so self-absorption could widen it (BUILD_STEPS.md, Phase 4e).")
+else:
+    uv = SpectrometerSettings.defaults(fwhm_nm=spectrum.settings.fwhm_nm, start_nm=305, end_nm=340,
+                                       noise_percent=spectrum.settings.noise_percent)
+    uv_spectrum, _ = cached_spectrum(config_text, json.dumps(uv.__dict__, sort_keys=True))
+    rotational = n2_rotational_temperature(uv_spectrum)
+    st.metric("T_gas (N₂ rotational)", f"{rotational.rotational_temperature_k:.0f} K")
+    st.caption("Fitted on a separate UV acquisition (305-340 nm), the way the band is measured.")
+    if rotational.nh_overlap_flagged:
+        status("warn", f"NH (A-X) emission near 336 nm: {rotational.nh_excess_fraction:.0%} beyond the N₂ prediction.")
+    else:
+        status("ok", "No NH (A-X) overlap near 336 nm.")
+st.caption(f"Model gas temperature: {result.inputs.gas_temperature_k:.0f} K.")
 
 # ------------------------------------------------------------------ line-ratio T_e with n_e from the probe (FR5.5, FR5.7)
 st.subheader("Electron temperature from line ratios")

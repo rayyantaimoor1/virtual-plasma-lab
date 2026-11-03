@@ -32,6 +32,8 @@ if summary["max_residual"] < 1e-8:
     status("ok", "Every balance closes to better than 1e-8 (ACC-3).")
 else:
     status("warn", "A balance did not close to 1e-8; treat this run with care.")
+collisional, regime = svc.sheath_regime(result)
+status("ok" if collisional else "warn", f"Model regime (FR2.10): {regime}.")
 
 left, right = st.columns(2)
 # ------------------------------------------------------------------ densities (FR3.2)
@@ -77,7 +79,8 @@ with st.expander("Regime assumptions of this run (FR3.6)"):
 # ------------------------------------------------------------------ sweep (FR3.7)
 plan = st.session_state.get("sweep")
 if plan:
-    st.subheader(f"Sweep over {plan['parameter']}")
+    label = plan.get("label", plan["parameter"])
+    st.subheader(f"Sweep over {label}")
 
     @st.cache_data(show_spinner="Running the sweep...")
     def run_sweep(config_text: str, plan_text: str) -> list[dict]:
@@ -92,7 +95,7 @@ if plan:
     fig.add_trace(go.Scatter(x=[r["value"] for r in ok], y=[r["ne"] for r in ok], name="n_e (m⁻³)", mode="lines+markers"))
     fig.add_trace(go.Scatter(x=[r["value"] for r in ok], y=[r["te"] for r in ok], name="T_e (eV)", yaxis="y2", mode="lines+markers"))
     fig.update_layout(yaxis2=dict(title="Electron temperature T_e (eV)", overlaying="y", side="right"))
-    st.plotly_chart(axis(fig, plan["parameter"], "Centre electron density n₀ (m⁻³)"), use_container_width=True)
+    st.plotly_chart(axis(fig, label, "Centre electron density n₀ (m⁻³)"), use_container_width=True)
     failed = [r for r in rows if r["te"] is None]
     if failed:
         status("warn", f"{len(failed)} sweep point(s) could not be solved; the others are shown.")
@@ -109,7 +112,7 @@ with s1.form("save_session"):
         session_id = store().save(1, config, svc.config_hash(config), {"plasma_state": summary}, note, __version__)
         st.session_state["session_id"] = session_id
         status("ok", f"Saved as {session_id}.")
-s2.download_button("Download results (CSV)", svc.results_csv(summary, config), file_name="stage1_results.csv",
+s2.download_button("Download results (CSV)", svc.results_csv(summary, config, st.session_state.get("session_id")), file_name="stage1_results.csv",
                    mime="text/csv")
 n1, n2 = st.columns(2)
 if n1.button("Open the virtual OES (M4)"):

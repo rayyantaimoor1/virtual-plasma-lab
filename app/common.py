@@ -124,6 +124,13 @@ def cached_spectrum(config_text: str, settings_text: str):
     return spectrum_for(plasma, SpectrometerSettings(**json.loads(settings_text))), solve_cr_for(plasma)
 
 
+@st.cache_data(show_spinner="Separating the species...", max_entries=16)
+def cached_contributions(config_text: str, settings_text: str):
+    """Noise-free part of each species in the spectrum (FR4.2), on the same grid as cached_spectrum."""
+    from plasma_twin.oes.spectrum import SpectrometerSettings, species_contributions
+    return species_contributions(cached_run(config_text), SpectrometerSettings(**json.loads(settings_text)))
+
+
 def spectrometer_settings_text() -> str:
     """The instrument settings last used on the OES screen, or the envelope defaults."""
     from plasma_twin.oes.spectrum import SpectrometerSettings

@@ -65,12 +65,14 @@ config["mixture"] = st.radio("Mixture mode (FR2.5)", mixtures, index=mixtures.in
                              key="w_mixture")
 mix = env["admixture_percent_of_ar"]
 m1, m2 = st.columns(2)
-if "N2" in config["mixture"]:
-    config["n2_percent"] = m1.number_input("N₂ flow (% of Ar flow)", float(mix["min"]), float(mix["max"]),
-                                          float(config["n2_percent"]), 0.5, key="w_n2")
-if "O2" in config["mixture"]:
-    config["o2_percent"] = m2.number_input("O₂ flow (% of Ar flow)", float(mix["min"]), float(mix["max"]),
-                                          float(config["o2_percent"]), 0.5, key="w_o2")
+# FR2.5: a gas not in the mixture keeps its field, disabled and showing 0; its stored value comes back if re-added.
+for column, gas, field, label in ((m1, "N2", "n2_percent", "N₂ flow (% of Ar flow)"), (m2, "O2", "o2_percent", "O₂ flow (% of Ar flow)")):
+    if gas in config["mixture"]:
+        config[field] = column.number_input(label, float(mix["min"]), float(mix["max"]), float(config[field]), 0.5, key=f"w_{gas}")
+    else:
+        column.number_input(label, value=0.0, disabled=True, key=f"w_{gas}_off")
+flows = svc.admixture_flows_sccm(config)
+st.caption(f"Resulting admixture flows: N₂ {flows['N2']:.1f} sccm, O₂ {flows['O2']:.1f} sccm (FR2.5)")
 if config["mixture"] == "Ar+N2+O2":
     status("info", "The supervisor has not yet confirmed whether N₂ and O₂ are added in the same run (Q5).")
 
@@ -97,6 +99,8 @@ if problems:
         status("error", f"{field}: {message}")
 else:
     status("ok", "Every parameter is inside the operating envelope.")
+    for note in svc.regime_notes(config):
+        status("info", f"Model regime: {note}.")
 
 # ------------------------------------------------------------------ run, save, sweep
 r1, r2 = st.columns([1, 2])
@@ -114,12 +118,20 @@ with r2.form("save_config"):
 with st.expander("Parameter sweep (FR2.12)"):
     sweepable = {"rf_power_w": ("RF power P (W)", env["rf_power_w"]), "pressure_mbar": ("Pressure p (mbar)", env["pressure_mbar"]),
                  "ar_flow_sccm": ("Argon flow Q (sccm)", env["ar_flow_sccm"])}
+    if "N2" in config["mixture"]:
+        sweepable["n2_percent_of_ar"] = ("N₂ admixture (% of Ar flow)", mix)
+    if "O2" in config["mixture"]:
+        sweepable["o2_percent_of_ar"] = ("O₂ admixture (% of Ar flow)", mix)
     parameter = st.selectbox("Parameter to sweep", list(sweepable), format_func=lambda k: sweepable[k][0])
     rng = sweepable[parameter][1]
     s1, s2, s3 = st.columns(3)
     start = s1.number_input("From", value=float(rng["min"]))
     end = s2.number_input("To", value=float(rng["max"]))
     points = s3.number_input("Points", 2, env["options"]["sweep_max_points"], 10)
-    if st.button("Run sweep", disabled=bool(problems)):
-        st.session_state["sweep"] = {"parameter": parameter, "values": np.linspace(start, end, int(points)).tolist()}
+    sweep_ok = float(rng["min"]) <= start < end <= float(rng["max"])
+    if not sweep_ok:
+        status("error", f"The sweep must start below its end, both within {rng['min']}-{rng['max']}.")
+    if st.button("Run sweep", disabled=bool(problems) or not sweep_ok):
+        st.session_state["sweep"] = {"parameter": parameter, "label": sweepable[parameter][0],
+                                     "values": np.linspace(start, end, int(points)).tolist()}
         run_and_open_results(config)

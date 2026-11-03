@@ -284,4 +284,20 @@ It is written so that either of us can explain any decision to the evaluation co
 
 **Left for Phase 8,** as planned: overlaying and analysing imported measured data (FR4.6, FR5.1, FR6.9), PDF reports, and the non-citable-data rule (FR11.5).
 
-**How Phase 6 closed:** all exit-gate items are met: one-click quick start, the M1→M7 workflow working in the browser, 315 tests passing, and this section written.
+**Checking every requirement before the push.** Before pushing, every screen requirement (FR1.1 to FR7.6, 63 in all) was compared with its SRS text. The workflow worked, but 16 requirements were only partly met.
+- **The gaps:**
+  - The Home screen had no Diagnostics or AI entry points.
+  - Admixture fields of gases not in the mixture vanished instead of showing 0, and no flow in sccm was shown.
+  - No model-regime note.
+  - The species toggles on the OES screen did not actually hide anything.
+  - The line table lacked E_k, g_k A_ki, relative intensity and the Boltzmann-plot flag.
+  - No level-population plot, and no T_gas method choice.
+  - The probe gave no n_e from the OML ion current.
+  - Exports did not record the session ID and version.
+- **How they were closed:**
+  - All 16 are fixed, with unit tests for the new functions and five new screen tests. Each changed screen was checked in the browser.
+  - **The OML n_e needed a second try.** The slope of the I² fit fails at the default 1 % noise, because the noise is as big as the ion current and squaring it spoils the fit. Fitting the current itself, I = −b√(V_p − V), works: 1 % off without noise, 15–22 % off at 1 % noise.
+  - The comparison screen's rules were left alone, because they were fixed in Phase 5 before any result was seen.
+  - The full list is in `docs/validation/phase6_fr_checklist.md`.
+
+**How Phase 6 closed:** all exit-gate items are met: one-click quick start, the M1→M7 workflow working in the browser, 315 tests passing, and this section written. After the requirement check: 329 tests passing.

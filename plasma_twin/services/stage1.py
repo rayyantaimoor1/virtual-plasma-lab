@@ -93,6 +93,41 @@ def validate_config(config: dict[str, Any]) -> dict[str, str]:
     return problems
 
 
+def admixture_flows_sccm(config: dict[str, Any]) -> dict[str, float]:
+    """FR2.5: each admixture as a flow in sccm (a percentage of the argon flow); 0 for gases not in the mixture."""
+    return {gas: config["ar_flow_sccm"] * config[field] / 100 if gas in config["mixture"] else 0.0
+            for gas, field in (("N2", "n2_percent"), ("O2", "o2_percent"))}
+
+
+def regime_notes(config: dict[str, Any]) -> list[str]:
+    """FR2.10: the model regime of a configuration, before it is run.
+
+    The ion mean free path uses the model's own numbers (ion-neutral cross-section 1e-18 m^2, gas at the
+    fixed Stage 1 temperature). Whether the sheath is collisional needs the sheath width, which only a
+    run gives, so the Results screen checks lambda_i < s_m (sheath_regime).
+    """
+    from plasma_twin.stage1.global_model import ION_NEUTRAL_CROSS_SECTION_M2, K_B
+    temperature = load_envelope()["stage1"]["fixed"]["gas_temperature_k"]
+    density = config["pressure_mbar"] * 100.0 / (K_B * temperature)
+    mean_free_path_mm = 1e3 / (density * ION_NEUTRAL_CROSS_SECTION_M2)
+    notes = [f"ion mean free path λ_i = {mean_free_path_mm:.3f} mm, against an electrode gap of "
+             f"{10 * config['electrode_gap_cm']:.0f} mm: diffusion-limited transport, and the model uses the "
+             "collisional-sheath law (Lieberman 2015 high-pressure capacitive model)"]
+    if "O2" in config["mixture"]:
+        notes.append("O₂ makes the plasma electronegative: probe and OES values will be flagged approximate (LI-4)")
+    return notes
+
+
+def sheath_regime(result) -> tuple[bool, str]:
+    """FR2.10 after a run: the sheath is collisional when the ion mean free path is shorter than the sheath."""
+    ratio = result.ion_mean_free_path_m / result.sheath_width_m
+    if ratio < 1:
+        return True, (f"collisional sheath: λ_i / s_m = {ratio:.2f} < 1, so the collisional Child law the "
+                      "model uses applies")
+    return False, (f"λ_i / s_m = {ratio:.2f} ≥ 1: the sheath is not collisional, outside the regime of the "
+                   "model's sheath law; treat the sheath values with care")
+
+
 def config_hash(config: dict[str, Any]) -> str:
     """SHA-256 of the configuration written as sorted JSON: the cache key and the stored config_hash (E2)."""
     return hashlib.sha256(json.dumps(config, sort_keys=True).encode("utf-8")).hexdigest()
@@ -178,9 +213,19 @@ def assumptions(result) -> list[str]:
     return out
 
 
-def results_csv(summary: dict[str, Any], config: dict[str, Any]) -> str:
-    """FR3.10: one quantity per row, with its unit, after the configuration it came from."""
+def export_header(session_id: str | None, **extra: Any) -> str:
+    """FR3.10, FR4.7: '#' comment lines naming the session and software version (and any settings given)."""
+    from plasma_twin import __version__
+    lines = [f"# session: {session_id or 'not saved'}", f"# software version: {__version__}"]
+    lines += [f"# {key}: {value}" for key, value in extra.items()]
+    return "\n".join(lines) + "\n"
+
+
+def results_csv(summary: dict[str, Any], config: dict[str, Any], session_id: str | None = None) -> str:
+    """FR3.10: a header with session ID and software version, then one quantity per row with its unit,
+    after the configuration it came from."""
     buffer = io.StringIO()
+    buffer.write(export_header(session_id))
     writer = csv.writer(buffer)
     writer.writerow(["section", "quantity", "value", "unit"])
     for key, value in config.items():
