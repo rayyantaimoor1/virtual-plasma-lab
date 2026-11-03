@@ -387,8 +387,32 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
   - Model vs OES vs probe values, with the deviation and a pass flag at ±30 %.
   - Dependent values marked: the OES n_e is taken from the probe and is not counted as an independent agreement.
 
+**Rules** (fixed 3 November 2026, before any Phase 5 code)
+- **Where the probe sits and what it sees:** the probe is at the discharge centre, so it sees n_e = n₀ and the model's EEDF (shape and T_e). In mixtures, the positive-ion density is n_e + n₋, by ion species.
+- **Plasma potential against ground:** V_p = T_s/2 + V_f, the presheath plus the floating sheath at the large grounded chamber wall. It comes from the model's own wall constants: about 12 V at the defaults, inside the −20 to +50 V sweep. The symmetric-electrode RF sheath voltage of the global model (hundreds of volts) is not used: the probe is referenced to the grounded chamber, as in the laboratory.
+- **Electron current below V_p (retarding):** I_e = (A e n/4) √(2e/m) ∫_V^∞ √ε F(ε)(1 − V/ε) dε, where V = V_p − V_probe. This is the same physics as `probe/retardation.py`, and it holds for any convex probe (Chen 2003, Lecture Notes on Langmuir Probe Diagnostics, Sec. V.A). Probe area A = 2π r L (the end face is ignored, about 1 % for the default probe).
+- **Electron current above V_p:** the OML cylinder law for a Maxwellian at the screening temperature T_s, I_e(V_p)·[2√(η/π) + e^η erfc √η] with η = (V_probe − V_p)/T_s. It is continuous at V_p. This is an approximation for a non-Maxwellian EEDF; the analysis uses only the region below V_p.
+- **Ion current:** the OML limit, I_i = A n_i e (√2/π) √(e(V_p − V_probe)/M) below V_p and zero above (Chen 2003, Eq. 22), summed over ion species. OML needs r_p/λ_D ≤ 1 (E12). At our densities λ_D ≈ 0.07 mm < r_p = 0.195 mm, so OML is formally outside its range. The validity check reports this, and the curve is still drawn with OML, as Chen notes OML "may give good results outside of its intended range".
+- **RF distortion:** the plasma potential oscillates as V_p + Ṽ sin ωt, and the probe current is averaged over one period (64 phases). Ṽ is a probe setting, the RF amplitude left after compensation: 0–50 V, default 0 V (a fully compensated probe). The supervisor asked for distortion to be modelled (D5); its size depends on the laboratory probe's compensation (SUPERVISOR_QUESTIONS.md, Q8).
+- **Noise:** Gaussian, as a percentage of the electron current at V_p, seeded.
+- **Analysis**, step by step; a failure reports the step it failed at (E11):
+  1. V_f: the zero crossing of the total current.
+  2. Ion fit: OML says I_i² is linear in V. Fit I² against V on the points below V_f − 0.5 (V_p − V_f)-equivalent. In practice this is the lowest 40 % of the voltages below V_f, at least 5 points. Extrapolate and subtract it.
+  3. V_p: the zero crossing of d²I_e/dV² (FR6.6), with derivatives from a Savitzky–Golay filter (window 5 points, cubic; documented smoothing). The crossing is linearly interpolated between points.
+  4. EEPF and EEDF by Druyvesteyn's formula, n F(ε) = (4/(A e))·√(m/(2e))·√ε·d²I_e/dV². It follows from twice differentiating the retarding-current integral above; the code shows the derivation. In joules it is the textbook 2√(2mE)/(e²A)·d²I/dV². Then n_e = ∫ nF dε and T_eff = (2/3)⟨ε⟩.
+  5. Slope T_e: the inverse slope of ln I_e between V_f and V_p (the same window as run 3).
+  6. Debye length λ_D = √(ε₀ T_eff/(e n_e)) and the OML check.
+- **Comparison (`compare/diagnostics.py`):** T_e, n_e and T_gas from the model, OES and probe.
+  - **Deviation:** each diagnostic's deviation from the model; pass if |deviation| ≤ 30 % (`envelope.toml`). A quantity passes when every independent diagnostic passes. The verdict counts the passing quantities.
+  - **T_e:** the probe's EEPF T_eff (same definition as the model) is compared. The slope T_e is shown but not counted.
+  - **T_gas:** OES gives it from N₂ T_rot (when N₂ is present) or Doppler (when E8 allows).
+  - **Dependent values:** following the supervisor (Q2), by default OES takes n_e from the probe and fits only T_e, so its n_e is marked dependent and excluded (FR7.2). The option to fit both is kept.
+  - **Excitation temperature:** T_exc is shown and excluded, with the reason (FR7.5).
+  - **With O₂:** probe and OES results are flagged approximate (LI-4). Negative ions change the probe's ion current, and the argon CR model ignores O₂ chemistry beyond metastable quenching.
+  - Each method's assumptions are listed from the settings used (FR7.6).
+
 **Tests** (`tests/test_probe_iv.py`, `test_probe_analysis.py`, `test_eepf.py`, `test_compare.py`)
-- A noise-free curve recovers the model T_e and n_e within ±10 % (ACC-2).
+- A noise-free curve recovers the model T_e (as T_eff, the EEPF mean-energy definition) and n_e within ±10 % (ACC-2); the slope T_e matches `probe_style_te` of the same EEDF.
 - The EEPF recovered from a Druyvesteyn plasma is Druyvesteyn-shaped.
 - The comparison flags 31 % as a fail and 29 % as a pass.
 - Generation plus analysis takes ≤ 2 s (PER-3).

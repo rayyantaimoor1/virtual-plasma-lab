@@ -64,7 +64,7 @@ What are the spectrometer's model, wavelength range and resolution? You said it 
 ### Q8. Langmuir probe type
 Is it a single cylindrical tungsten probe, 0.195 mm radius and 5 mm long, as in the published laboratory paper? Is it RF-compensated?
 
-**Until answered:** yes to the size and shape. The model includes RF distortion, as you asked, so it assumes the probe is not fully compensated.
+**Until answered:** yes to the size and shape. RF distortion is modelled, as you asked, through the RF amplitude left after compensation. It defaults to 0 V (fully compensated) until we know the laboratory probe's compensation, and can be set from 0 to 50 V.
 **Answer:**
 
 ### Q9. Electron density in the low-pressure chamber
