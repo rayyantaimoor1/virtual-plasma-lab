@@ -18,7 +18,7 @@ def test_envelope_loads_with_a_version(envelope: dict) -> None:
 def test_every_range_is_complete_and_in_order(envelope: dict) -> None:
     ranges = dict(iter_ranges(envelope))
     # A count guards against the loop passing because it found nothing to check.
-    assert len(ranges) == 22  # Stage 1: 4, OES: 4, probe: 6, Stage 2: 8
+    assert len(ranges) == 23  # Stage 1: 4, OES: 4, probe: 7 (RF amplitude added in Phase 5), Stage 2: 8
     for name, rng in ranges.items():
         assert rng["min"] < rng["max"], name
         assert rng["min"] <= rng["default"] <= rng["max"], name

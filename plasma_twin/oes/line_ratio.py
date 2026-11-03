@@ -59,7 +59,27 @@ def fit_te_ne(measured: dict[float, float], argon_density_m3: float, shape: floa
     return LineRatioFit(float(np.exp(found.x[0])), float(np.exp(found.x[1])), rms, wavelengths, bool(found.success))
 
 
-def fit_spectrum_points(points, result) -> LineRatioFit:
+def fit_te_fixed_ne(measured: dict[float, float], ne_m3: float, argon_density_m3: float, shape: float,
+                    gas_temperature_k: float, gap_m: float, radius_m: float, extra_metastable_loss_per_s: float = 0.0,
+                    start_te: float = 2.0) -> LineRatioFit:
+    """Fit T_e only, with n_e given (for example by the probe, as the supervisor proposed, Q2)."""
+    wavelengths = tuple(sorted(w for w, v in measured.items() if v > 0))
+    if len(wavelengths) < 3:
+        raise ValueError("a line-ratio fit needs at least three lines")
+    target = _shares(np.array([measured[w] for w in wavelengths]))
+
+    def residual(p: np.ndarray) -> np.ndarray:
+        cr = solve_cr(float(np.exp(p[0])), ne_m3, argon_density_m3, shape, gas_temperature_k, gap_m, radius_m,
+                      extra_metastable_loss_per_s)
+        return _shares(np.array([cr.line_emission_w_m3[w] for w in wavelengths])) - target
+
+    found = least_squares(residual, x0=[np.log(start_te)], bounds=([np.log(TE_BOUNDS_EV[0])], [np.log(TE_BOUNDS_EV[1])]),
+                          xtol=1e-10, ftol=1e-12, gtol=1e-12)
+    return LineRatioFit(float(np.exp(found.x[0])), ne_m3, float(np.sqrt(np.mean(found.fun**2))), wavelengths,
+                        bool(found.success))
+
+
+def fit_spectrum_points(points, result, fixed_ne_m3: float | None = None) -> LineRatioFit:
     """Fit from Boltzmann-style LinePoints measured on a spectrum, using a global-model point for the
     known quantities (gas density and temperature, EEDF, geometry, quenching in mixtures)."""
     from plasma_twin.stage1.eedf import SHAPES
@@ -68,5 +88,8 @@ def fit_spectrum_points(points, result) -> LineRatioFit:
     quench = (m.get("n2_density_m3", 0.0) * K_QUENCH_N2
               + m.get("o2_density_m3", 0.0) * (K_QUENCH_O2_TO_GROUND + K_QUENCH_O2_DISSOCIATING))
     measured = {p.wavelength_nm: p.intensity for p in points}
+    if fixed_ne_m3 is not None:
+        return fit_te_fixed_ne(measured, fixed_ne_m3, m.get("argon_density_m3", result.gas_density_m3), SHAPES[x.eedf],
+                               x.gas_temperature_k, x.electrode_gap_m, x.electrode_radius_m, quench)
     return fit_te_ne(measured, m.get("argon_density_m3", result.gas_density_m3), SHAPES[x.eedf],
                      x.gas_temperature_k, x.electrode_gap_m, x.electrode_radius_m, quench)

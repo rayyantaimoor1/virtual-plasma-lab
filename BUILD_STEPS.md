@@ -411,6 +411,22 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
   - **With O₂:** probe and OES results are flagged approximate (LI-4). Negative ions change the probe's ion current, and the argon CR model ignores O₂ chemistry beyond metastable quenching.
   - Each method's assumptions are listed from the settings used (FR7.6).
 
+**As built (3 November 2026): changes to the rules above and findings, each made before any comparison with data**
+- **Ion fit, as implemented:** the I² fit uses the lowest 40 % of the points below V_f, at least 5 (the rule's wording above was garbled). Then a **second pass** refits I² = a·(V_p − V) with its zero fixed at the first-pass V_p, because OML puts the ion current's zero exactly at V_p (Chen Eq. 22). A free fit reached zero at 8.5 V instead of 12 V, and that kink made a false spike in the Maxwellian EEPF at 3–4 eV.
+- **Noise robustness, three changes:**
+  - **V_f:** the last negative-to-positive crossing, because noise made false crossings deep in the ion region.
+  - **V_p:** the d²I/dV² zero crossing nearest the peak of dI/dV, because noise made many crossings. Still a zero crossing, as FR6.6 asks.
+  - **Ion-fit fallback:** a straight line, or else a constant, each with a warning, when noise spoils the I² fit.
+- **EEPF reliability flag (new):** a single sweep with 1 % noise cannot give an EEPF; the second derivative turns noise into a false tail, inflating T_eff by about 200 %.
+  - **The rule:** the point-to-point noise is measured from second differences of the ion-fit residual (blind to smooth misfit). From it, the expected false density and false mean energy that clipped noise adds are computed. The EEPF is trusted only if both are ≤ 5 %.
+  - **In practice:** at the 0.5 V step this allows about 0.001 % noise; at the default 1 %, the EEPF is flagged and the probe's T_e and n_e are not counted in the comparison.
+  - **What was tried and dropped:** cutting the EEDF at its first zero past the peak did not work, because the peak itself became a noise spike. It was removed, not kept.
+- **Added: the saturation density,** n = I_e(V_p)/(A e √(eT_slope/2πm)). It is the textbook random-flux formula and stands up to noise: within 6 % at 1 % noise. It is shown alongside n_e(EEPF), and OES uses it for n_e when the EEPF is flagged.
+- **Finding: the V_p bias.** Just above V_p the cylindrical OML electron current has a second derivative that plunges towards −∞, so the zero crossing sits low: by 0.16 V at a 0.1 V step and 0.58 V at the default 0.5 V step. At 0.5 V this makes n_e(EEPF) 14 % low (T_eff within 4–8 %).
+  - **The ACC-2 test (±10 %)** uses a 0.1 V step, where n_e is within 4–6 % and T_eff within 1.3 %. The 0.5 V bias is pinned by its own test.
+  - **An exact test** shows the V_p offset is the only error: recovered(ε) = √(ε/(ε+δ))·true(ε+δ), within 3 %.
+- **Finding: borrowing n_e makes OES T_e sensitive.** With n_e taken from the probe (the supervisor's Q2 route), a 10–14 % low n_e makes the line-ratio T_e 29–35 % high, because two-step excitation ties the line pattern to n_e. So at the defaults (probe noise 1 %), only OES T_e counts, and it misses (+34 %). With a noise-free probe in argon, 1 of 2 quantities agree. With 5 % N₂, all 3 agree (T_e: OES +29 %, probe −3 %; n_e: probe −14 %; T_gas: +1 %).
+
 **Tests** (`tests/test_probe_iv.py`, `test_probe_analysis.py`, `test_eepf.py`, `test_compare.py`)
 - A noise-free curve recovers the model T_e (as T_eff, the EEPF mean-energy definition) and n_e within ±10 % (ACC-2); the slope T_e matches `probe_style_te` of the same EEDF.
 - The EEPF recovered from a Druyvesteyn plasma is Druyvesteyn-shaped.
@@ -418,8 +434,9 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
 - Generation plus analysis takes ≤ 2 s (PER-3).
 
 **Exit gate**
-- [ ] Tests pass.
-- [ ] Results with O₂ present are flagged as approximate (LI-4).
+- [x] Tests pass. (280 passed, plus the Phase 2 benchmark test still marked as an expected failure, 3 November 2026.)
+- [x] Results with O₂ present are flagged as approximate (LI-4). (`test_oxygen_results_are_flagged_approximate`: flagged, and nothing counts as agreement.)
+- [x] `BUILDING_JOURNEY.md` has its Phase 5 section.
 
 **Commit:** `Phase 5: virtual Langmuir probe, OML analysis, EEPF, diagnostics comparison`
 

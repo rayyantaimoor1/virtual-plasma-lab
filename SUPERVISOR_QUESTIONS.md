@@ -71,6 +71,7 @@ Is it a single cylindrical tungsten probe, 0.195 mm radius and 5 mm long, as in 
 You said n_e should come from "the probe value used as an input". Without measured data, the probe is itself simulated from the model, so using it as an input would be circular.
 
 **Until answered:** the model calculates n_e from its own power balance. The virtual probe tries to recover the same value, as a consistency check. A real probe value replaces it when measured data is imported.
+**Found while building (3 Nov 2026):** when OES takes n_e from the probe, as you proposed, the OES T_e becomes very sensitive to it. A 10 % error in the probe's n_e moves the OES line-ratio T_e by about 30 %. Fitting T_e and n_e together from the spectrum avoids this. Which do you prefer?
 **Answer:**
 
 ### Q10. Sample data files

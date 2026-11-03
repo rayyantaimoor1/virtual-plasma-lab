@@ -202,3 +202,47 @@ It is written so that either of us can explain any decision to the evaluation co
 **What the virtual OES shows at the defaults:** the brightest line is 811.5 nm, as in real argon. T_exc is about 0.5 eV with R² = 0.05, flagged unreliable, against T_e = 3.06 eV. That is the known behaviour of low-pressure argon: its 2p levels are not in equilibrium with the electrons.
 
 **How Phase 4 closed:** all three exit-gate items are met: 245 tests pass, T_exc is never labelled T_e, and this section is written.
+
+---
+
+## Phase 5: virtual Langmuir probe and diagnostics comparison (complete, 3 November 2026)
+
+**What we made**
+- **`probe/iv_model.py`:** the I-V curve of the laboratory's cylindrical tungsten probe (0.195 mm × 5 mm, −20 to +50 V), computed from the model's own plasma: electron density, EEDF, ions and plasma potential. It includes OML ion current, optional RF distortion and seeded noise.
+- **`probe/analysis.py` and `probe/eepf.py`:** the laboratory's analysis steps.
+  - **V_f, V_p:** V_f from the zero of the current; V_p from the zero of d²I/dV².
+  - **EEPF:** by the Druyvesteyn method, giving n_e and T_eff.
+  - **Also:** the slope T_e, the saturation n_e, the Debye length and the OML validity check.
+  - **Failures:** a failure names the step it stopped at.
+- **`compare/diagnostics.py`:** model, OES and probe side by side for T_e, n_e and T_gas.
+  - **Rules:** a ±30 % pass rule; dependent and unreliable values are marked and not counted; T_exc is shown but excluded.
+  - **Also:** the O₂ "approximate" flag, and a list of each method's assumptions.
+
+**Techniques and why**
+- **Formulas read in the source, not remembered:** the OML ion current is Chen's Eq. 22, from his open lecture notes. Chen gives the Druyvesteyn method only as a proportionality, so we derived the exact constant from the same retarding-current integral the curve generator uses, and checked it against the textbook form.
+- **The probe sees exactly the model's plasma,** so a noise-free curve must give the model's values back. That turns the probe into a test of the analysis chain before it is ever used on measured data.
+- **Every new rule checked by an exact test:**
+  - the Maxwellian exponential;
+  - the random-flux current at V_p;
+  - the Savitzky–Golay noise gain against the filter's own weights;
+  - the noise estimator against white noise and against smooth curves.
+
+**Problems and how we handled them**
+- **With realistic 1 % noise the EEPF is meaningless.** T_eff came out about 200 % high, because the second derivative turns noise into a false energy tail.
+  - **Tried first:** cutting the EEDF at its first zero past the peak. It failed, because the peak itself was a noise spike, so it was removed.
+  - **The final answer:** a reliability flag computed from the measured noise, with the EEPF trusted only if noise could change n_e and the mean energy by at most 5 %. Plus the textbook saturation density, which stays within 6 % at 1 % noise.
+  - **The lesson for the laboratory:** EEPFs need averaged sweeps or very low noise.
+- **Noise broke three analysis steps.** It made false zero crossings (V_f, V_p) and a rising ion fit. Each step was made robust, and the changes are recorded in `BUILD_STEPS.md`.
+- **V_p reads slightly low,** because the cylindrical electron-saturation current bends sharply just above V_p. At the laboratory's 0.5 V step this makes n_e(EEPF) 14 % low. It is recorded and pinned by a test. The ±10 % test uses a 0.1 V step, where it passes, and an exact test proves the V_p offset is the only error.
+- **A false EEPF spike at 3–4 eV** came from the ion fit reaching zero too early (at 8.5 V, not at V_p = 12 V). It was fixed by refitting with OML's own condition, ion current zero at V_p.
+- **My first noise estimate counted smooth misfit as noise** and flagged a noise-free curve. It was replaced by a second-difference estimator, which is blind to smooth trends.
+- **A test tolerance I nearly chose after seeing the numbers** (12 %) was replaced by a test of the exact relation the offset predicts, at the same 3 % as the formula test.
+- **One shell command failed on quoting**, so the test files were written directly; nothing ran half-way.
+
+**What the comparison shows**
+- **Defaults (probe noise 1 %):** the probe EEPF is flagged, so only OES T_e counts, and it misses by +34 %.
+- **Noise-free probe, argon:** T_e from the probe −4 %, n_e −14 %; 1 of 2 quantities agree.
+- **Noise-free probe, 5 % N₂:** all 3 quantities agree (T_e: OES +29 %, probe −3 %; n_e: probe −14 %; T_gas: +1 %).
+- **A finding for the supervisor (added to Q9):** taking OES n_e from the probe makes the OES T_e very sensitive to it, about 30 % per 10 % error in n_e.
+
+**How Phase 5 closed:** all exit-gate items are met: 280 tests pass, results with O₂ are flagged approximate and never counted, and this section is written.
