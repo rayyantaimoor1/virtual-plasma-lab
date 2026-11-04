@@ -1,6 +1,6 @@
 """M5 OES analysis (FR5.1-FR5.10): Boltzmann plot, excitation temperature and line-ratio T_e."""
-from common import (PAGES, axis, cached_probe, cached_spectrum, config_json, need_result, page_setup,  # noqa: I001
-                    probe_settings_text, sci, spectrometer_settings_text, status)
+from common import (PAGES, axis, cached_probe, cached_spectrum, config_json, is_researcher, measured_spectrum,  # noqa: I001
+                    measured_store, need_result, page_setup, probe_settings_text, sci, spectrometer_settings_text, status)
 
 import csv
 import io
@@ -20,9 +20,17 @@ st.title("OES analysis")
 result = need_result()
 config_text = config_json(st.session_state["config"])
 spectrum, cr = cached_spectrum(config_text, spectrometer_settings_text())
-st.caption("Analysing the synthetic spectrum of the open plasma (FR5.1).")
-if st.session_state["role"] == "Researcher":
-    status("info", "Analysing an imported measured spectrum comes with data import in Phase 8.")
+source = "synthetic"
+if is_researcher():
+    oes_files = [f.file_id for f in measured_store().list(diagnostic="oes", stage=1)]
+    source = st.selectbox("Spectrum to analyse (FR5.1)", ["synthetic"] + oes_files,
+                          format_func=lambda s: "synthetic spectrum of the open plasma" if s == "synthetic" else f"measured file {s}")
+if source == "synthetic":
+    st.caption("Analysing the synthetic spectrum of the open plasma (FR5.1).")
+else:
+    spectrum, record = measured_spectrum(source, result.inputs.gas_temperature_k)
+    status("info", f"Analysing measured file {source} with the CR-model lines and the open plasma's known quantities "
+                   f"(gas density, geometry); its own conditions: {record.metadata.get('conditions')}.")
 
 points = [p for p in integrated_intensities(spectrum, cr.lines) if p.intensity > 0]
 if not points:
@@ -81,7 +89,8 @@ else:
 
 # ------------------------------------------------------------------ gas temperature (FR5.6)
 st.subheader("Gas temperature")
-has_n2 = result.mixture.get("n2c_excitation_m3_s", 0.0) > 0
+# the N2 method fits a separate synthetic UV acquisition, so it is offered only for the synthetic spectrum
+has_n2 = source == "synthetic" and result.mixture.get("n2c_excitation_m3_s", 0.0) > 0
 methods = [f"Doppler width of Ar I {DOPPLER_LINE_NM:.1f} nm"] + (["N₂ rotational temperature, (1,0) band at 315.9 nm"] if has_n2 else [])
 method = st.radio("Method", methods, horizontal=True)
 if not has_n2:

@@ -33,6 +33,7 @@ PAGES = {
     "sessions": "pages/7_Sessions.py",
     "underwater": "pages/8_Underwater_configuration.py",
     "underwater_results": "pages/9_Underwater_results.py",
+    "measured": "pages/10_Measured_data.py",
 }
 
 
@@ -189,3 +190,24 @@ def run_stage2_and_open(config: dict) -> None:
     st.session_state["has_run2"] = True
     st.session_state.pop("session_id2", None)
     st.switch_page(PAGES["underwater_results"])
+
+
+# ------------------------------------------------------------------ measured data (Phase 8, Researcher only)
+@st.cache_resource
+def measured_store():
+    """Measured files next to the session database, so PLASMA_TWIN_DB moves both (screen tests)."""
+    import os
+    from plasma_twin.storage.measured import MeasuredStore
+    path = os.environ.get("PLASMA_TWIN_DB")
+    return MeasuredStore(Path(path)) if path else MeasuredStore()
+
+
+def is_researcher() -> bool:
+    return st.session_state.get("role") == "Researcher"
+
+
+def measured_spectrum(file_id: str, gas_temperature_k: float):
+    """A saved OES file wrapped as a Spectrum, so the Phase 4 analysis runs on it unchanged (FR5.1)."""
+    from plasma_twin.data_io.validation import spectrum_from_arrays
+    wavelength, intensity, record = measured_store().load(file_id)
+    return spectrum_from_arrays(wavelength, intensity, float(record.metadata["instrument_fwhm_nm"]), gas_temperature_k), record

@@ -682,6 +682,7 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
     - Stage 1: power, pressure, Ar flow, mixture and admixtures;
     - Stage 2: average power, frequency, pulse width, gap, O₂ flow, bubble gas.
   - **Probe files** also need the tip radius and exposed length, inside the probe envelope, because the analysis needs the probe area.
+  - **OES files** also need the instrument FWHM, inside the OES resolution envelope. **Changed while building, before any result:** line integration and the H-alpha Stark width both need it.
   - **Probe files are Stage 1 only:** a Langmuir probe is not used in the underwater discharge (D1).
 - **Storage and privacy (FR10.4, FR10.5, CON-6):**
   - **Where:** a saved file is copied byte for byte to `data/measured/<sha256>.<ext>`, made read-only, and recorded in `imported_files` with its metadata, mapping and units. `data/measured/` is gitignored, like the database, so measured data never leave the computer.
@@ -708,6 +709,27 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
   - **M6 (FR6.9):** can analyse a saved probe file with the same method.
 - **Sample files:** none have arrived from the supervisor yet, so that gate item waits. Small synthetic test files are made by the tests themselves, never committed as "measured data".
 
+**As built (4 November 2026)**
+- **Code:**
+  - `plasma_twin/data_io/`: `importers.py`, `validation.py`, `export.py` and `overlay.py`.
+  - `plasma_twin/storage/measured.py`, which uses the `imported_files` and `validation_results` tables from Phase 0.
+  - Screen `app/pages/10_Measured_data.py` (M10).
+  - Researcher overlays on M4 (FR4.6), M5 (FR5.1) and M6 (FR6.9); the export panel on Sessions (FR11.5); a Home entry for Researchers.
+- **matplotlib 3.11.2** draws every PDF and PNG; kaleido would have needed a browser engine. It is pinned in `requirements.txt` with its dependencies.
+- **Changed while building, before any result:** OES files must also give the instrument FWHM. Line integration and the H-alpha Stark width both need it (recorded under the metadata rule).
+- **Fixed while building:**
+  - **Error messages:** the first importer sniffed the delimiter from 20 lines, so one bad cell early on gave a vague "could not separate columns". It now takes the delimiter from the first data line, and every bad cell is reported by line and column.
+  - **Speed:** reading every cell as text took 2.4 s for 11 MB, near the PER-7 limit at 50 MB. It now reads numbers directly and only falls back to text to locate a bad cell: 49 MB in 1.2 s.
+  - **"Not run" is never a fail:** a NaN value (an OML density spoiled by noise) now counts as "not run".
+  - **Upload limit:** Streamlit's uploader advertised 200 MB. `.streamlit/config.toml` now sets `maxUploadSize = 50`, and a test keeps it equal to the envelope.
+  - **Screen tests:** they kept the cached stores of earlier tests. The test fixture now clears them, so each test has its own database.
+- **How SEC-3 is tested:** the PDF is rendered uncompressed with Type 3 fonts, so the test can read back the text matplotlib drew. It checks that a non-citable file's name, instrument and values appear in neither the PDF nor the CSV, and that its anonymised entry does.
+- **End-to-end check with files made by the model itself** (a self-consistency test of the import → analysis chain, not physics validation):
+  - probe file, imported in mA: within 4 % (T_e) and 16 % (n_e);
+  - Stage 1 spectrum, with n_e from that probe file: T_e within 1.4 %;
+  - Stage 2 H-alpha: Stark n_e within 0.1 %.
+  - The literature benchmarks show the known Phase 2 failures, unchanged.
+
 **Tests** (`tests/test_importers.py`, `test_validation.py`, `test_export.py`)
 - A wrong-type, oversized or broken file is rejected and nothing is stored.
 - The mA → A conversion is correct.
@@ -715,9 +737,9 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
 - A 50 MB file parses in ≤ 15 s (PER-7).
 
 **Exit gate**
-- [ ] Tests pass.
-- [ ] The sample files from the supervisor (once received) import and validate.
-- [ ] Measured data stay private.
+- [x] Tests pass. (Phase 8: 30 unit tests and 4 screen tests; full-suite count in BUILDING_JOURNEY.md.)
+- [ ] The sample files from the supervisor (once received) import and validate. **Open: no sample files received yet (Round 3 Q8 promised one of each).**
+- [x] Measured data stay private: `data/measured/` and the database are gitignored (tested), files are read-only, non-citable data never leave in an export (SEC-3 test), and the server listens on this computer only (SEC-1).
 
 **Commit:** `Phase 8: measured-data import, validation report, export with citation filter`
 

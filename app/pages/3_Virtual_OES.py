@@ -1,6 +1,6 @@
 """M4 Virtual OES (FR4.1-FR4.8): the emission spectrum of the open plasma."""
-from common import (PAGES, axis, cached_contributions, cached_spectrum, config_json, need_result, page_setup,  # noqa: I001
-                    sci, status, svc)
+from common import (PAGES, axis, cached_contributions, cached_spectrum, config_json, is_researcher, measured_spectrum,  # noqa: I001
+                    measured_store, need_result, page_setup, sci, status, svc)
 
 import json
 
@@ -64,6 +64,21 @@ if show["Ar I"]:
     shown = [w for w in argon_lines if spectrum.settings.start_nm <= w <= spectrum.settings.end_nm]
     fig.add_trace(go.Scatter(x=shown, y=[0] * len(shown), mode="markers", marker_symbol="line-ns-open", marker_size=12,
                              name="Ar I line positions"))
+# ------------------------------------------------------------------ overlay a measured spectrum (FR4.6, Researcher)
+if is_researcher():
+    from plasma_twin.data_io.overlay import NoCommonLine, normalise
+    oes_files = [f.file_id for f in measured_store().list(diagnostic="oes", stage=1)]
+    chosen = st.selectbox("Overlay a measured Stage 1 spectrum (FR4.6)", ["none"] + oes_files)
+    if chosen != "none":
+        measured, record = measured_spectrum(chosen, result.inputs.gas_temperature_k)
+        try:
+            norm = normalise(spectrum.wavelength_nm, spectrum.intensity, settings.fwhm_nm, dict(cr.line_emission_w_m3),
+                             measured.wavelength_nm, measured.intensity, measured.settings.fwhm_nm)
+            mx, my = svc.downsample_peaks(measured.wavelength_nm, measured.intensity * norm.scale)
+            fig.add_trace(go.Scatter(x=mx, y=my, mode="lines", name=f"measured {chosen} (normalised)", line=dict(dash="dot")))
+            st.caption(f"Both spectra normalised to their peak at the Ar I {norm.reference_nm:.3f} nm line.")
+        except NoCommonLine as problem:
+            status("warn", f"Cannot overlay {chosen}: {problem}.")
 st.plotly_chart(axis(fig, "Wavelength λ (nm)", "Spectral intensity I (W m⁻³ nm⁻¹)"), use_container_width=True)
 st.caption(f"Drawn from {len(spectrum.wavelength_nm):,} points, reduced to {len(x):,} for display (each bin keeps its peak).")
 
@@ -88,8 +103,6 @@ if n2 is not None and n2.max() > 0:
 st.dataframe(rows, hide_index=True, use_container_width=True)
 
 # ------------------------------------------------------------------ overlay, export, next (FR4.6-FR4.8)
-if st.session_state["role"] == "Researcher":
-    status("info", "Overlaying an imported measured spectrum (FR4.6) comes with data import in Phase 8.")
 header = svc.export_header(st.session_state.get("session_id"), resolution_fwhm_nm=settings.fwhm_nm,
                            wavelength_range_nm=f"{settings.start_nm}-{settings.end_nm}", noise_percent_of_peak=settings.noise_percent,
                            integration_time_ms=st.session_state.get("oes_integration_ms", 100.0), noise_seed=settings.seed)

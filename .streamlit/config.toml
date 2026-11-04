@@ -2,6 +2,8 @@
 [server]
 address = "127.0.0.1"
 port = 8501
+# FR10.1: the same 50 MB limit as envelope.toml (data.import_max_file_mb); the parser checks it again.
+maxUploadSize = 50
 
 # SEC-5: the application makes no outbound network connection at run time.
 [browser]

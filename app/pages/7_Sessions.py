@@ -1,12 +1,10 @@
 """M11 Sessions, basic (FR11.1-FR11.4): list, search, open, compare and delete saved runs."""
 from common import PAGES, __version__, axis, page_setup, sci, status, store, svc, svc2  # noqa: I001
 
-import csv
-import io
-
 import plotly.graph_objects as go
 import streamlit as st
 
+from plasma_twin.data_io.export import sessions_csv, sessions_pdf, sessions_png
 from plasma_twin.storage.sessions import SessionError
 
 page_setup("Sessions")
@@ -93,11 +91,14 @@ if pending:
         del st.session_state["confirm_delete"]
         st.rerun()
 
-# ------------------------------------------------------------------ export (FR11.5, CSV only here)
-buffer = io.StringIO()
-fields = list(row(records[0]))
-writer = csv.DictWriter(buffer, fieldnames=fields)
-writer.writeheader()
-writer.writerows(row(r) for r in records if not chosen or r.session_id in chosen)
-st.download_button("Download the listed (or selected) sessions (CSV)", buffer.getvalue(), file_name="sessions.csv", mime="text/csv")
-st.caption("PDF reports and the rule for non-citable measured data come with data import in Phase 8.")
+# ------------------------------------------------------------------ export panel (FR11.5, E19)
+st.subheader("Export")
+selected = [r for r in records if not chosen or r.session_id in chosen]
+same_stage = [r for r in selected if r.stage == selected[0].stage]
+status("ok", f"Exporting {len(selected)} session(s). Sessions hold model results only, so 0 non-citable measured files "
+             "are excluded (E19).")
+e1, e2, e3 = st.columns(3)
+e1.download_button("PDF report", sessions_pdf(selected), file_name="sessions_report.pdf", mime="application/pdf")
+e2.download_button("CSV (results and configurations)", sessions_csv(selected), file_name="sessions.csv", mime="text/csv")
+e3.download_button("PNG figure", sessions_png(same_stage), file_name="sessions.png", mime="image/png",
+                   help="Headline quantity of the sessions of the first selected session's stage.")

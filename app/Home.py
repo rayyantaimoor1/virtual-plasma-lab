@@ -40,6 +40,8 @@ with c3:
         st.switch_page(PAGES["probe"])
     if st.button("Model vs diagnostics"):
         st.switch_page(PAGES["compare"])
+    if st.session_state["role"] == "Researcher" and st.button("Measured data and validation"):
+        st.switch_page(PAGES["measured"])
 with c4:
     st.markdown("**AI module**")
     status("info", "Built in Phases 9-13.")

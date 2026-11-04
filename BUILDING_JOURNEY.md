@@ -358,3 +358,37 @@ It is written so that either of us can explain any decision to the evaluation co
 - S. aureus and spores (no parameters, LI-6).
 
 **How Phase 7 closed:** all tests pass: 355, plus the Phase 2 benchmark still marked as an expected failure. Each part matches its own published data. The end-to-end ±30 % check is open by team decision, waiting on Q13. Version 0.7.0.
+
+## Phase 8: measured data, validation and export (built 4 November 2026; waits for the supervisor's sample files)
+
+**What we made**
+- **A Researcher screen (M10):**
+  - upload a measured spectrum (.txt) or probe curve (.csv);
+  - see how many rows were read, and a preview;
+  - map the columns and units (mA and µA are converted to A);
+  - fill in the required details (date, instrument, operating conditions);
+  - choose whether the data may be cited (default: no);
+  - save or cancel.
+- **The validation set and the report:** the saved files are listed, and "Run validation" compares the model with the literature benchmarks and every saved file within ±30 %. Results are recorded with the date and software version. The report downloads as PDF or CSV.
+- **Researcher overlays:** a measured spectrum drawn over the synthetic one (normalised to the same argon line), and measured spectra and probe curves analysed with exactly the same methods as the synthetic ones.
+- **Exports from Sessions:** a PDF report, CSV and PNG.
+
+**Techniques and why**
+- **Files are treated as data, never code:**
+  - **Rejected with the exact reason, and nothing stored:** wrong type, over 50 MB, binary content, too few rows, or a bad cell (named by line and column).
+  - **Saved files** are copied byte for byte, made read-only, and kept in a folder git ignores.
+- **One function decides what an export may show (`report_rows`).** A non-citable file can only ever appear as "Measured file M-0003 (not citable): pass". The PDF and CSV writers never see its values. A test renders the PDF in a readable form and checks that none of the secret file's name, instrument or numbers leaked.
+- **Measured data never change the model (CON-6):** validation only reads. A test runs the model before and after a validation run and gets identical results.
+- **Same method, measured or synthetic:** a measured spectrum is wrapped in the same `Spectrum` type the virtual spectrometer makes, so the Phase 4 analysis runs on it unchanged.
+
+**Problems and how we handled them**
+- **The first importer gave a vague error** ("could not separate columns") when a bad cell sat near the top of a file. It now finds the delimiter from the first data line and reports the exact line and column.
+- **Parsing was too slow at first:** about 11 s projected for 50 MB, near the 15 s limit. It now reads numbers directly and only reads text to find a bad cell: 49 MB in 1.2 s.
+- **A spectrum's analysis needs the instrument resolution,** which the free-text "instrument" field can't give. It became a required number, decided before any result and recorded as a rule change.
+- **Checking the PDF for leaks was harder than expected:** a normal PDF compresses its text and stores fonts as glyph codes. The test renders it uncompressed with simple fonts, so the drawn text can be read back. Even then "fi" comes out as one glyph, so the test matches on the file ID.
+- **Streamlit's upload box said "200MB per file",** above our 50 MB limit. Its own setting now matches the envelope, and a test checks that.
+- **The screen tests shared one cached database,** which had already caused a numbering problem in Phase 7. The test fixture now clears the cache, so every test starts clean.
+
+**Left open:** the supervisor's sample files (one OES text file and one probe .csv were promised) have not arrived, so that gate item waits.
+
+**How Phase 8 closed:** all tests pass: 383, plus the Phase 2 benchmark still marked as an expected failure. Measured data stay private. The import and validation of the supervisor's own sample files waits until they arrive. Version 0.8.0.

@@ -17,10 +17,18 @@ needs_data = pytest.mark.skipif(any(s is not DataStatus.OK for s in STATUS.value
 streamlit_testing = pytest.importorskip("streamlit.testing.v1")
 
 
+def use_database(monkeypatch, path) -> None:
+    """Point the app at a database and drop its cached stores, which would otherwise outlive one test."""
+    monkeypatch.setenv("PLASMA_TWIN_DB", str(path))
+    import common
+    common.store.clear()
+    common.measured_store.clear()
+
+
 @pytest.fixture(autouse=True)
 def isolated(tmp_path, monkeypatch):
-    monkeypatch.setenv("PLASMA_TWIN_DB", str(tmp_path / "screens.db"))
     monkeypatch.syspath_prepend(str(APP))
+    use_database(monkeypatch, tmp_path / "screens.db")
     yield
 
 
@@ -189,3 +197,59 @@ def test_underwater_results_show_disinfection_and_save_a_stage2_session() -> Non
     assert not sessions.exception
     table = sessions.dataframe[0].value
     assert table.loc[table["Session"] == session_id, "Stage"].tolist() == [2]
+
+
+
+def open_as_researcher(relative: str, has_run: bool = True):
+    at = streamlit_testing.AppTest.from_file(str(APP / relative), default_timeout=300)
+    at.session_state["role"] = "Researcher"
+    if has_run:
+        at.session_state["has_run"] = True
+    at.run()
+    assert not at.exception, [e.value for e in at.exception]
+    return at
+
+
+@needs_data
+def test_measured_data_screen_is_for_researchers_only() -> None:
+    at = open_screen("pages/10_Measured_data.py", has_run=False)
+    assert "Researcher role" in text_of(at)
+    assert not at.subheader
+
+
+@needs_data
+def test_measured_data_screen_lists_files_and_runs_validation(measured_set, monkeypatch) -> None:
+    """FR10.5-FR10.8 on the screen, with the synthetic validation set."""
+    use_database(monkeypatch, measured_set[0].db_path)
+    at = open_as_researcher("pages/10_Measured_data.py", has_run=False)
+    assert {"Import a file", "Validation set", "Validation"} <= {h.value for h in at.subheader}
+    assert {measured_set[1], measured_set[2], measured_set[3]} <= set(at.dataframe[0].value["File"])
+    next(b for b in at.button if "Run validation" in b.label).click().run()
+    assert not at.exception, [e.value for e in at.exception]
+    assert "1 non-citable file(s) will appear in exports only as anonymised" in text_of(at)
+
+
+@needs_data
+def test_researcher_overlays_and_imported_analysis(measured_set, monkeypatch) -> None:
+    """FR4.6 overlay on M4, FR5.1 imported spectrum on M5, FR6.9 imported I-V curve on M6."""
+    use_database(monkeypatch, measured_set[0].db_path)
+    _, probe_id, oes_id, _ = measured_set
+    m4 = open_as_researcher("pages/3_Virtual_OES.py")
+    next(s for s in m4.selectbox if "Overlay a measured" in s.label).set_value(oes_id).run()
+    assert not m4.exception and any("normalised to their peak" in c.value for c in m4.caption)
+    m5 = open_as_researcher("pages/4_OES_analysis.py")
+    next(s for s in m5.selectbox if "Spectrum to analyse" in s.label).set_value(oes_id).run()
+    assert not m5.exception and f"Analysing measured file {oes_id}" in text_of(m5)
+    m6 = open_as_researcher("pages/5_Langmuir_probe.py")
+    next(s for s in m6.selectbox if "measured I-V curve" in s.label).set_value(probe_id).run()
+    assert not m6.exception and f"Analysing measured file {probe_id}" in text_of(m6)
+    assert "Floating potential V_f" in text_of(m6)
+
+
+@needs_data
+def test_sessions_export_panel_offers_pdf_csv_and_png() -> None:
+    at = open_screen("pages/2_Results.py")
+    next(b for b in at.button if "Save as session" in b.label).click().run()
+    sessions = open_screen("pages/7_Sessions.py", has_run=False)
+    assert "Export" in [h.value for h in sessions.subheader]
+    assert "0 non-citable measured files are excluded (E19)" in text_of(sessions)

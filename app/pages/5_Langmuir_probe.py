@@ -1,5 +1,6 @@
 """M6 Virtual Langmuir probe (FR6.1-FR6.10): simulate and analyse an I-V curve."""
-from common import PAGES, axis, cached_probe, config_json, metric_grid, need_result, page_setup, sci, status, svc  # noqa: I001
+from common import (PAGES, axis, cached_probe, config_json, is_researcher, measured_store, metric_grid, need_result,  # noqa: I001
+                    page_setup, sci, status, svc)
 
 import csv
 import io
@@ -50,8 +51,24 @@ curve, analysis, error = cached_probe(config_json(st.session_state["config"]), s
 
 fig = go.Figure(go.Scatter(x=curve.voltage_v, y=1e3 * curve.current_a, mode="lines+markers", marker_size=3, name="I(V)"))
 st.plotly_chart(axis(fig, "Probe voltage V (V)", "Probe current I (mA)"), use_container_width=True)
-if st.session_state["role"] == "Researcher":
-    status("info", "Analysing an imported measured I-V curve (FR6.9) comes with data import in Phase 8.")
+if is_researcher():
+    probe_files = [f.file_id for f in measured_store().list(diagnostic="probe")]
+    chosen = st.selectbox("Analyse a measured I-V curve instead (FR6.9)", ["none"] + probe_files)
+    if chosen != "none":
+        from types import SimpleNamespace
+
+        from plasma_twin.probe.analysis import ProbeAnalysisError, analyse
+        voltage, current, record = measured_store().load(chosen)
+        geometry = record.metadata["probe"]
+        curve = SimpleNamespace(voltage_v=voltage, current_a=current)
+        fig.add_trace(go.Scatter(x=voltage, y=1e3 * current, mode="lines", name=f"measured {chosen}"))
+        st.plotly_chart(axis(fig, "Probe voltage V (V)", "Probe current I (mA)"), use_container_width=True, key="measured_iv")
+        try:
+            analysis, error = analyse(voltage, current, float(geometry["tip_radius_mm"]), float(geometry["exposed_length_mm"])), None
+        except ProbeAnalysisError as problem:
+            analysis, error = None, str(problem)
+        status("info", f"Analysing measured file {chosen} with the same method (probe r_p = {geometry['tip_radius_mm']} mm, "
+                       f"L = {geometry['exposed_length_mm']} mm).")
 
 # ------------------------------------------------------------------ analysis (FR6.6, FR6.7)
 if analysis is None:
