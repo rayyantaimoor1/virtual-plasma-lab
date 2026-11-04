@@ -661,6 +661,53 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
   - The citation filter: non-citable data never appear in an export (SEC-3, E19).
 - Streamlit page M10 (Researcher only), the M11 export panel, and the overlays in M4 and M6.
 
+**Rules** (fixed 4 November 2026, before any Phase 8 code)
+- **Files are data, never code (SEC-2):**
+  - **Types:** an OES spectrum must be `.txt` and a probe I–V curve `.csv` (the supervisor's formats, Round 3 Q8).
+  - **Rejected with the exact reason (E14), and nothing stored:**
+    - a file over 50 MB (envelope `data.import_max_file_mb`);
+    - a file containing a NUL byte (binary);
+    - a file that is not UTF-8 or Latin-1 text;
+    - fewer than two numeric columns;
+    - fewer than 10 data rows;
+    - a non-numeric or empty cell after the header (the row number is given);
+    - an OES wavelength column that is not increasing.
+  - **Header and delimiter:** leading lines that are not numbers are kept as the file's header, not data. The delimiter (tab, comma, semicolon or spaces) is detected from the first data lines, then the whole file is read with pandas' C parser (PER-7: 50 MB in ≤ 15 s).
+- **Column mapping and units (FR10.3):**
+  - **OES:** wavelength in nm and intensity in arbitrary units.
+  - **Probe:** voltage in V and current in A, mA or µA, converted to A (× 1, × 10⁻³, × 10⁻⁶).
+  - **Preview:** downsampled to at most 4,000 points, keeping peaks (as in Phase 6).
+- **Mandatory metadata (FR10.2):**
+  - **Every file:** diagnostic, plasma stage, gas mixture, measurement date (not in the future), instrument (not empty), and operating conditions inside that stage's envelope:
+    - Stage 1: power, pressure, Ar flow, mixture and admixtures;
+    - Stage 2: average power, frequency, pulse width, gap, O₂ flow, bubble gas.
+  - **Probe files** also need the tip radius and exposed length, inside the probe envelope, because the analysis needs the probe area.
+  - **Probe files are Stage 1 only:** a Langmuir probe is not used in the underwater discharge (D1).
+- **Storage and privacy (FR10.4, FR10.5, CON-6):**
+  - **Where:** a saved file is copied byte for byte to `data/measured/<sha256>.<ext>`, made read-only, and recorded in `imported_files` with its metadata, mapping and units. `data/measured/` is gitignored, like the database, so measured data never leave the computer.
+  - **Citation permission:** "Not citable" unless the Researcher ticks permission. Permission is fixed at save time; changing it means deleting and importing again.
+  - **Cancel:** stores nothing.
+- **Validation (FR10.6, FR10.7, CON-6, CON-7, ACC-4):**
+  - **The tolerance** is read from `envelope.toml` (`validation.agreement_tolerance_fraction`, ±30 %), fixed before any comparison.
+  - **Literature benchmarks:** the Saikia et al. (2018) points (Phase 2, unchanged rules). The Phase 2 gap stays visible as failures.
+  - **Measured probe file (Stage 1):** analysed with exactly the M6 method (`probe.analysis.analyse`). It is compared with the model run at the file's conditions (default geometry, Druyvesteyn):
+    - T_e: the EEPF effective temperature if the EEPF is reliable, otherwise the slope temperature (flagged);
+    - n_e: the EEPF density if reliable, otherwise the OML ion density.
+  - **Measured OES file, Stage 1:** line intensities are integrated at the CR-model lines, then a line-ratio fit gives T_e. Its n_e comes from a saved probe file at the same operating conditions if one exists; otherwise both T_e and n_e are fitted.
+  - **Measured OES file, Stage 2:** n_e from the H-alpha Stark width (Phase 7 method), compared with the model's channel n_e. The power-share assumption applies.
+  - **Recording:** every check is written to `validation_results` with date and software version. A check that cannot run (for example no lines in range) is reported as "not run" with the reason, never as a pass.
+  - **Measured data never change model parameters (CON-6):** validation only reads data. A test checks that the model gives identical results before and after a validation run.
+- **Export and the citation filter (FR10.8, FR11.5, E19, SEC-3):**
+  - **Formats:** PDF (multi-page report with tables and figures), CSV and PNG, all made with matplotlib.
+  - **Non-citable files appear only as anonymised entries:** "Measured file M-0003 (not citable): pass" or "fail". No file name, no metadata, no values, no curve.
+  - **E19:** the number of non-citable files excluded is shown before every export.
+  - **SEC-3:** a test exports with a non-citable file present and checks that none of its numbers, name or metadata appear in the PDF, CSV or PNG data.
+- **Overlays and imported analysis (Researcher only, LI-9):**
+  - **M4 (FR4.6):** overlays a saved Stage 1 OES file. Both spectra are normalised to the same reference line: the strongest model Ar I line inside both wavelength ranges, using each spectrum's peak within ±3 FWHM of it.
+  - **M5 (FR5.1):** can analyse a saved Stage 1 OES file instead of the synthetic spectrum.
+  - **M6 (FR6.9):** can analyse a saved probe file with the same method.
+- **Sample files:** none have arrived from the supervisor yet, so that gate item waits. Small synthetic test files are made by the tests themselves, never committed as "measured data".
+
 **Tests** (`tests/test_importers.py`, `test_validation.py`, `test_export.py`)
 - A wrong-type, oversized or broken file is rejected and nothing is stored.
 - The mA → A conversion is correct.
