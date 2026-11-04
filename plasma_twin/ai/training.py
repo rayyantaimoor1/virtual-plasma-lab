@@ -23,10 +23,12 @@ from plasma_twin.ai.registry import ModelCard, Registry, make_card, new_model_id
 BOOTSTRAP_RESAMPLES = 2000
 BOOTSTRAP_SEED = 20261108
 TASKS = {
-    "spectrum_to_te_ne": "Stage 1: OES line areas -> T_e and n_e (clean runs only)",
+    "spectrum_to_plasma": "Stage 1: spectrum -> T_e, n_e, T_gas with 90 % intervals (Phase 10, M12)",
+    "spectrum_to_te_ne": "Stage 1: OES line areas -> T_e and n_e (Phase 9 framework check)",
     "anomaly_range_check": "Stage 1: is a run faulty? (range-check baseline)",
 }
-ALGORITHMS = {"spectrum_to_te_ne": ("ridge", "xgboost"), "anomaly_range_check": ("range_check",)}
+ALGORITHMS = {"spectrum_to_plasma": ("random_forest", "xgboost"), "spectrum_to_te_ne": ("ridge", "xgboost"),
+              "anomaly_range_check": ("range_check",)}
 
 
 # ------------------------------------------------------------------------------------ features
@@ -34,11 +36,17 @@ def line_columns(frame: pd.DataFrame) -> list[str]:
     return sorted((c for c in frame.columns if c.startswith("line_")), key=lambda c: float(c[5:]))
 
 
-def log_line_ratios(frame: pd.DataFrame) -> np.ndarray:
-    """log10(each line area / the run's strongest line area); areas at or below zero (noise) are floored."""
-    areas = frame[line_columns(frame)].to_numpy(dtype=float)
+def ratio_features(areas: np.ndarray) -> np.ndarray:
+    """log10(each line area / the run's strongest line area); areas at or below zero (noise) are floored.
+    Ratios need no absolute calibration, and the logarithm keeps weak and strong lines on one scale."""
+    areas = np.atleast_2d(np.asarray(areas, dtype=float))
     strongest = areas.max(axis=1, keepdims=True)
     return np.log10(np.clip(areas, 1e-6 * strongest, None) / strongest)
+
+
+def log_line_ratios(frame: pd.DataFrame) -> np.ndarray:
+    """The line-ratio features of every row of a dataset (columns in wavelength order)."""
+    return ratio_features(frame[line_columns(frame)].to_numpy(dtype=float))
 
 
 def anomaly_features(frame: pd.DataFrame) -> np.ndarray:
@@ -123,6 +131,9 @@ def train(task: str, algorithm: str, frame: pd.DataFrame, card: datasets.Dataset
     """FR16.2: train a model and its baseline, evaluate both on both splits, log and register (E23)."""
     if algorithm not in ALGORITHMS.get(task, ()):
         raise ValueError(f"algorithm {algorithm!r} is not offered for task {task!r}")
+    if task == "spectrum_to_plasma":  # Phase 10: conformal intervals, range check and the physics comparison
+        from plasma_twin.ai import inference
+        return inference.train(algorithm, frame, card, registry)
     registry = registry or Registry()
     metrics: dict[str, Any] = {}
     predictions: dict[str, Any] = {}

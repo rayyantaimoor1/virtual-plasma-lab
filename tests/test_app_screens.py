@@ -285,3 +285,26 @@ def test_ai_training_screen_lists_a_registered_model_with_its_evaluation(ai_fold
     assert table["Model"].tolist() == [model.model_id] and table["Status"].tolist() == ["current"]
     assert "Evaluation and model card" in [h.value for h in at.subheader]
     assert any("Paired bootstrap" in c.value for c in at.caption)
+
+
+@needs_data
+def test_ai_spectrum_screen_without_a_model_shows_only_the_physics(ai_folders) -> None:
+    """M12, E22: with no current model the AI estimate is absent and the physics fit is still shown."""
+    at =open_screen("pages/12_AI_spectrum.py")
+    assert "No current AI model" in text_of(at)
+    assert "T_e (CR-model line-ratio fit)" in text_of(at) and "T_e (AI estimate)" not in text_of(at)
+
+
+@needs_data
+def test_ai_spectrum_screen_puts_the_ai_estimate_next_to_the_physics(ai_folders) -> None:
+    """M12 with a Phase 10 model trained on the locked dataset (physics comparison skipped to keep the test short)."""
+    from plasma_twin.ai import datasets, inference
+    from plasma_twin.ai.registry import Registry
+    if not (datasets.DATA_DIR / f"{datasets.dataset_id(1)}.parquet").exists():
+        pytest.skip("the locked Stage 1 dataset has not been built here")
+    frame, card = datasets.load(datasets.dataset_id(1), folder=datasets.DATA_DIR)
+    model = inference.train("xgboost", frame, card, Registry(), with_physics=False)
+    at = open_screen("pages/12_AI_spectrum.py")
+    text = text_of(at)
+    assert "T_e (AI estimate)" in text and "T_e (CR-model line-ratio fit)" in text
+    assert any("90 % interval" in c.value for c in at.caption) and any(model.model_id in c.value for c in at.caption)

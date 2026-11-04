@@ -70,7 +70,10 @@ if not cards:
 def headline(result: dict, who: str) -> str:
     values = (result or {}).get(who) or {}
     if "te_mae" in values:
-        return f"T_e MAE {values['te_mae']:.3f} eV, n_e error {100 * values['ne_median_relative_error']:.0f} %"
+        text = f"T_e MAE {values['te_mae']:.3f} eV, n_e error {100 * values['ne_median_relative_error']:.0f} %"
+        if "te_coverage" in values:  # Phase 10: 90 % conformal intervals
+            text += f", coverage T_e {values['te_coverage']:.0%} / n_e {values['ne_coverage']:.0%}"
+        return text
     if "recall" in values:
         return f"recall {values['recall']:.0%}, false alarms {values['false_alarm_rate']:.0%}"
     return "-"
@@ -92,15 +95,41 @@ if predictions:
     left, right = st.columns(2)
     for column, key, label, unit in ((left, "te", "Electron temperature T_e", "eV"), (right, "ne", "Electron density n_e", "m⁻³")):
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=p[f"{key}_twin"], y=p[f"{key}_model"], mode="markers", name="model"))
+        bars = None
+        if f"{key}_low" in p:  # Phase 10: the 90 % interval of each estimate
+            bars = dict(type="data", symmetric=False, array=[h - m for h, m in zip(p[f"{key}_high"], p[f"{key}_model"])],
+                        arrayminus=[m - lo for m, lo in zip(p[f"{key}_model"], p[f"{key}_low"])], thickness=1)
+        fig.add_trace(go.Scatter(x=p[f"{key}_twin"], y=p[f"{key}_model"], mode="markers", name="model (90 % interval)" if bars else "model",
+                                 error_y=bars))
         fig.add_trace(go.Scatter(x=p[f"{key}_twin"], y=p[f"{key}_baseline"], mode="markers", name="ridge baseline", marker_symbol="x"))
+        if f"{key}_physics" in p:
+            fig.add_trace(go.Scatter(x=p[f"{key}_twin"], y=p[f"{key}_physics"], mode="markers", name="physics line-ratio fit",
+                                     marker_symbol="triangle-up", visible="legendonly"))  # its outliers would squash the plot
         low, high = min(p[f"{key}_twin"]), max(p[f"{key}_twin"])
         fig.add_trace(go.Scatter(x=[low, high], y=[low, high], mode="lines", name="perfect", line=dict(dash="dot")))
-        column.plotly_chart(axis(fig, f"{label} from the twin ({unit})", f"Predicted {label} ({unit})"), use_container_width=True)
-    p_value = card.metrics.get(split, {}).get("p_value")
+        fig = axis(fig, f"{label} from the twin ({unit})", f"Predicted {label} ({unit})", log_y=key == "ne")
+        if key == "ne":
+            fig.update_xaxes(type="log")
+        fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0), margin=dict(t=60), height=440)
+        column.plotly_chart(fig, use_container_width=True)
+    if any(k.endswith("_physics") for k in p):
+        st.caption("Click 'physics line-ratio fit' in a legend to show the physics points; some of its fits run away to 6-9 eV "
+                   "at low pressure, which squashes the plot.")
+    result = card.metrics.get(split, {})
+    p_value = result.get("p_value")
     if p_value is not None:
         st.caption(f"Paired bootstrap of T_e absolute errors against the ridge baseline: p = {sci(p_value, 2)} "
                    + ("(significantly better)" if p_value < 0.05 else "(not significantly better)") + ".")
+    comparisons = [(name, label) for name, label in (("te_vs_ridge", "T_e vs ridge"), ("ne_vs_ridge", "n_e vs ridge"),
+                                                     ("te_vs_physics", "T_e vs physics fit"), ("ne_vs_physics", "n_e vs physics fit"),
+                                                     ("tgas_vs_mean", "T_gas vs training mean")) if f"p_value_{name}" in result]
+    if comparisons:
+        st.dataframe([{"Comparison": label, "p (model better)": sci(result[f"p_value_{name}"], 2),
+                       "95 % interval of mean error difference": f"{sci(result[f'ci_{name}_low'], 2)} to {sci(result[f'ci_{name}_high'], 2)}",
+                       "Verdict": "significantly better" if result[f"p_value_{name}"] < 0.05 else "not significantly better"}
+                      for name, label in comparisons], hide_index=True, use_container_width=True)
+        st.caption("Errors: T_e in eV, n_e as |Δ log10 n_e|, T_gas in K. A negative interval means the model's errors are smaller "
+                   "(scipy.stats.bootstrap, paired). The physics fit is given the known pressure and mixture.")
 with st.expander("Model card"):
     st.json(asdict(card))
 with st.expander("Compare logged training runs (MLflow)"):

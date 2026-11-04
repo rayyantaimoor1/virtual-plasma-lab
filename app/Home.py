@@ -58,6 +58,8 @@ with c3:
         st.switch_page(PAGES["measured"])
 with c4:
     st.markdown("**AI module**")
+    if st.button("AI spectrum analysis"):
+        st.switch_page(PAGES["ai_spectrum"])
     if st.button("AI training and models"):
         st.switch_page(PAGES["ai_training"])
 

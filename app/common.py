@@ -35,6 +35,7 @@ PAGES = {
     "underwater_results": "pages/9_Underwater_results.py",
     "measured": "pages/10_Measured_data.py",
     "ai_training": "pages/11_AI_training.py",
+    "ai_spectrum": "pages/12_AI_spectrum.py",
 }
 
 

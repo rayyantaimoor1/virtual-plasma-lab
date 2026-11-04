@@ -73,12 +73,13 @@ class Registry:
                              "twin_version": card.twin_version, "software_version": card.software_version})
             mlflow.log_params({"seed": card.seed, **{f"hp.{k}": v for k, v in card.hyperparameters.items()}})
             for split, result in card.metrics.items():
-                for who in ("model", "baseline"):
-                    for name, value in (result.get(who) or {}).items():
-                        if isinstance(value, (int, float)):
-                            mlflow.log_metric(f"{split}.{who}.{name}", float(value))
-                if isinstance(result.get("p_value"), (int, float)):
-                    mlflow.log_metric(f"{split}.p_value", float(result["p_value"]))
+                for key, value in result.items():
+                    if isinstance(value, dict):  # model, baseline, physics
+                        for name, number in value.items():
+                            if isinstance(number, (int, float)) and not isinstance(number, bool) and number == number:
+                                mlflow.log_metric(f"{split}.{key}.{name}", float(number))
+                    elif isinstance(value, (int, float)) and not isinstance(value, bool) and value == value:
+                        mlflow.log_metric(f"{split}.{key}", float(value))  # p-values, intervals, row counts
         card = ModelCard(**{**asdict(card), "mlflow_run_id": run.info.run_id})
         folder = self.models_dir / card.model_id
         folder.mkdir(parents=True, exist_ok=True)

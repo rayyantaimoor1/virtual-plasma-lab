@@ -431,3 +431,37 @@ It is written so that either of us can explain any decision to the evaluation co
   - **Range check:** catches 74 % of faults but false-alarms on 36 % of clean runs, far from the 90 % / 5 % target. Phases 10 and 11 have to beat these.
 
 **How Phase 9 closed:** all tests pass: 403, plus the Phase 2 benchmark still marked as an expected failure. The dataset settings and seeds were committed before any AI code. Version 0.9.0.
+
+## Phase 10: AI reads T_e, n_e and T_gas from a spectrum (built 5 November 2026; two pass marks not met)
+
+**What we made**
+- **An AI that reads a spectrum:** it measures the 20 argon lines between 690 and 860 nm and gives T_e, n_e and T_gas, each with a 90 % interval ("the true value should be inside this range 9 times out of 10").
+- **Two tree models:** a Random Forest and XGBoost, both trained only on spectra the twin made.
+- **A safety check:** if the spectrum looks unlike anything the model learned from (a missing line, or a line ratio outside the training range), the AI says nothing and explains why, instead of guessing.
+- **A new screen, M12:** the AI estimate always sits next to the physics line-ratio fit and the twin's own values. It works on the synthetic spectrum and, for a Researcher, on a measured file.
+- **M16 now shows more:** interval bars, the physics points, and a table of every comparison with its p-value.
+
+**Techniques and why**
+- **Rules before results, again:** the features, model settings, interval method, range check and pass marks were committed (99314c3) before any tree model was trained on the full data. So nothing could be adjusted after seeing a number.
+- **Line ratios, not the raw spectrum:** a line's area stays the same when a coarser spectrometer smears it out, but its shape does not. Line ratios therefore let the model read measured spectra taken with a different instrument. This was a deliberate change from the plan, written down in the rules.
+- **Conformal prediction (MAPIE):** we keep a quarter of the training data aside, see how wrong the model is on it, and make each interval just wide enough to cover 90 % of those errors. It needs no assumption about the error's shape.
+- **Three-way comparison:** each model is compared with the simple ridge baseline and with the physics fit from Phase 4, on both the random and the held-out-corner split. The tests are a paired bootstrap (p-value) and `scipy.stats.bootstrap` (a 95 % interval of the difference).
+
+**What happened, reported as it came**
+- **The trees are not better than the simple baseline.** For T_e, Random Forest, XGBoost and ridge regression all have the same error (0.104 eV), with p ≈ 0.5. The line ratios relate to T_e and n_e in a nearly straight-line way, so a straight line does as well as a forest. The plan wanted the trees to be significantly better. They are not, and we say so.
+- **T_e intervals covered 84 % and 80 %, below the 85 % mark.** n_e intervals passed (92 %, 89 %).
+  - **The check:** to find out whether the method was broken, we repeated it on 30 other random splits, as a diagnostic only, changing nothing.
+  - **What it showed:** the average was 90.2 %, exactly as designed. Our locked split just landed in the unlucky 10 %. The result stands as measured.
+- **Both the AI and the baseline beat the physics fit by far** (0.10 eV against 0.84 eV mean error for T_e), even though the physics fit is told the pressure and gas mixture.
+  - **Why the physics fit loses:** at low pressure about a quarter of its fits ran away to 6–9 eV. When T_e and n_e are both fitted from line ratios alone, the fit can trade one against the other. That is why the physics screen normally takes n_e from the probe.
+  - **Status:** recorded as an open finding for the physics side.
+- **T_gas:** the AI does learn T_gas (to 0.6 K) from how gas heating goes with the line pattern, so it is shown, with a note that it does not come from a line width.
+
+**Problems and how we handled them**
+- **How to keep the honest failures visible:** the two unmet pass marks are kept as tests marked "expected failure (strict)" with the measured numbers. Every test run lists them, and if a future change ever makes them pass, the run flags it.
+- **A NaN from scipy:** when two models make exactly the same errors, the bootstrap has nothing to resample and returns NaN. The code now handles that case.
+- **Squashed plots:** the physics fit's runaway points (up to 9 eV and 1e18 m⁻³) pushed the AI points into a corner. They are now hidden until clicked in the legend, and n_e uses log axes.
+- **A gap the range check cannot see:** the models learned only Druyvesteyn, 0D plasmas in the standard chamber. If a user changes those, the line ratios might still look normal, so M12 now warns in words.
+- **A test-order quirk:** the Phase 9 Windows process-pool crash came back when the screen tests ran before a test that builds a dataset in parallel. In the normal (alphabetical) order the AI tests run first, so the full suite is unaffected. Recorded, not hidden.
+
+**How Phase 10 closed:** 417 tests pass, and 5 are marked as expected failures: the Phase 2 benchmark, plus Phase 10's two unmet pass marks (T_e coverage, trees vs ridge), each tested for both models. Coverage and every comparison are logged in MLflow and shown on M16 and M12. Version 0.10.0.
