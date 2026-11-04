@@ -877,6 +877,50 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
 - Comparison with the ridge baseline and with the physics line-ratio result from Phase 4. Significance is tested with a paired bootstrap of the absolute errors using `scipy.stats`.
 - Page M12: the AI estimate always sits next to the physics analysis, and it works on synthetic and imported spectra.
 
+**Rules** (fixed 5 November 2026, before any Phase 10 code and before any Random Forest or XGBoost accuracy on the full dataset was seen)
+- **Data:** the locked Stage 1 dataset `S1-b898643fad`, clean runs only (the faulty runs belong to Phase 12). No new dataset and no changed setting.
+- **Features: log line ratios, not a resampled spectrum** (a change from the plan, with its reasons):
+  - **What:** log10(area / strongest area) of the 20 CR-model Ar I lines in 690–860 nm, measured with `integrated_intensities` exactly as on M5. These are the ridge baseline's features, so the comparison tests the algorithm alone.
+  - **Why not a resampled spectrum:** a line's area does not change when the instrument broadens it, but its shape does. A model trained on 0.005 nm spectra would misread a measured spectrum taken at 0.05 nm, and M12 must work on imported spectra.
+  - **Also:** the locked dataset stores line areas. Storing spectra would need a new dataset after the lock.
+- **Targets:** T_e (eV), log10 n_e (n_e spans an order of magnitude) and T_gas (K). One regressor per target.
+- **Models:** hyperparameters are fixed here and never tuned on a test set.
+  - **Random Forest:** scikit-learn, 500 trees, otherwise the library defaults, seeded.
+  - **XGBoost:** the Phase 9 parameters (400 trees, depth 4, learning rate 0.05, subsample 0.9, column sample 0.9).
+- **90 % intervals (MAPIE split conformal):**
+  - **Method:** `SplitConformalRegressor`, absolute-residual score, confidence 0.90, on a model fitted beforehand.
+  - **Data:** each split's training rows are divided 75/25 (seed 20261109) into a fitting part and a calibration part. The model learns only from the fitting part.
+  - **n_e:** the interval is made on log10 n_e, so it is multiplicative (for example ×0.8 to ×1.25).
+  - **Fairness:** the ridge baseline still learns from all the training rows. That handicap works against the AI, not for it.
+- **Training-range check (withheld estimates):** an estimate is withheld, with the reason shown, if:
+  - any of the 20 lines lies outside the spectrum's wavelength range or cannot be measured (for example, blended at a wide instrument width); or
+  - any feature lies outside [min − 0.1 w, max + 0.1 w] of the fitting rows, where w = max − min.
+
+  Metrics are computed on **all** held-out rows (the check cannot flatter them), and the share that would be withheld is reported next to them.
+- **T_gas:**
+  - **The problem:** the 690–860 nm window holds no direct T_gas physics, because the Doppler width (about 0.0015 nm) is below the 0.005 nm instrument.
+  - **The test:** the AI's T_gas is compared with a "training mean" baseline by the paired bootstrap.
+  - **The rule:** if p ≥ 0.05 on the random split, M12 withholds the AI T_gas and points to the physics routes (Doppler width, N₂ rotational band).
+- **Comparisons, on both splits:**
+  - **(a)** against the ridge baseline;
+  - **(b)** against the Phase 4 physics line-ratio fit (`fit_te_ne`), given the run's known gas density, T_gas, EEDF, geometry and quenching, and no probe. The physics fit is given more information than the AI (it knows the pressure and mixture), and this is stated wherever it is shown.
+- **Significance tests:**
+  - **p-values:** the Phase 9 paired bootstrap of absolute errors (T_e in eV; n_e as |Δ log10 n_e|; seed 20261108, 2,000 resamples).
+  - **Confidence interval:** `scipy.stats.bootstrap` (paired, 2,000 resamples, the same seed) gives a 95 % interval of the mean error difference.
+- **Physics cache:** the physics fit takes about 2 s per spectrum. It is run once per dataset on the clean held-out rows of both splits, in parallel, and cached as `data/ai/<dataset_id>-physics.parquet` (gitignored with the dataset).
+- **Pass marks (tests):** each result is reported whatever it is.
+  - **Coverage:** ≥ 85 % on the random split, for T_e and for n_e.
+  - **Region coverage:** reported, not tested. The conformal guarantee needs held-out data like the calibration data, and the held-out corner breaks that on purpose.
+  - **Significance:** model vs ridge, p < 0.05 on the random split.
+- **Registry and M16:**
+  - **Task and algorithms:** new task `spectrum_to_plasma` with algorithms `random_forest` and `xgboost`.
+  - **Model card:** coverage, median interval widths, withheld share, and p-values and confidence intervals against the ridge baseline and the physics fit, for both splits. Everything is logged in MLflow.
+- **M12 (AI spectrum analysis):**
+  - **Sources:** the synthetic spectrum of the open plasma, or (for a Researcher) a measured Stage 1 OES file. Measured data are used for inference only, never for training (AIQ-5).
+  - **Physics alongside:** the physics line-ratio fit is always shown next to the AI estimate.
+  - **Labels:** every AI value is labelled "AI estimate" and carries its 90 % interval.
+  - **When there is no current model:** if the model is missing or out of date, only the physics is shown (E22).
+
 **Tests** (`tests/test_ai_inference.py`)
 - On held-out synthetic spectra, interval coverage is ≥ 85 %.
 - The ensemble's error is significantly lower than the baseline's (p < 0.05). Whatever the result, it is reported honestly.
