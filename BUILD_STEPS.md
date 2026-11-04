@@ -819,6 +819,36 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
 - **M16:** everyone sees the dataset cards, registry, model cards and logged runs; only a Researcher can start training (E23).
 - **Exit gate:** the dataset settings and seed are committed (this commit) before Phase 10 starts.
 
+**As built (4 November 2026)**
+- **Code:**
+  - `plasma_twin/ai/`: `datasets.py`, `registry.py` and `training.py`.
+  - `scripts/build_ai_datasets.py`.
+  - Screen `app/pages/11_AI_training.py` (M16).
+  - Home shows the AI model status (FR1.5) and an AI entry point.
+  - `TWIN_VERSION = "1.0"`.
+- **Datasets built from the locked settings:**
+  - **Stage 1** `S1-b898643fad`: 1,200 rows (600 clean, 120 of each fault type), in about 3 minutes on 10 processes.
+  - **Stage 2** `S2-a2eb665287`: 1,500 rows in 49 s.
+  - **Speed:** each row has its own seeded generator, so the build runs in parallel and still gives identical rows (tested). Reusing the fixed NIST line list removed a second CR-model solve per row.
+- **Baselines on the full Stage 1 dataset, reported as they came** (the bar Phases 10 and 11 must beat):
+  - **Ridge on log line ratios:**
+    - random split (120 clean test runs): T_e MAE 0.104 eV (median 2.9 %), n_e median error 8.3 %;
+    - region split (34 runs): T_e median 2.6 %, n_e median 8.3 %;
+    - R² for T_e is low (0.32 random, negative in the corner) because T_e varies little across the envelope (about 3.0–3.4 eV), so R² is a poor measure here. MAE and median error are the ones to read.
+  - **Range check:**
+    - random split: recall 74 %, false alarms 36 %;
+    - region split: recall 91 %, false alarms 47 %;
+    - far from AIQ-2 (≥ 90 % recall at ≤ 5 % false alarms).
+  - **XGBoost was deliberately not trained on the full data:** it is Phase 10's model, and its rules should be fixed before its accuracy is seen.
+- **Known limits of the features, recorded:**
+  - **Air leak:** the OES window (690–860 nm) holds argon lines only, because O I lines are not modelled (pending e–O data, Phase 7). So an air leak shows only through argon line ratios and the probe curve, not as new N₂ or O lines as the plan imagined.
+  - **Stage 2 log reduction:** most rows reach the one-cell cap, so it carries little information; the ozone and H₂O₂ columns carry more.
+- **Fixed while building:**
+  - **JSON error:** the ridge run's error arrays were left in the metrics, so the card could not be saved as JSON.
+  - **Process crash in tests:** a process pool started after Streamlit's AppTest crashes on Windows, so that screen test builds its 30 rows in one process.
+  - **Movable folders:** `PLASMA_TWIN_MODELS` and `PLASMA_TWIN_AI_DATA` move the AI folders for tests, as `PLASMA_TWIN_DB` moves the database.
+- **Storage:** `models/*` is gitignored like `data/ai/` and `mlruns/`. Models and datasets are rebuilt from the locked settings and seeds.
+
 **Tests** (`tests/test_ai_datasets.py`, `tests/test_ai_registry.py`)
 - The same seed gives an identical dataset.
 - Every row is inside the envelope.
@@ -827,8 +857,8 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
 - A model stamped with an old twin version is reported as out of date.
 
 **Exit gate**
-- [ ] Tests pass.
-- [ ] The dataset generation settings and seed are committed **before** Phase 10 starts.
+- [x] Tests pass. (Phase 9: 18 unit tests and 2 screen tests; full-suite count in BUILDING_JOURNEY.md.)
+- [x] The dataset generation settings and seed are committed **before** Phase 10 starts. (Commit cd8e3f0, before any AI code.)
 
 **Commit:** `Phase 9: AI datasets from the twin, baselines, MLflow registry, model cards`
 

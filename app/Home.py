@@ -5,6 +5,20 @@ import streamlit as st
 
 from plasma_twin.reference.loaders import DataStatus, check_reference_data, load_manifest
 
+
+
+def ai_model_status() -> dict:
+    """FR1.5: the AI models' state; an out-of-date model is shown as such (E22)."""
+    from plasma_twin.ai.registry import Registry
+    registry = Registry()
+    states = [registry.status(c) for c in registry.cards()]
+    if not states:
+        text = "no models trained yet"
+    else:
+        text = f"{states.count('current')} current, {states.count('out of date')} out of date, {states.count('missing')} missing"
+    return {"Data set": "AI models", "Status": text, "Source": "trained on twin data (AI training screen)"}
+
+
 page_setup("Home")
 st.title("Plasma Digital Twin")
 st.caption("A virtual laboratory for a 13.56 MHz argon capacitively coupled plasma, with a virtual spectrometer "
@@ -44,7 +58,8 @@ with c3:
         st.switch_page(PAGES["measured"])
 with c4:
     st.markdown("**AI module**")
-    status("info", "Built in Phases 9-13.")
+    if st.button("AI training and models"):
+        st.switch_page(PAGES["ai_training"])
 
 # ------------------------------------------------------------------ recent sessions (FR1.3)
 st.subheader("Recent sessions")
@@ -64,7 +79,7 @@ manifest = load_manifest()
 words = {DataStatus.OK: "loaded", DataStatus.MISSING: "MISSING", DataStatus.CORRUPT: "CHANGED (checksum mismatch)"}
 st.dataframe([{"Data set": manifest[name]["title"], "Status": words[state], "Source": manifest[name]["source"]}
               for name, state in states.items()]
-             + [{"Data set": "AI models (surrogate, inverse, anomaly)", "Status": "not built yet (Phases 9-13)", "Source": "-"}],
+             + [ai_model_status()],
              hide_index=True, use_container_width=True)
 if all(s is DataStatus.OK for s in states.values()):
     status("ok", "All reference data sets are present and match their recorded checksums.")

@@ -253,3 +253,35 @@ def test_sessions_export_panel_offers_pdf_csv_and_png() -> None:
     sessions = open_screen("pages/7_Sessions.py", has_run=False)
     assert "Export" in [h.value for h in sessions.subheader]
     assert "0 non-citable measured files are excluded (E19)" in text_of(sessions)
+
+
+@pytest.fixture
+def ai_folders(tmp_path, monkeypatch):
+    monkeypatch.setenv("PLASMA_TWIN_MODELS", str(tmp_path / "models"))
+    monkeypatch.setenv("PLASMA_TWIN_AI_DATA", str(tmp_path / "ai"))
+    return tmp_path
+
+
+def test_ai_training_screen_shows_datasets_and_gates_training(ai_folders) -> None:
+    """FR16.1, E23: everyone sees the dataset settings; only a Researcher may train."""
+    at = open_screen("pages/11_AI_training.py", has_run=False)
+    assert {"Training data", "Train a model", "Model registry"} <= {h.value for h in at.subheader}
+    assert at.dataframe[0].value["Settings locked"].tolist() == ["2026-11-04", "2026-11-04"]
+    assert "Training is for the Researcher role" in text_of(at)
+
+
+@needs_data
+def test_ai_training_screen_lists_a_registered_model_with_its_evaluation(ai_folders) -> None:
+    """FR16.3-FR16.5 with a small dataset and one trained model."""
+    from plasma_twin.ai import datasets
+    from plasma_twin.ai.registry import Registry
+    from plasma_twin.ai.training import train
+    # one process: a process pool started after Streamlit's AppTest has run in this interpreter crashes on Windows
+    frame, card = datasets.build(1, runs=30, workers=1)
+    datasets.save(frame, card)
+    model = train("spectrum_to_te_ne", "xgboost", frame, card, Registry())
+    at = open_as_researcher("pages/11_AI_training.py", has_run=False)
+    table = at.dataframe[1].value
+    assert table["Model"].tolist() == [model.model_id] and table["Status"].tolist() == ["current"]
+    assert "Evaluation and model card" in [h.value for h in at.subheader]
+    assert any("Paired bootstrap" in c.value for c in at.caption)

@@ -37,3 +37,6 @@ data/reference/lxcat/
 # Measured data imported by a Researcher stay on this computer (Phase 8, CON-6)
 data/measured/
 data/ai/
+# Trained AI models are rebuilt from the locked datasets (Phase 9); only the folder is kept
+models/*
+!models/.gitkeep

@@ -392,3 +392,42 @@ It is written so that either of us can explain any decision to the evaluation co
 **Left open:** the supervisor's sample files (one OES text file and one probe .csv were promised) have not arrived, so that gate item waits.
 
 **How Phase 8 closed:** all tests pass: 383, plus the Phase 2 benchmark still marked as an expected failure. Measured data stay private. The import and validation of the supervisor's own sample files waits until they arrive. Version 0.8.0.
+
+## Phase 9: AI datasets, training framework and model registry (complete, 4 November 2026)
+
+**What we made**
+- **Labelled datasets made by the twin itself:**
+  - **Stage 1, 1,200 runs:** power, pressure, flow and gas mixture spread evenly across the envelope. Each run has its OES line areas, its probe I–V curve and the true T_e, n_e and T_gas.
+  - **Stage 2, 1,500 runs:** pulse, gas and water settings, with ozone, H₂O₂, OH and log reduction.
+- **Faults for anomaly detection:** half of the Stage 1 runs carry one of five faults:
+  - a contaminated probe tip;
+  - a shifted spectrometer;
+  - an air leak;
+  - a wrong power meter;
+  - failed RF compensation.
+- **Two baselines every future model must beat:** ridge regression for reading T_e and n_e from a spectrum, and a range check for spotting faults.
+- **A model registry:** every training run is logged with MLflow, and every model gets a card and a twin-version stamp.
+- **A new screen, M16:** datasets, training (Researcher only), predicted-against-twin plots, the registry and model cards.
+
+**Techniques and why**
+- **Settings locked before any model:** every noise level, fault size, seed and split is in `config/ai_datasets.toml`, committed with a lock date before any AI code existed. So no setting can quietly be tuned to make a model look better (AIQ-5). The dataset ID is a hash of that file, so changing a setting makes a new dataset instead of overwriting the old one.
+- **Faults made by physics, not by editing labels:**
+  - **contaminated tip:** a series resistance in the probe circuit;
+  - **air leak:** the twin is really run with air added, while the record says it wasn't;
+  - **wrong power meter:** the plasma gets a different power from the one recorded.
+- **Two ways to test every model:** a random split (can it interpolate?) and a held-out corner of the envelope (can it extrapolate?). Both results are always shown.
+- **A twin-version stamp on every model:** if the physics changes, old models are marked out of date and never used (AIQ-6).
+- **A fair comparison:** a paired bootstrap tests whether a model is really better than its baseline, not just lucky on one test set.
+
+**Problems and how we handled them**
+- **Python 3.14 and MLflow:**
+  - **The libraries:** all five install, but MLflow 3.18 has put its simple folder store into maintenance mode, and its recommended SQLite store needs the full server.
+  - **The choice:** we kept the light `mlflow-skinny` and opted into the folder store, which is still the "local file store" the SRS asks for.
+- **Speed:** a run takes 1–3 s, so one process would need up to an hour for Stage 1. Giving every row its own seeded random generator made a parallel build possible that is still exactly reproducible (tested): about 3 minutes on 10 cores.
+- **A screen test crashed** when it started worker processes after Streamlit's test harness had run in the same Python process (a Windows quirk). That test now builds its tiny dataset in one process.
+- **An honest limit:** the plan said an air leak would show "unexpected N₂/O lines". Our OES window has only argon lines (O I is not modelled yet), so the leak shows only in argon line ratios and the probe curve. Recorded, not hidden.
+- **Baseline results, as they came:**
+  - **Ridge:** T_e within 3 % and n_e within 8 % (median).
+  - **Range check:** catches 74 % of faults but false-alarms on 36 % of clean runs, far from the 90 % / 5 % target. Phases 10 and 11 have to beat these.
+
+**How Phase 9 closed:** all tests pass: 403, plus the Phase 2 benchmark still marked as an expected failure. The dataset settings and seeds were committed before any AI code. Version 0.9.0.
