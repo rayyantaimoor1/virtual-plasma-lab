@@ -1,0 +1,62 @@
+# AI dataset settings (Phase 9, AIQ-5, CON-10, FR16.1).
+# LOCKED on 2026-11-04, before any model was trained. These values are never changed after seeing an
+# accuracy. A change needs a new [lock] date and a note in BUILD_STEPS.md, and makes a new dataset ID.
+# Each value states why it was chosen; "assumption" marks a value chosen by reasoning, not read in a source.
+
+[lock]
+date = "2026-11-04"
+
+# ----------------------------------------------------------------- Stage 1: the twin across the envelope
+[stage1]
+runs = 1200
+seed = 20261104
+# Latin hypercube over the three continuous inputs, so the envelope is covered evenly with few runs.
+continuous = ["rf_power_w", "pressure_mbar", "ar_flow_sccm"]   # ranges from envelope.toml
+mixtures = ["Ar", "Ar+N2", "Ar+O2", "Ar+N2+O2"]                 # equally likely
+admixture_percent = [1.0, 10.0]                                 # uniform, each gas present (envelope)
+eedf = "Druyvesteyn"                                            # the supervisor's choice for Stage 1
+spatial = "0D"
+
+[stage1.spectrometer]
+# The OES features are measured exactly as on M5: line areas on a synthetic, noisy spectrum.
+window_nm = [690.0, 860.0]          # the argon 2p -> 1s lines used by the line-ratio fit
+fwhm_nm = 0.005                     # envelope default (laboratory instrument better than 0.01 nm)
+noise_percent_of_peak = 1.0         # envelope default: a CCD signal-to-noise of about 100 at the brightest line
+calibration_drift_percent = 5.0     # assumption: largest linear tilt of the relative spectral response across
+                                    # the window; a lamp-calibrated spectrometer is typically good to a few %
+
+[stage1.probe]
+noise_percent = 1.0                 # envelope default (FR6.4)
+# sweep, tip and RF settings: the envelope defaults (the COMSATS laboratory probe)
+
+# ----------------------------------------------------------------- Stage 2
+[stage2]
+runs = 1500
+seed = 20261105
+continuous = ["power_w", "frequency_khz", "width_us", "o2_flow_sccm", "water_temperature_c", "treatment_time_min",
+              "water_volume_ml", "water_ph"]
+width_us = [2.0, 40.0]              # duty <= 40 % at 10 kHz: inside the run rule (E5) without warnings
+power_share = [0.01, 0.10]          # log-uniform; up to about the model's validity limit (Phase 7)
+gaps_mm = [1, 2, 3]                 # equally likely
+bubble_gas = ["O2 + water vapour", "O2 only"]
+
+# ----------------------------------------------------------------- faults for anomaly detection (FR13, AIQ-2)
+[faults]
+fraction = 0.5                      # half of the Stage 1 runs carry exactly one fault, the five types equally
+seed = 20261106
+# Magnitudes are drawn uniformly in each range.
+probe_contamination_ohm = [200.0, 2000.0]  # assumption: a resistive surface layer in series with the tip; at the
+                                           # ~20 mA saturation current this drops 4-40 V, flattening the knee
+wavelength_shift_nm = [0.02, 0.20]         # 4 to 40 instrument FWHMs: a drifted grating calibration
+air_leak_percent = [0.5, 3.0]              # % of the Ar flow; air is taken as 78 % N2 and 21 % O2 (the 1 % Ar is
+                                           # ignored); the run is labelled with the leak-free inputs
+power_error_percent = [15.0, 40.0]         # signed (random sign): the plasma gets P (1 + e) while P is recorded
+rf_residual_v = [5.0, 20.0]                # RF left after a failed compensation (envelope allows up to 50 V)
+
+# ----------------------------------------------------------------- splits (FR16.3)
+[splits]
+random_test_fraction = 0.2
+seed = 20261107
+# The held-out corner tests extrapolation: no run inside it is used for training under this split.
+stage1_region = { rf_power_w_min = 80.0, pressure_mbar_min = 0.4 }
+stage2_region = { power_w_min = 80.0, o2_flow_sccm_min = 250.0 }

@@ -773,6 +773,52 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
   - Researchers can start training.
   - Everyone can see the metrics and model cards.
 
+**Rules** (fixed 4 November 2026, before any Phase 9 code)
+- **Libraries, as installed on Python 3.14:** scikit-learn 1.9.1, XGBoost 3.4.1, SHAP 0.54.1, MAPIE 1.6.0 and **mlflow-skinny** 3.18.0, all re-pinned in `requirements.txt`.
+  - **Why mlflow-skinny:** it is the same tracking library without the web server and its database stack, which we don't need: M16 is the interface.
+  - **Store:** MLflow 3.18 put the folder store into maintenance mode, and its SQLite store needs the full server stack. So the registry uses the folder store under `mlruns/` (gitignored), opting in with `MLFLOW_ALLOW_FILE_STORE=true`. That is the "local file store" SI-7 asks for.
+- **Twin version (AIQ-6, E22):**
+  - A new constant `plasma_twin.TWIN_VERSION` names the physics version. It is separate from the software version, which changes every phase.
+  - It changes only when the twin's physics or reference data change, and every dataset and model is stamped with it.
+  - A model stamped with another twin version is "out of date": it is listed, but never used.
+- **Datasets (AIQ-5, CON-10):**
+  - **Settings:** every sampling, noise, fault and split setting lives in `plasma_twin/config/ai_datasets.toml`. That file was locked on 4 November 2026, before any model was trained, and is committed with these rules.
+  - **Dataset ID:** a hash of that file's contents, the twin version and the stage, so a changed setting gives a new ID and never silently replaces the old one.
+  - **Same seed, same dataset:** identical rows.
+- **Stage 1 rows:**
+  - **Sampling:** a Latin hypercube over power, pressure and Ar flow (envelope ranges); the mixture is drawn equally from the four modes, with admixtures 1–10 %.
+  - **Labels:** T_e, centre n_e and T_gas.
+  - **OES features:** the areas of the CR-model Ar I lines in 690–860 nm, measured exactly as on M5 (`integrated_intensities`). The spectrum they are measured on is synthetic and has the locked 1 % noise and a random linear calibration tilt of up to ±5 %.
+  - **Probe features:** the full noisy I–V curve (envelope default sweep, 1 % noise).
+  - **Recorded:** the inputs and the seed of every row.
+- **Stage 2 rows:** a Latin hypercube over the continuous inputs, plus the gap and bubble gas drawn equally. Each row stores the final O₃, H₂O₂ and OH, the log reduction, T_e, n_e and the temperature rise.
+- **Faults (AIQ-2):**
+  - **Which runs:** half of the Stage 1 runs carry exactly one fault, the five types equally. The magnitude is drawn from the locked range, and the fault type and magnitude are stored as labels.
+  - **How each fault is made:**
+    - **probe tip contamination:** the probe voltage is shifted by I·R, a series resistance;
+    - **spectrometer wavelength shift:** the whole wavelength axis is offset;
+    - **air leak:** the twin is run with air added (78 % N₂, 21 % O₂) but the row records the leak-free inputs;
+    - **power-meter miscalibration:** the twin runs at P(1 + e) while P is recorded;
+    - **RF compensation failure:** the probe curve is made with an RF residual.
+  - **Rule:** every fault is made by the twin or the instrument model, never by editing labels.
+- **Splits (FR16.3):**
+  - **Random:** 80/20, seeded.
+  - **Region:** holds out the corner P ≥ 80 W and p ≥ 0.4 mbar (Stage 1), or P ≥ 80 W and O₂ ≥ 250 sccm (Stage 2). No row inside the corner is in that split's training set.
+  - **Reporting:** both results are always reported.
+- **Storage:** datasets are generated, not hand-made, so the Parquet files go to `data/ai/` (gitignored; they can be rebuilt from the config and seed). A small JSON card with the dataset ID, twin version, row counts per stage and fault, seed and lock date is kept with each.
+- **Registry (`ai/registry.py`, FR16.4, FR16.5):**
+  - **Logging:** every training run is logged with MLflow: dataset ID, twin version, seed, algorithm, hyperparameters and metrics on both splits, for the model and its baseline.
+  - **Saving:** the fitted model is saved under `models/<model_id>/` with a JSON model card.
+  - **Never measured data:** models are trained on twin data only (AIQ-5). The training code cannot read the measured-data store.
+- **Baselines, always trained alongside:** ridge regression on log line ratios (each line over the strongest) for T_e and n_e, and a range check for anomalies (flag a run if any feature lies outside the training range).
+- **Metrics:**
+  - **Regression:** MAE, median relative error and R².
+  - **Anomaly detection:** recall and false-alarm rate.
+  - **Model vs baseline:** a paired bootstrap of absolute errors (seeded, 2,000 resamples) gives the p-value AIQ-1 asks for.
+  - Results are reported as they come, never tuned on the test set.
+- **M16:** everyone sees the dataset cards, registry, model cards and logged runs; only a Researcher can start training (E23).
+- **Exit gate:** the dataset settings and seed are committed (this commit) before Phase 10 starts.
+
 **Tests** (`tests/test_ai_datasets.py`, `tests/test_ai_registry.py`)
 - The same seed gives an identical dataset.
 - Every row is inside the envelope.

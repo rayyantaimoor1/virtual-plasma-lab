@@ -36,3 +36,4 @@ data/reference/nist/
 data/reference/lxcat/
 # Measured data imported by a Researcher stay on this computer (Phase 8, CON-6)
 data/measured/
+data/ai/
