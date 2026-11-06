@@ -506,3 +506,44 @@ It is written so that either of us can explain any decision to the evaluation co
 - **Wrong default model:** M15 first opened the Random Forest, because it was the newest model. It now opens XGBoost, as the rules say. Streamlit had to be restarted to see the change, because it does not reload the `plasma_twin` package by itself.
 
 **How Phase 11 closed:** 434 tests pass, and 6 are marked as expected failures: the Phase 2 benchmark, Phase 10's four, and the Stage 2 surrogate's median error. The accuracy and speed-up numbers are on every model card, in MLflow and on M15. Version 0.11.0.
+
+## Phase 12: AI spots runs that break the physics (complete, 7 November 2026)
+
+**What we made**
+- **An anomaly detector:** it compares what the spectrometer and the probe show with what the twin expects at the settings that were recorded. Seven "residuals" (observed minus expected) describe the run:
+  - the overall brightness, the tilt and the pattern of the lines;
+  - the probe's saturation current, its knee position, its knee shape and its overall shape.
+- **The detector itself:** an Isolation Forest, trained only on clean runs, scores how unusual those residuals are.
+  - **Severities:** Normal, Warning or Critical.
+  - **Likely cause:** the residual that pushed the score up most is named in words.
+- **A new screen, M13:**
+  - check the open plasma, saved sessions or (for a Researcher) measured files;
+  - see the scores over time, and why a run was flagged;
+  - mark flagged runs as reviewed, and export the log.
+- **A log in the database:** every check is stored, with a "reviewed" flag.
+
+**Techniques and why**
+- **Residuals, not raw values:** a range check only asks "is each number normal?". A run made at 30 % more power than recorded looks perfectly normal on its own, because it is just a different, valid plasma. Only comparing it with what the twin expects at the recorded power shows that something is wrong.
+- **Few, meaningful features:** a quick test on made-up data showed that an Isolation Forest barely notices a point that is odd in only one of ten features. So we used seven features, each with a physical meaning.
+- **A calibrated score:** the raw forest score sits around 0.4–0.5 for both normal and odd runs, so the SRS thresholds (0.60 and 0.75) could not be applied to it directly. We rescaled it with a held-back quarter of the clean runs, so a typical clean run scores 0.5 and "Warning" starts where only 5 % of clean runs reach.
+
+**Problems and how we handled them**
+- **Two residuals measured noise, not physics.** We found this on four rows, before any detector was trained:
+  - **The line pattern:** it was dominated by the weakest lines, which are mostly noise. It now uses only lines at least 5 % as bright as the strongest.
+  - **The floating potential:** near it, the probe current is smaller than the noise, so its "zero crossing" landed anywhere within 16 V. It was replaced by the voltage where the current reaches 10 % of its final value.
+
+  Both changes were written into the rules as a dated amendment and committed before training, so the rules still came before the results.
+- **Times in the log:** SQLite stores UTC, which reads five hours behind Pakistan time. The screen now labels the column "(UTC)" instead of hiding that.
+
+**What happened, reported as it came**
+- **Every target met on the random split:**
+  - **Detector:** catches 100 % of the faults with 3.1 % false alarms.
+  - **Range check:** catches 74 % with 36 % false alarms.
+  - **The difference** is very significant (p = 2×10⁻⁹).
+- **Every fault type is caught,** including the small air leaks, which the range check almost always missed (22 %).
+- **In the held-out corner of the envelope:**
+  - **Detector:** still 100 % recall, but 5.9 % false alarms (2 of 34 clean runs).
+  - **Range check:** already catches 91 % there, so the improvement is not significant in that corner.
+- **One instrument alone is not enough:** the spectrum alone catches only 30 % (it cannot see probe faults), the probe alone 82% (it cannot see a shifted spectrometer). That is why the full detector uses both.
+
+**How Phase 12 closed:** 449 tests pass, and 6 are marked as expected failures (the same six as after Phase 11; Phase 12 adds none). The per-fault detection table is on the model card, in MLflow and on M13. Version 0.12.0.

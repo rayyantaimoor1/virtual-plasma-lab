@@ -23,6 +23,7 @@ def use_database(monkeypatch, path) -> None:
     import common
     common.store.clear()
     common.measured_store.clear()
+    common.anomaly_log.clear()
 
 
 @pytest.fixture(autouse=True)
@@ -336,3 +337,35 @@ def test_ai_surrogate_screen_maps_explains_and_checks_with_the_twin(ai_folders) 
     next(b for b in at.button if b.label == "Check with twin").click().run()
     assert not at.exception, [e.value for e in at.exception]
     assert "Surrogate and twin" in text_of(at) and at.dataframe[0].value["Value shown"].str.contains("surrogate|twin").all()
+
+
+def test_ai_anomaly_screen_without_a_detector_says_so(ai_folders) -> None:
+    at = open_screen("pages/14_AI_anomaly.py", has_run=False)
+    assert "No current anomaly detector" in text_of(at)
+
+
+@needs_data
+def test_ai_anomaly_screen_checks_logs_reviews_and_exports(ai_folders) -> None:
+    """FR13.1-FR13.7 with the detector trained on the locked dataset (the twin's expectation from the cache)."""
+    import json
+    import shutil
+
+    from plasma_twin.ai import anomaly, datasets
+    from plasma_twin.ai.registry import Registry
+    from plasma_twin.probe.iv_model import ProbeSettings
+    expected = datasets.DATA_DIR / f"{datasets.dataset_id(1)}-expected.parquet"
+    if not expected.exists():
+        pytest.skip("the twin's expectation has not been computed here (scripts/train_anomaly.py)")
+    frame, card = datasets.load(datasets.dataset_id(1), folder=datasets.DATA_DIR)
+    datasets.data_dir().mkdir(parents=True, exist_ok=True)
+    shutil.copy(expected, datasets.data_dir() / expected.name)  # the test's own data folder gets the cached expectation
+    anomaly.train(frame, card, Registry(), workers=1)
+    at = streamlit_testing.AppTest.from_file(str(APP / "pages/14_AI_anomaly.py"), default_timeout=300)
+    at.session_state["probe_settings"] = json.dumps(ProbeSettings.defaults(rf_amplitude_v=20.0).__dict__, sort_keys=True)
+    at.run()
+    next(b for b in at.button if b.label == "Run anomaly check").click().run()
+    assert not at.exception, [e.value for e in at.exception]
+    assert at.dataframe[0].value["Severity"].tolist()[0] in ("Warning", "Critical")  # RF left on the probe
+    assert "flagged (E24)" in text_of(at) and "Why this score?" in {h.value for h in at.subheader}
+    next(b for b in at.button if b.label == "Mark reviewed").click().run()
+    assert not at.exception and at.dataframe[1].value["Reviewed"].tolist() == ["yes"]

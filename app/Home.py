@@ -62,6 +62,8 @@ with c4:
         st.switch_page(PAGES["ai_spectrum"])
     if st.button("AI surrogate and explanations"):
         st.switch_page(PAGES["ai_surrogate"])
+    if st.button("AI anomaly detection"):
+        st.switch_page(PAGES["ai_anomaly"])
     if st.button("AI training and models"):
         st.switch_page(PAGES["ai_training"])
 

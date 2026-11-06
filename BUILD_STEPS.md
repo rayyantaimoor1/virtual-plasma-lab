@@ -1160,14 +1160,44 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
 
   Nothing else changes: the scaling, thresholds, models, splits and pass marks stay as above.
 
+**As built (7 November 2026)**
+- **Code:**
+  - `plasma_twin/ai/anomaly.py`, `plasma_twin/storage/anomaly_log.py` and `scripts/train_anomaly.py`.
+  - Screen `app/pages/14_AI_anomaly.py` (M13), with a Home entry point.
+  - The database moves to schema version 2. The change only adds a table, so an existing version-1 file simply gains `anomaly_log` on start-up and keeps every session.
+  - Version 0.12.0.
+- **The twin's expectation** at all 1,200 recorded inputs is cached in `data/ai/`. With the amended residuals, clean runs give residuals near zero (for example `oes_pattern` about 0.02–0.03 instead of 0.5–0.9).
+- **Results, reported as they came** (random split: 240 held-out runs, 112 of them faulty; region: 67 runs, 33 faulty):
+
+  | Split | Detector | Recall | False alarms | Contamination | Wavelength shift | Air leak | Power error | RF failure |
+  |---|---|---|---|---|---|---|---|---|
+  | random | **residual detector** | **100 %** | **3.1 %** | 100 % | 100 % | 100 % | 100 % | 100 % |
+  | random | range check (baseline) | 74 % | 36 % | 92 % | 100 % | 22 % | 59 % | 100 % |
+  | random | OES only | 30 % | 5.5 % | 0 % | 100 % | 30 % | 14 % | 14 % |
+  | random | probe only | 82 % | 0.8 % | 100 % | 0 % | 100 % | 100 % | 100 % |
+  | region | **residual detector** | **100 %** | **5.9 %** | 100 % | 100 % | 100 % | 100 % | 100 % |
+  | region | range check (baseline) | 91 % | 47 % | 100 % | 100 % | 57 % | 100 % | 100 % |
+  | region | OES only | 27 % | 2.9 % | 0 % | 100 % | 14 % | 0 % | 0 % |
+  | region | probe only | 79 % | 2.9 % | 100 % | 12 % | 100 % | 100 % | 100 % |
+
+  - **Detector vs range check (exact McNemar):** p = 1.9e-9 on the random split. On the region split p = 0.12: the range check already catches 91 % in that corner, so the extra recall is not significant there.
+  - **The region false-alarm rate (5.9 %)** is 2 of 34 clean runs, just above 5 %. It is reported, not tested; the pass mark is on the random split.
+  - **The single-diagnostic detectors** catch what their instrument can see. OES alone cannot see probe faults, and the probe alone cannot see a spectrometer shift, which is why the full detector uses both.
+  - **"In range but wrong":** three runs made at +30 % power while recording the nominal power (index 55, 103 and 106) all pass the range check, and all score about 0.81 (Critical).
+- **Checked in the browser:** the open default plasma scores 0.488 (Normal), with every residual near zero. The check, the score history, the log, the export and the reviewing all work.
+- **Fixed while building:**
+  - **The two residuals** above, by an amendment committed before any detector was trained.
+  - **The log** showed "open" instead of "open plasma".
+  - **Times are SQLite's UTC**, which reads five hours behind Pakistan time, so the column now says "(UTC)".
+
 **Tests** (`tests/test_ai_anomaly.py`)
 - On held-out injected faults: recall ≥ 90 % at a false-alarm rate ≤ 5 %.
 - Recall is significantly higher than the range-check baseline. A fault with all values in range but the physics broken must be caught.
 - Clean runs are rated Normal.
 
 **Exit gate**
-- [ ] Tests pass.
-- [ ] A per-fault-type detection table is recorded.
+- [x] Tests pass. Every Phase 12 pass mark is met: recall 100 % at 3.1 % false alarms, McNemar p = 1.9e-9, the in-range +30 % power run is caught, the default plasma is Normal, and RF left on the probe is flagged with a probe cause.
+- [x] A per-fault-type detection table is recorded: above, on the model card, in MLflow and on M13.
 
 **Commit:** `Phase 12: AI physics-relationship anomaly detection`
 

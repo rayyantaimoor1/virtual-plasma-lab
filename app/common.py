@@ -37,6 +37,7 @@ PAGES = {
     "ai_training": "pages/11_AI_training.py",
     "ai_spectrum": "pages/12_AI_spectrum.py",
     "ai_surrogate": "pages/13_AI_surrogate.py",
+    "ai_anomaly": "pages/14_AI_anomaly.py",
 }
 
 
@@ -54,6 +55,15 @@ def page_setup(title: str) -> None:
         st.caption(f"Model version {__version__}")
         if st.session_state.get("session_id"):
             st.caption(f"Open session: {st.session_state['session_id']}")
+
+
+@st.cache_resource
+def anomaly_log():
+    """The anomaly log lives in the session database, so PLASMA_TWIN_DB moves it too (screen tests)."""
+    import os
+    from plasma_twin.storage.anomaly_log import AnomalyLog
+    path = os.environ.get("PLASMA_TWIN_DB")
+    return AnomalyLog(Path(path)) if path else AnomalyLog()
 
 
 @st.cache_resource

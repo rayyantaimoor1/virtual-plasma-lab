@@ -12,10 +12,10 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2  # 2 (Phase 12): adds anomaly_log; additive, so a version-1 file just gains the table
 DEFAULT_DB_PATH = Path(__file__).resolve().parents[2] / "data" / "plasma_twin.db"
 
-TABLES = ("configurations", "sessions", "results", "imported_files", "validation_results")
+TABLES = ("configurations", "sessions", "results", "imported_files", "validation_results", "anomaly_log")
 
 # Structured values (settings, results, metadata) are stored as JSON text because Stage 1 and
 # Stage 2 have different fields. One column per field would need a table per stage and a schema
@@ -77,6 +77,21 @@ CREATE TABLE IF NOT EXISTS validation_results (
     passed           INTEGER NOT NULL CHECK (passed IN (0, 1)),
     software_version TEXT NOT NULL,                          -- FR10.7
     run_at           TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Phase 12, FR13.7: every anomaly check, so flagged runs can be reviewed and the log exported.
+CREATE TABLE IF NOT EXISTS anomaly_log (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    source       TEXT NOT NULL,                              -- "open plasma", a session ID or a measured file ID
+    detector     TEXT NOT NULL,                              -- full, oes or probe
+    model_id     TEXT NOT NULL,
+    score        REAL NOT NULL,
+    severity     TEXT NOT NULL CHECK (severity IN ('Normal', 'Warning', 'Critical')),
+    likely_cause TEXT NOT NULL,
+    range_check  TEXT NOT NULL,                              -- flagged, passed or not applicable
+    reviewed     INTEGER NOT NULL DEFAULT 0 CHECK (reviewed IN (0, 1)),
+    reviewed_at  TEXT,
+    checked_at   TEXT NOT NULL DEFAULT (datetime('now'))
 );
 """
 
