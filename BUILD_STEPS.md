@@ -1098,6 +1098,63 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
 - Applied to saved sessions and to imported measured files (from Phase 8).
 - Page M13: an anomaly list, a severity timeline, and the likely-cause panel.
 
+**Rules** (fixed 7 November 2026, before any Phase 12 code and before any detector was trained)
+- **Data:** the locked Stage 1 dataset, all 1,200 rows (600 clean, 120 of each fault), with the Phase 9 random and region splits. The detector learns from the clean training rows only.
+- **Expected diagnostics:** the twin is run noise-free at each row's recorded inputs, and the instruments are applied without noise:
+  - the line areas measured exactly as on M5;
+  - the probe curve with the envelope sweep and RF amplitude 0.
+
+  The result is cached as `data/ai/<dataset_id>-expected.parquet` (gitignored).
+- **Residual features: observation against the twin's expectation (FR13.2), seven of them.**
+  - **Why so few:** a pre-check on generic data showed that an Isolation Forest barely notices a point that is far off in only one of ten features. So the residuals are few, each with a physical meaning.
+  - **OES:**
+    1. `oes_intensity`: log10(sum of observed areas / sum of expected areas). Power and density.
+    2. `oes_tilt`: slope of the line-ratio residuals (log10, each over the strongest) against wavelength scaled to −1…1. Spectral response drift.
+    3. `oes_pattern`: RMS of those residuals after removing their mean and tilt. The line pattern, which carries T_e and the gas composition.
+  - **Probe:**
+    1. `iv_amplitude`: log10(observed / expected current at the end of the sweep). Electron saturation, so n_e.
+    2. `iv_floating`: observed minus expected floating potential (V), where the current crosses zero.
+    3. `iv_knee`: mean of (I_obs − I_exp) / I_exp,end between the expected floating and plasma potentials. Knee shape, so T_e, contamination and RF.
+    4. `iv_shape_rms`: RMS of the same normalised residual over the whole sweep.
+- **Detectors (sklearn IsolationForest, 300 trees, default sample size, seed 20261110), trained on clean runs only:**
+  - **Full:** all seven residuals, for runs with both diagnostics (the AIQ-2 pass mark).
+  - **OES only:** `oes_tilt` and `oes_pattern`, for a measured spectrum. Its absolute intensity is uncalibrated.
+  - **Probe only:** the four probe residuals, for a measured probe file.
+
+  The quality of all three is reported.
+- **Anomaly score:**
+  - **The problem:** the raw Isolation Forest score sits near 0.4–0.5 for normal and mildly odd points alike (the pre-check), so the SRS thresholds 0.60 and 0.75 cannot be applied to it directly.
+  - **The fix:** the clean training rows are divided 75/25 (seed 20261110). The forest learns from the first part. On the second part, the median m and the 95th percentile q of the raw score are found, and score = 0.5 + 0.1 (raw − m) / (q − m), clipped to 0–1.
+  - **What the thresholds then mean:** a typical clean run scores 0.5. Warning (≥ 0.60) starts at the clean 95th percentile, so about 5 % false alarms are expected by design. Critical (≥ 0.75) is 2.5 times further out.
+  - **Unchanged:** the thresholds are the SRS values in envelope.toml (`anomaly_warning_score`, `anomaly_critical_score`).
+- **A flagged run:** score ≥ 0.60 (Warning or Critical, E24).
+- **Contributions and likely cause (FR13.5):**
+  - **Contribution:** SHAP TreeExplainer on the forest. A residual's contribution is minus its SHAP value, because a shorter isolation path means more anomalous.
+  - **Likely cause:** the residual with the largest contribution, named in words (for example "probe knee shape: T_e, tip contamination or RF").
+- **Range-check baseline:** the Phase 9 range check on the raw features (line ratios and scaled probe curve), learned from the same clean training rows and evaluated on the same held-out rows.
+- **Metrics (both splits):**
+  - recall over all held-out faults and for each fault type;
+  - false-alarm rate on held-out clean runs.
+  - **Detector vs baseline:** an exact one-sided McNemar test on the held-out faulty runs (`scipy.stats.binomtest` on the runs only one of them flags).
+- **Pass marks (tests, full detector, random split):** each result is reported whatever it is.
+  - **Recall and false alarms:** recall ≥ 90 % with a false-alarm rate ≤ 5 %.
+  - **Against the baseline:** McNemar p < 0.05.
+  - **In range but wrong:** a run made with +30 % power while recording the nominal power has observations a normal run could have, so the range check passes it. The detector must flag it.
+  - **Clean runs:** the default plasma, observed with the default instruments, is rated Normal.
+  - **Region split:** reported, not tested.
+- **Where it is applied (FR13.1), Stage 1 only:** the detector learned Stage 1 faults.
+  - **The open plasma:** with the OES and probe screens' current settings, so a user can watch, for example, an RF residual being flagged.
+  - **Saved Stage 1 sessions:** they store no instrument settings, so their diagnostics are regenerated with the envelope defaults.
+  - **Measured files (Researcher):** with the OES-only or probe-only detector, at the file's recorded conditions, or else the open plasma's.
+- **Anomaly log (FR13.7):** a new `anomaly_log` table in the session database records:
+  - the time, source and model;
+  - the score, severity and likely cause;
+  - the range-check result;
+  - whether the run has been reviewed.
+
+  Runs can be marked reviewed, and the log can be exported as CSV.
+- **Registry:** task `anomaly_residual`, algorithm `isolation_forest`. The card holds both splits, each fault type, the baseline, McNemar p, all three detectors, and the score scaling (m, q).
+
 **Tests** (`tests/test_ai_anomaly.py`)
 - On held-out injected faults: recall ≥ 90 % at a false-alarm rate ≤ 5 %.
 - Recall is significantly higher than the range-check baseline. A fault with all values in range but the physics broken must be caught.
