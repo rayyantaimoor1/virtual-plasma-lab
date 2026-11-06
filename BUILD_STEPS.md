@@ -1113,7 +1113,7 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
     3. `oes_pattern`: RMS of those residuals after removing their mean and tilt. The line pattern, which carries T_e and the gas composition.
   - **Probe:**
     1. `iv_amplitude`: log10(observed / expected current at the end of the sweep). Electron saturation, so n_e.
-    2. `iv_floating`: observed minus expected floating potential (V), where the current crosses zero.
+    2. `iv_floating` (replaced by `iv_knee_position`, see the amendment below): observed minus expected floating potential (V), where the current crosses zero.
     3. `iv_knee`: mean of (I_obs − I_exp) / I_exp,end between the expected floating and plasma potentials. Knee shape, so T_e, contamination and RF.
     4. `iv_shape_rms`: RMS of the same normalised residual over the whole sweep.
 - **Detectors (sklearn IsolationForest, 300 trees, default sample size, seed 20261110), trained on clean runs only:**
@@ -1154,6 +1154,11 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
 
   Runs can be marked reviewed, and the log can be exported as CSV.
 - **Registry:** task `anomaly_residual`, algorithm `isolation_forest`. The card holds both splits, each fault type, the baseline, McNemar p, all three detectors, and the score scaling (m, q).
+- **Amendment, 7 November 2026, before any detector was trained or scored.** A smoke test of the residuals on four dataset rows showed two features measuring noise instead of physics:
+  - **`oes_pattern` and `oes_tilt`:** these were 0.5–0.9 on clean runs, because the weakest lines are mostly noise and their log ratios swing widely. **Change:** they use only the lines whose expected area is at least 5 % of the expected strongest line (13 of 20 in the default plasma). The selection uses the twin's noise-free expectation, never the observation. `oes_intensity` still sums all 20 lines.
+  - **`iv_floating`:** this was 2–16 V off on clean runs. Near the floating potential the ion current is smaller than the 1 % noise, so the first zero crossing lands almost anywhere. **Change:** it is replaced by `iv_knee_position`, the observed minus expected voltage where the current first reaches 10 % of the expected end current. 10 % is ten times the noise, and RF, T_e and contamination all move it.
+
+  Nothing else changes: the scaling, thresholds, models, splits and pass marks stay as above.
 
 **Tests** (`tests/test_ai_anomaly.py`)
 - On held-out injected faults: recall ≥ 90 % at a false-alarm rate ≤ 5 %.
