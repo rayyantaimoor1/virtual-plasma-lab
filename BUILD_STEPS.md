@@ -992,6 +992,55 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
 - Every surrogate value is labelled "surrogate". Any number used for a decision is re-checked with the twin, and if the two disagree by more than the tolerance, the twin value is shown (event: surrogate–twin disagreement).
 - Page M15: fast sweep heatmaps, SHAP plots, and a "check with twin" button.
 
+**Rules** (fixed 6 November 2026, before any Phase 11 code and before any surrogate was trained)
+- **What the surrogate copies:** the twin's own noise-free outputs, not instrument readings. A surrogate copies the twin, so spectrometer noise and calibration tilt do not belong in its targets.
+  - **Stage 1:** the locked dataset stores noisy line areas, and its faulty rows' recorded inputs do not match their plasma. So the twin is re-run, noise-free, at the 1,200 recorded inputs of the locked Stage 1 plan (same seed, same rows, no faults). The outputs are cached as `data/ai/<dataset_id>-twin.parquet` (gitignored). No locked setting changes.
+  - **Stage 2:** the locked dataset is already noise-free, so its 1,500 rows are used as they are.
+- **Inputs:** every other setting is held at its default, and M15 warns when the open configuration differs in one of them.
+  - **Stage 1:** power, pressure, Ar flow, N₂ % and O₂ % (0 when the gas is absent, so they also encode the mixture). Held at defaults: EEDF (Druyvesteyn), 0D, geometry.
+  - **Stage 2:** power, frequency, pulse width, O₂ flow, water temperature, treatment time, water volume, pH, power share, gap, and water vapour (1 if the bubble gas holds it). Held at defaults: voltage, conductivity, COD, waste type, organism, initial count.
+- **Outputs and the scale each is learned on:**
+  - **Stage 1:** T_e (eV), log10 n_e, T_gas (K), and log10 of the noise-free emission of the four strongest lines in the window: 763.5, 811.5, 750.4 and 842.5 nm.
+  - **Stage 2:**
+    - T_e (eV);
+    - log10 n_e, log10 O₃ and log10 temperature rise;
+    - log10(H₂O₂ + 1e-9 mmol/L) and log10(OH + 1e-20 mol/L). The floors are about 1,000 times below the smallest non-zero value, because these are exactly zero in many "O₂ only" runs;
+    - log reduction.
+- **Models:** hyperparameters are fixed here and never tuned on a test set.
+  - **XGBoost:** one multi-output model per stage (one tree per output per round, the Phase 9 parameters). One call predicts every output, which matters for speed. It is the surrogate M15 uses by default.
+  - **Random Forest:** offered for comparison (500 trees, scikit-learn's multi-output forest) and reported.
+  - **Baseline:** a ridge regression on the standardised inputs, per output, reported beside them.
+- **Splits:** the Phase 9 random and region splits for each stage. Both are always reported.
+- **Accuracy metrics, per output:**
+  - **R²:** on the scale the output is learned on (log10 for the wide-range outputs). In linear units a few of the largest values would decide it.
+  - **Median relative error:** in the original units, over held-out rows whose true value is not zero.
+  - **Mean absolute error:** in the original units.
+- **Speed (AIQ-3):**
+  - **The twin's time:** the median wall-clock time of one twin run over 20 held-out configurations, run one after another. Stage 1 is the global model plus the CR model (needed for the line outputs). Stage 2 is the bubble, liquid and survival chain.
+  - **Pass mark:** speed-up per configuration inside a 625-point map (25 × 25, one call), which is what M15 does.
+  - **Also reported:** the speed-up of a single one-configuration call.
+  - **Pre-check, recorded honestly:** on synthetic data a single XGBoost call costs 2–4 ms of fixed overhead, so the single-call speed-up for Stage 2 (twin ≈ 0.2 s) may fall below 100×. That is why the pass mark is set on the map use, and the single-call figure is reported beside it.
+- **SHAP:**
+  - **Method:** TreeExplainer on the trained model, on each output's learned scale.
+  - **Global importance:** the mean |SHAP| over the random split's held-out rows, stored on the model card.
+  - **Local:** computed on M15 for the open configuration; local values must add up to the prediction minus the expected value.
+- **Twin check (FR15.3, FR17.22, E27):**
+  - **When the two disagree:** if |surrogate − twin| > 5 % of |twin| (`surrogate_twin_disagreement_percent` in envelope.toml), the twin value is the one shown and the point is flagged on the map.
+  - **Zero outputs:** an output whose twin value is zero counts as agreeing if the surrogate is within its floor.
+- **Pass marks (tests, XGBoost, random split):** each result is reported whatever it is.
+  - **Accuracy:** every output of both stages reaches R² ≥ 0.98 and median relative error ≤ 5 %.
+  - **Speed:** at least 100× per configuration in a map, for each stage.
+  - **SHAP additivity:** SHAP values add up to the prediction minus the expected value (to 1e-3).
+  - **Physical sense:** for Stage 1 T_e, mean |SHAP| of pressure exceeds that of power.
+  - **Region split:** reported, not tested.
+- **Known in advance, recorded so the numbers are read correctly:**
+  - **Stage 2 log reduction:** every Stage 2 row reaches the one-cell cap, so log reduction follows the water volume exactly. Its surrogate score says nothing about kill kinetics.
+  - **T_gas:** its relative error is small by construction (300–308 K), so its R² is the meaningful measure.
+- **Registry and M15/M16:**
+  - **Tasks:** `surrogate_stage1` and `surrogate_stage2`, algorithms `xgboost` and `random_forest`.
+  - **The card:** per-output metrics on both splits, the ridge baseline, both speed-ups, and the global SHAP importance.
+  - **Labels:** M15 labels every surrogate value "surrogate".
+
 **Tests** (`tests/test_ai_surrogate.py`)
 - On held-out twin runs: R² ≥ 0.98 and median relative error ≤ 5 %.
 - The surrogate is at least 100× faster than the twin.
