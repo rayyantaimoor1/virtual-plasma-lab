@@ -308,3 +308,31 @@ def test_ai_spectrum_screen_puts_the_ai_estimate_next_to_the_physics(ai_folders)
     text = text_of(at)
     assert "T_e (AI estimate)" in text and "T_e (CR-model line-ratio fit)" in text
     assert any("90 % interval" in c.value for c in at.caption) and any(model.model_id in c.value for c in at.caption)
+
+
+def test_ai_surrogate_screen_without_a_model_says_so(ai_folders) -> None:
+    """M15, E22: no current surrogate means no map, only a clear message."""
+    at = open_screen("pages/13_AI_surrogate.py", has_run=False)
+    assert "No current surrogate for this stage" in text_of(at) and not at.subheader
+
+
+@needs_data
+def test_ai_surrogate_screen_maps_explains_and_checks_with_the_twin(ai_folders) -> None:
+    """FR15.1-FR15.6 with a Stage 2 surrogate (timing skipped to keep the test short)."""
+    from plasma_twin.ai import datasets
+    from plasma_twin.ai import surrogate as sg
+    from plasma_twin.ai.registry import Registry
+    if not (datasets.DATA_DIR / f"{datasets.dataset_id(2)}.parquet").exists():
+        pytest.skip("the locked Stage 2 dataset has not been built here")
+    table, _ = datasets.load(datasets.dataset_id(2), folder=datasets.DATA_DIR)
+    sg.train(2, "xgboost", Registry(), table=table, timing=False)
+    at = streamlit_testing.AppTest.from_file(str(APP / "pages/13_AI_surrogate.py"), default_timeout=300)
+    at.run()
+    next(r for r in at.radio if r.label == "Stage").set_value(2).run()
+    assert not at.exception, [e.value for e in at.exception]
+    headings = {h.value for h in at.subheader}
+    assert {"Fast map (surrogate)", "Check a point with the twin", "Global importance (SHAP)", "Why this value? (open configuration)"} <= headings
+    assert any("the contributions add up exactly" in c.value for c in at.caption)
+    next(b for b in at.button if b.label == "Check with twin").click().run()
+    assert not at.exception, [e.value for e in at.exception]
+    assert "Surrogate and twin" in text_of(at) and at.dataframe[0].value["Value shown"].str.contains("surrogate|twin").all()

@@ -69,6 +69,10 @@ if not cards:
 
 def headline(result: dict, who: str) -> str:
     values = (result or {}).get(who) or {}
+    r2 = [v for k, v in values.items() if k.endswith("_r2") and not k.startswith(("te_r2", "ne_r2", "tgas_r2"))]
+    if r2 and "te_mae" not in values:  # Phase 11 surrogates: the worst output decides
+        errors = [v for k, v in values.items() if k.endswith("_median_relative_error")]
+        return f"worst R² {min(r2):.3f}, worst median error {max(errors):.1%}"
     if "te_mae" in values:
         text = f"T_e MAE {values['te_mae']:.3f} eV, n_e error {100 * values['ne_median_relative_error']:.0f} %"
         if "te_coverage" in values:  # Phase 10: 90 % conformal intervals

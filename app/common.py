@@ -36,6 +36,7 @@ PAGES = {
     "measured": "pages/10_Measured_data.py",
     "ai_training": "pages/11_AI_training.py",
     "ai_spectrum": "pages/12_AI_spectrum.py",
+    "ai_surrogate": "pages/13_AI_surrogate.py",
 }
 
 

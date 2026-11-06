@@ -465,3 +465,44 @@ It is written so that either of us can explain any decision to the evaluation co
 - **A test-order quirk:** the Phase 9 Windows process-pool crash came back when the screen tests ran before a test that builds a dataset in parallel. In the normal (alphabetical) order the AI tests run first, so the full suite is unaffected. Recorded, not hidden.
 
 **How Phase 10 closed:** 417 tests pass, and 5 are marked as expected failures: the Phase 2 benchmark, plus Phase 10's two unmet pass marks (T_e coverage, trees vs ridge), each tested for both models. Coverage and every comparison are logged in MLflow and shown on M16 and M12. Version 0.10.0.
+
+## Phase 11: a fast AI copy of the twin, explained with SHAP (built 6 November 2026; one pass mark not met)
+
+**What we made**
+- **A surrogate for each stage:** a learned copy of the twin that answers in microseconds instead of a fraction of a second.
+  - **Stage 1:** T_e, n_e, T_gas and the four strongest argon lines.
+  - **Stage 2:** T_e, n_e, ozone, H₂O₂, OH, temperature rise and log reduction.
+- **A new screen, M15:**
+  - **Fast map:** pick two settings and see an output across a 25 × 25 grid in about 20 ms. The twin would need about two minutes.
+  - **Check with twin:** any point can be re-run through the real twin. If the two differ by more than 5 %, the twin value is shown and the point is marked on the map (E27).
+  - **SHAP charts:** which settings matter most overall, and why the open configuration gets its value.
+  - **Accuracy table:** R², median error and speed-up for every output.
+
+**Techniques and why**
+- **Copy the twin, not the instrument:** a surrogate should reproduce the twin's own answer. So for Stage 1 the twin was re-run without spectrometer noise at the same 1,200 locked settings. No locked setting changed.
+- **One model for all outputs:** a single XGBoost model predicts every output in one call. Seven separate models would pay the per-call overhead seven times.
+- **Log scales:** quantities that span many orders of magnitude (n_e, ozone, OH) are learned as logarithms. H₂O₂ and OH get a tiny floor, because they are exactly zero when the bubble holds no water vapour.
+- **SHAP:** it splits each prediction into one contribution per setting, and the contributions add up exactly to the prediction (tested).
+
+**What happened, reported as it came**
+- **Stage 1 passes everything:**
+  - **Accuracy:** every output R² ≥ 0.994, median error ≤ 3.2 %.
+  - **Speed:** 20,000× faster in a map, and even a single call is 157× faster.
+  - **SHAP:** pressure is by far the biggest influence on T_e, power almost none, exactly as the particle balance predicts.
+- **Stage 2 passes R² and speed but not the median error:**
+  - **Errors:** ozone 12 %, H₂O₂ 18 %, OH 33 %, n_e 8 %, temperature rise 5.04 % (against a 5 % target).
+  - **Why R² still passes:** R² on a log scale that spans several decades can be 0.99 while single values are 10–30 % off.
+  - **Status:** recorded and kept visible as a strict expected failure. A larger Stage 2 dataset or more inputs per row would be the honest fix, not tuning on the test set.
+- **Random Forest** was worse on every output and as slow as the twin for single calls, so XGBoost is the default.
+
+**Problems and how we handled them**
+- **Speed for single calls:**
+  - **The pre-check:** before writing any code, a quick timing showed that a single XGBoost call costs a few milliseconds of fixed overhead. For Stage 2, whose twin takes only 0.07–0.2 s, that could miss 100×.
+  - **The rule:** set before training, the pass mark is the speed per point in a map, which is what M15 actually does.
+  - **The result:** the single-call figure (39× for Stage 2) is reported beside it, not hidden.
+- **Log reduction carries no information:**
+  - **Why:** every Stage 2 training run reaches the "one cell left" cap, so the log reduction only follows the water volume.
+  - **What we did:** the surrogate gets it right (0.03 %), but M15 says plainly that this says nothing about kill kinetics.
+- **Wrong default model:** M15 first opened the Random Forest, because it was the newest model. It now opens XGBoost, as the rules say. Streamlit had to be restarted to see the change, because it does not reload the `plasma_twin` package by itself.
+
+**How Phase 11 closed:** 434 tests pass, and 6 are marked as expected failures: the Phase 2 benchmark, Phase 10's four, and the Stage 2 surrogate's median error. The accuracy and speed-up numbers are on every model card, in MLflow and on M15. Version 0.11.0.

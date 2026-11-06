@@ -26,9 +26,12 @@ TASKS = {
     "spectrum_to_plasma": "Stage 1: spectrum -> T_e, n_e, T_gas with 90 % intervals (Phase 10, M12)",
     "spectrum_to_te_ne": "Stage 1: OES line areas -> T_e and n_e (Phase 9 framework check)",
     "anomaly_range_check": "Stage 1: is a run faulty? (range-check baseline)",
+    "surrogate_stage1": "Stage 1 surrogate: power, pressure, flow, mixture -> T_e, n_e, T_gas, lines (Phase 11, M15)",
+    "surrogate_stage2": "Stage 2 surrogate: pulse, gas, water, time -> species, log reduction (Phase 11, M15)",
 }
 ALGORITHMS = {"spectrum_to_plasma": ("random_forest", "xgboost"), "spectrum_to_te_ne": ("ridge", "xgboost"),
-              "anomaly_range_check": ("range_check",)}
+              "anomaly_range_check": ("range_check",), "surrogate_stage1": ("xgboost", "random_forest"),
+              "surrogate_stage2": ("xgboost", "random_forest")}
 
 
 # ------------------------------------------------------------------------------------ features
@@ -134,6 +137,9 @@ def train(task: str, algorithm: str, frame: pd.DataFrame, card: datasets.Dataset
     if task == "spectrum_to_plasma":  # Phase 10: conformal intervals, range check and the physics comparison
         from plasma_twin.ai import inference
         return inference.train(algorithm, frame, card, registry)
+    if task.startswith("surrogate_stage"):  # Phase 11: learns the twin's noise-free outputs, not this frame
+        from plasma_twin.ai import surrogate
+        return surrogate.train(int(task[-1]), algorithm, registry)
     registry = registry or Registry()
     metrics: dict[str, Any] = {}
     predictions: dict[str, Any] = {}
