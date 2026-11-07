@@ -38,6 +38,7 @@ PAGES = {
     "ai_spectrum": "pages/12_AI_spectrum.py",
     "ai_surrogate": "pages/13_AI_surrogate.py",
     "ai_anomaly": "pages/14_AI_anomaly.py",
+    "ai_recommend": "pages/15_AI_recommend.py",
 }
 
 

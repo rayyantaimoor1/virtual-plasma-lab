@@ -369,3 +369,36 @@ def test_ai_anomaly_screen_checks_logs_reviews_and_exports(ai_folders) -> None:
     assert "flagged (E24)" in text_of(at) and "Why this score?" in {h.value for h in at.subheader}
     next(b for b in at.button if b.label == "Mark reviewed").click().run()
     assert not at.exception and at.dataframe[1].value["Reviewed"].tolist() == ["yes"]
+
+
+def test_ai_recommend_screen_without_a_surrogate_says_so(ai_folders) -> None:
+    """M14, E22: the recommender needs a surrogate to search on."""
+    at = open_screen("pages/15_AI_recommend.py", has_run=False)
+    assert "No current surrogate for this stage" in text_of(at)
+
+
+@needs_data
+def test_ai_recommend_screen_verifies_candidates_and_applies_one(ai_folders) -> None:
+    """FR14.1-FR14.8 with a Stage 2 surrogate: twin-verified candidates, what-if, save and apply."""
+    from plasma_twin.ai import datasets
+    from plasma_twin.ai import surrogate as sg
+    from plasma_twin.ai.registry import Registry
+    if not (datasets.DATA_DIR / f"{datasets.dataset_id(2)}.parquet").exists():
+        pytest.skip("the locked Stage 2 dataset has not been built here")
+    table, _ = datasets.load(datasets.dataset_id(2), folder=datasets.DATA_DIR)
+    sg.train(2, "xgboost", Registry(), table=table, timing=False)
+    at = streamlit_testing.AppTest.from_file(str(APP / "Home.py"), default_timeout=300)  # from Home, so switch_page knows every page
+    at.run()
+    at.switch_page("pages/15_AI_recommend.py").run()
+    next(r for r in at.radio if r.label == "Stage").set_value(2).run()
+    next(b for b in at.button if b.label == "Find settings").click().run()
+    assert not at.exception, [e.value for e in at.exception]
+    assert "Ranked candidates (every outcome re-simulated by the twin)" in {h.value for h in at.subheader}
+    ranked = at.dataframe[0].value
+    assert ranked["Goal met (twin)"].tolist()[0] == "yes" and "Log reduction, twin-verified" in ranked.columns
+    assert "The twin confirms the goal" in text_of(at)
+    next(b for b in at.button if b.label == "Re-simulate with the twin").click().run()
+    assert not at.exception and any("re-simulated by the digital twin" in c.value for c in at.caption)
+    next(b for b in at.button if b.label == "Apply to the configuration screen").click().run()
+    assert not at.exception, [e.value for e in at.exception]
+    assert at.session_state["config2"]["power_w"] < 20 and not at.session_state["has_run2"]  # filled, not run

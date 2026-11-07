@@ -547,3 +547,44 @@ It is written so that either of us can explain any decision to the evaluation co
 - **One instrument alone is not enough:** the spectrum alone catches only 30 % (it cannot see probe faults), the probe alone 82% (it cannot see a shifted spectrometer). That is why the full detector uses both.
 
 **How Phase 12 closed:** 449 tests pass, and 6 are marked as expected failures (the same six as after Phase 11; Phase 12 adds none). The per-fault detection table is on the model card, in MLflow and on M13. Version 0.12.0.
+
+## Phase 13: AI suggests settings, and the twin checks every one (built 7 November 2026; one finding left open)
+
+**What we made**
+- **A recommender:** you state a goal, and the AI searches for settings that reach it. The goals are:
+  - **Stage 1:** a target electron density, a target gas temperature, or the strongest Ar line;
+  - **Stage 2:** a target *E. coli* log reduction with the least energy per litre, or the largest log reduction within an energy budget.
+- **Twin checks on every suggestion:** the search runs on the fast surrogate from Phase 11. The best three suggestions are then re-run through the real twin, and only the twin's answers are shown and ranked. A suggestion whose twin run fails is dropped and listed, never shown.
+- **A new screen, M14:**
+  - set the goal and the settings to keep fixed;
+  - see the ranked, twin-checked candidates and an energy chart;
+  - try a what-if (change one setting, and the twin shows what happens);
+  - apply a candidate to the configuration screen, or save it as a file.
+
+**Techniques and why**
+- **Search on the surrogate, judge with the twin:** the surrogate is about 20,000 times faster in a map, so the search can try thousands of settings in under a second. But the surrogate can be wrong, so it never has the last word.
+- **Differential evolution:** a search that keeps a population of candidate settings and breeds better ones. It needs no gradients, which the surrogate's decision trees do not have.
+- **A twin repair:** when the twin says a candidate just misses, the recommender nudges the one setting the goal rises with (RF power for n_e and T_gas, treatment time for disinfection), checking each step with the twin. We planned this before writing any code, because a pre-check showed the Stage 2 surrogate was blind to one regime (below).
+- **Reachable test goals:** each benchmark target is the twin's own value at randomly drawn settings, so every goal is known to be possible.
+
+**Problems and how we handled them**
+- **A pre-check before the rules:** the twin kills *E. coli* very fast. At the default power share, even 10 W for 6 seconds leaves less than one live cell, so "3-log with the least energy" always lands on the lowest-energy corner. At low power shares that is no longer true. The Stage 2 surrogate had learned only from runs that reached the one-cell cap, so it cannot see that. We wrote this down before building, and planned the twin repair for it.
+- **A bug that halved Stage 2's score:** the first benchmark run gave 20 of 30. The ten Stage 2 goals had reached their target exactly but were marked "not met", because the code applied the 0.01-log tolerance in the wrong direction. The code was fixed to match the rules, and the benchmark run again.
+- **The "least energy" finding** (see below): we did not change the search rule after seeing it, and left the choice open.
+- **Small screen fixes:**
+  - one sentence mixed up the open run's value with the candidate's;
+  - tiny OH values showed as 0.00;
+  - one screen test opened M14 in a way the real app never does.
+
+**What happened, reported as it came**
+- **Every pass mark met:**
+  - the twin confirms 30 of 30 benchmark goals, 27 even without the repair;
+  - both impossible goals are reported as unreachable, with the closest real option;
+  - the slowest suggestion takes 2.9 seconds, against a 60-second limit.
+- **The headline example:** 3-log *E. coli* at the default settings is reached at 10 W for 6 seconds (0.12 kJ/L, against 12 kJ/L for the default run).
+- **Found, not hidden:** the tests check that the goal is met, not that the energy is the least.
+  - **The cause:** when a Stage 2 target sits exactly at the one-cell cap, the search's "aim 0.1 log higher" rule asks the surrogate for something it can never predict, so the search stops caring about energy.
+  - **The effect:** in 4 of the 10 Stage 2 goals, the suggestion used more energy than the settings that defined the target. In one it used 137 kJ/L where 23 was enough.
+  - **The fix:** capping the aim at the one-cell limit would fix it. That is left as a choice for a dated amendment, with both results reported.
+
+**How Phase 13 closed:** 471 tests pass, and 6 are marked as expected failures (the same six as after Phase 12; Phase 13 adds none). The benchmark is on M14 and in BUILD_STEPS.md. Version 0.13.0.
