@@ -1219,6 +1219,85 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
   - If no setting inside the envelope reaches the target, say so and show the closest one (event: target unreachable).
 - Page M14: a target form, ranked candidates, twin-verified outcomes, and "apply to configuration".
 
+**Rules** (fixed 7 November 2026, before any Phase 13 code and before any recommendation was made)
+- **What is searched:** the inputs of the Phase 11 surrogate, using the current XGBoost surrogate of the stage (nothing new is trained). Every other setting comes from the open configuration. M14 warns when one of them differs from what the surrogate was trained with (as M15 does).
+- **Search bounds:** the envelope, narrowed to the surrogate's training range so that it never extrapolates.
+  - **Stage 1:** power 10–100 W, pressure 0.1–0.5 mbar, Ar flow 100–500 sccm, and each admixture present 1–10 %.
+  - **Stage 2:**
+    - power 10–100 W, frequency 5–10 kHz;
+    - pulse width 2–40 µs, so the duty cycle is never above 40 % and the run is never blocked (E5);
+    - O₂ flow 100–300 sccm, time 0.1–30 min;
+    - water temperature 5–60 °C, volume 50–5,000 mL, pH 2–12;
+    - gap 1, 2 or 3 mm (searched as a whole number), water vapour in the bubble yes/no.
+- **Fixed settings (FR14.2):** these hold the value from the open configuration.
+  - **Stage 1:** the gas mixture (which gases are present) is always fixed. The user may also fix power, pressure, flow or the admixture %.
+  - **Stage 2:**
+    - **Fixed unless the user frees them:** the water being treated (volume, pH, temperature) and the bubble gas.
+    - **Always fixed:** the power share. It is the model's uncertainty, not a knob, so the search may not choose the physics.
+    - **Free unless the user fixes them:** power, frequency, pulse width, O₂ flow, treatment time and gap.
+- **Objectives (FR14.1), and when the twin says a goal is met:**
+
+  | Stage | Objective | Met when (twin value) | Aim on the surrogate | Cost |
+  |---|---|---|---|---|
+  | 1 | reach a target n_e | within ±10 % of the target | within ±5 % | RF power (W) |
+  | 1 | reach a target T_gas | within ±0.5 K of the target | within ±0.25 K | RF power (W) |
+  | 1 | strongest chosen line (one of the four surrogate lines) | twin within 5 % of the surrogate's optimum | maximum | — |
+  | 2 | reach a target log reduction with the least energy | twin ≥ target − 0.01 | ≥ target + 0.1 | energy per litre |
+  | 2 | maximise log reduction within an energy budget | energy ≤ budget, and twin within 5 % of the surrogate's optimum | maximum | — |
+
+  - **Tolerances:**
+    - **±10 % for n_e:** a third of the ±30 % agreement tolerance.
+    - **±0.5 K for T_gas:** far tighter than any OES gas-temperature fit, and 6 % of the 300–308 K range the envelope spans.
+    - **Why the surrogate aims tighter:** to leave room for its own error.
+    - **A "strongest" goal:** has no target value. It counts as met when the twin confirms the optimum the surrogate found, using the 5 % tolerance of E27.
+  - **Energy per litre:** average power × treatment time ÷ water volume (kJ/L), calculated exactly, not learned. Stage 1 has no volume, so its cost is the RF power.
+- **Search:** `scipy.optimize.differential_evolution` on the surrogate.
+  - **Settings:** seed 20261111, Latin-hypercube start, population 20 per searched setting, at most 60 generations, `polish=False` (the trees have no gradient), and the whole population is predicted in one surrogate call.
+  - **Objective:** a point that meets the aim scores its cost scaled to 0–1. A point that misses scores 1 + its miss, so any point that meets the aim beats any point that misses.
+  - **For a "maximise" goal:** the objective is minus the value. For the energy budget, points over the budget score worse than any point inside it.
+- **Top 3:** from every point the search evaluated, sorted by objective, the first three that are at least 0.1 apart from each other (distance on the searched settings, each scaled to 0–1). This stops the three being copies of one point.
+- **Twin verification (FR14.3, CON-12, E25):** every one of the three is re-run through the twin. M14 shows only twin-verified candidates.
+  - **If the twin fails for a candidate:** it is dropped and listed with the reason.
+  - **What is shown for each:** the settings, the surrogate prediction, the twin outcome, the cost and whether the goal is met (FR14.4).
+- **Twin repair** (planned now, because of the pre-check below):
+  - **When:** a twin-verified candidate misses a target goal, and the setting the goal rises with is free. For n_e and T_gas that setting is RF power; for log reduction it is treatment time.
+  - **How:** that one setting is adjusted by bisection with the twin itself, for at most 12 twin runs. The adjusted candidate replaces the original and is labelled "repaired by the twin" on M14, with the number of twin runs.
+  - **Why this is sound:** in the twin, n_e and T_gas rise with power, and the ozone dose (so the log reduction) rises with time.
+  - **Limits:** there is no repair for "maximise" goals. If the setting's limit still misses the goal, the candidate is kept as it was.
+  - **Reported separately:** the benchmark result without the repair.
+- **Ranking (FR14.4): by the twin, never by the surrogate.**
+  - **Target goals:** met candidates first, then the lowest cost; candidates that miss are ordered by the smallest miss.
+  - **"Maximise" goals:** the highest twin value first; for the budget goal, candidates over budget come last.
+- **Unreachable (FR14.8, E26):** if none of the twin-verified (or repaired) candidates meets the goal, M14 says that no setting was found inside the envelope that reaches it. It then shows the closest twin-verified candidate.
+- **What-if (FR14.6):** change one setting of the open configuration. The twin is run before and after, and its outputs are shown side by side. There is no surrogate in it.
+- **Apply or save (FR14.7):**
+  - **Apply:** fills the Stage 1 or Stage 2 configuration screen with the candidate. Nothing runs until the user presses Run.
+  - **Save:** downloads the recommendation as a JSON file with the goal, the fixed settings, every candidate and its twin outcome.
+- **Energy chart (FR14.5):** the twin outcome against the cost, for the candidates and the open configuration.
+- **Benchmark goals (AIQ-4):** fixed now, and reachable by construction, because each target is the twin's own value at real settings.
+  - **Stage 1, 20 goals** (seed 20261111):
+    - settings drawn uniformly inside the Stage 1 bounds;
+    - the mixture drawn from the four, each admixture present drawn from 1–10 %;
+    - target = the twin's value at those settings: goals 1–10 are n_e targets, goals 11–20 are T_gas targets;
+    - fixed: the mixture only.
+  - **Stage 2, 10 goals** (seed 20261112):
+    - settings drawn uniformly inside the Stage 2 bounds, the power share log-uniform in 0.01–0.10 (the dataset's range), and the gap and bubble gas uniform;
+    - target = the twin's log reduction at those settings, reached with the least energy;
+    - fixed: as a user would leave them, so volume, pH, temperature, power share and bubble gas from the drawn settings, with everything else free.
+- **Pass marks (tests):** each result is reported whatever it is.
+  - **100 % twin-verified (AIQ-4):** no candidate can leave the recommender without a twin outcome. With a twin that fails, the candidate is dropped and listed, never shown.
+  - **Benchmark:** the twin confirms the goal for ≥ 90 % of the 30 goals (at least 27). The rate is reported per stage and per objective, with and without the repair.
+  - **Unreachable:**
+    - n_e = 1 × 10¹⁸ m⁻³ (the envelope reaches about 6 × 10¹⁶) is reported as unreachable, with the closest option shown;
+    - so is a 9-log reduction in 500 mL, where at most 7.9 is possible (one cell left in the whole volume).
+  - **Speed (PER-10):** one recommendation, including the twin runs, takes ≤ 60 s. This is tested for each objective at the default configuration.
+  - **The headline example:** a 3-log *E. coli* reduction with the least energy, at the default configuration, is confirmed by the twin.
+- **Known in advance** (a pre-check of the twin, not of any recommender), recorded so the results are read correctly:
+  - **At the default power share (0.076):** every setting in the envelope kills down to the last cell (the one-cell cap), even 10 W for 6 s. So "3-log with least energy" at the default configuration lands on the lowest-energy corner: 10 W, 0.1 min. That comes from the twin's ozone kinetics (the Hunt & Marinas rate constant is very large), not from the AI.
+  - **At low power shares:** short runs fall below the cap (0.01: 3.2 log at 10 W and 6 s; 0.03: 6.9 log in 500 mL).
+  - **The Stage 2 surrogate's blind spot:** it learned only capped rows (all 1,500 of them), so it predicts the cap everywhere and cannot see this low-share regime. The twin repair is the planned answer, and its effect is reported separately.
+- **Where results are stored:** nothing new is trained or registered. The benchmark is run by `scripts/benchmark_recommendations.py`, saved as `data/ai/recommend-benchmark.json` (gitignored) and shown on M14.
+
 **Tests** (`tests/test_ai_recommend.py`)
 - 100 % of recommendations carry a twin-verified outcome.
 - On a benchmark set of targets, the twin confirms the target is met within tolerance for ≥ 90 % of them.
