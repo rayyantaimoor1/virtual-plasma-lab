@@ -1297,6 +1297,13 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
   - **At low power shares:** short runs fall below the cap (0.01: 3.2 log at 10 W and 6 s; 0.03: 6.9 log in 500 mL).
   - **The Stage 2 surrogate's blind spot:** it learned only capped rows (all 1,500 of them), so it predicts the cap everywhere and cannot see this low-share regime. The twin repair is the planned answer, and its effect is reported separately.
 - **Where results are stored:** nothing new is trained or registered. The benchmark is run by `scripts/benchmark_recommendations.py`, saved as `data/ai/recommend-benchmark.json` (gitignored) and shown on M14.
+- **Amendment, 7 November 2026, made after the first benchmark results (below) and asked for by the student.** Because it comes after results, both sets are reported, and no pass mark changes.
+  - **The problem it fixes:** the search aimed at "log reduction ≥ target + 0.1" on the surrogate. When the target sits at the one-cell cap, log10(N0 × V), that aim can never be met, so the search ignored energy (see "A finding the pass marks do not cover" under As built).
+  - **The change:** for "reach a target log reduction with the least energy", the aim becomes ≥ min(target + 0.1, cap − 0.05).
+    - **The cap:** log10(initial count × water volume in mL), calculated exactly at each searched point, never learned.
+    - **Why 0.05:** about eight times the Stage 2 surrogate's mean absolute error for log reduction (0.005 on the random split, 0.0065 on the region split, Phase 11).
+  - **What does not change:** the twin's "met" test (≥ target − 0.01), the twin repair, the ranking, the benchmark goals, the seeds and every pass mark.
+  - **Also reported from now on, not tested:** for each Stage 2 benchmark goal, whether the recommendation uses no more energy than the drawn settings that defined the target.
 
 **As built (7 November 2026)**
 - **Code:**
