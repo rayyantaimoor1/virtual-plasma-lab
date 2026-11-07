@@ -226,7 +226,8 @@ with st.expander("How good is the recommender? (benchmark of 30 reachable goals)
                       for r in bench["rows"]], hide_index=True, use_container_width=True)
         st.caption("Targets are the twin's own values at settings drawn with a fixed seed, so every goal is reachable. "
                    "Target (AIQ-4): the twin confirms ≥ 90 % of them.")
-        st.caption("Known limit: the test is whether the goal is met, not whether the energy is the least. When a Stage 2 "
-                   "target sits at the one-cell cap, the search cannot aim 0.1 log above it, so it stops looking for the least "
-                   "energy; in 4 of the 10 Stage 2 goals the recommendation used more energy than the settings that defined "
-                   "the target (BUILD_STEPS.md, Phase 13).")
+        energy = s.get("stage2_energy_not_above_drawn")
+        if energy:
+            st.caption(f"Energy check (reported, not a pass mark): {energy} Stage 2 recommendations use no more energy than "
+                       "the settings that defined their target. The search aim is capped just below the one-cell limit "
+                       "(dated amendment, BUILD_STEPS.md, Phase 13).")

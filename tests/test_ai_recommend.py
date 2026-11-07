@@ -73,6 +73,15 @@ def test_meeting_the_aim_always_beats_missing_it() -> None:
     assert scores[0] <= 1.0 < scores[1] < scores[2]  # costly but meets 3 + 0.1 < cheap but short
 
 
+def test_the_aim_never_asks_for_more_than_the_one_cell_cap() -> None:
+    """Amendment: at a target on the cap, a point the surrogate puts just below the cap still meets the aim."""
+    goal = rc.Goal("lr_least_energy", 7.875)
+    cap = rc.one_cell_cap(150000.0, np.array([500.0, 500.0]))
+    assert cap[0] == pytest.approx(7.8751, abs=1e-4)
+    scores = rc._search_scores(goal, np.array([7.87, 7.80]), np.array([0.12, 0.12]), (0.0, 1000.0), cap)
+    assert scores[0] <= 1.0 < scores[1]  # 7.87 >= cap - 0.05; 7.80 is not
+
+
 def test_the_three_candidates_are_distinct() -> None:
     unit = np.array([[0.0, 0.0], [0.01, 0.0], [0.5, 0.5], [0.52, 0.5], [1.0, 1.0]])
     assert rc._distinct(np.arange(5), unit) == [0, 2, 4]

@@ -1313,7 +1313,7 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
 - **Surrogates used:** `surrogate_stage1-20261106-205543-270107` and `surrogate_stage2-20261106-205627-242738`, the Phase 11 XGBoost models.
 - **Benchmark, reported as it came:**
   - **First run: 20 of 30, caused by a bug in the code, not by the rules.** The code tested log reduction as "≥ target + 0.01" instead of the rules' "≥ target − 0.01". All ten Stage 2 goals reached their target exactly and were still marked "not met". The code was corrected to match the rules, nothing else was changed, and the benchmark was run again.
-  - **Second run:**
+  - **Second run (the rules as first written):**
 
     | Objective | Goals | Met (twin) | Met without the repair |
     |---|---|---|---|
@@ -1322,7 +1322,22 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
     | log reduction, least energy (Stage 2) | 10 | 10 | 10 |
     | **all** | **30** | **30 (100 %)** | **27 (90 %)** |
 
-  - **Twin repair:** it fixed three n_e goals, where the twin found the surrogate's choice outside the ±10 % band. The repair used 3–5 twin runs each.
+  - **Third run, after the amendment (below), same goals and seeds:**
+
+    | Objective | Goals | Met (twin) | Met without the repair | Energy ≤ the drawn settings' |
+    |---|---|---|---|---|
+    | n_e target (Stage 1) | 10 | 10 | 7 | — |
+    | T_gas target (Stage 1) | 10 | 10 | 10 | — |
+    | log reduction, least energy (Stage 2) | 10 | 10 | **1** | **10** (before: 6) |
+    | **all** | **30** | **30 (100 %)** | **18 (60 %)** | |
+
+    - **Stage 2 energy:** the recommended energies fell from 0.44–146 kJ/L to **0.014–0.098 kJ/L**.
+      - Each is now below the drawn settings' energy, by 28 to about 1,100 times.
+      - Goal 30 lands exactly on the cheapest corner (0.072 kJ/L).
+      - Goal 26 lands at 0.015 kJ/L, against 0.013 for the corner.
+    - **Why "without the repair" fell to 1 of 10:** the surrogate now picks the cheapest settings, which the twin rejects at these low power shares. The surrogate's blind spot (known in advance) is real. The twin repair then finds the shortest treatment time that works, using all 12 of its twin runs. This is the job the repair was planned for.
+    - **Unchanged:** the Stage 1 goals, the 2.9 s worst case, both unreachable goals and the headline example.
+  - **Twin repair (second run):** it fixed three n_e goals, where the twin found the surrogate's choice outside the ±10 % band. The repair used 3–5 twin runs each.
   - **Speed:** the longest recommendation took 2.9 s, against the 60 s limit. A search evaluates 120–6,000 surrogate points in under a second.
   - **Unreachable goals:** n_e = 10¹⁸ m⁻³ and 9 log in 500 mL are both reported as unreachable. The closest option shown gives n_e 5.6 × 10¹⁶ (the envelope's top) and 7.88 log (the one-cell cap).
   - **The headline example:** at the default configuration, 3-log *E. coli* is met at 10 W for 6 s, 0.12 kJ/L, against 12 kJ/L for the default run. The twin gives 7.88 log, the cap, as the pre-check predicted.
@@ -1332,7 +1347,7 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
     - In 4 of 10 goals the recommendation used more energy than the drawn settings that defined the target (goals 22, 27, 29 and 30). In goal 27 it used 137 against 23 kJ/L.
     - In 2 of 10 (goals 26 and 30) the cheapest corner of the envelope, 10 W for 6 s, also meets the target: 0.013 and 0.072 kJ/L, against the 9.9 and 146 kJ/L recommended.
     - The other 8 have power shares of 0.013–0.060, where the cheapest corner falls short (2.5–8.8 log). So the problem is real there, not trivial.
-  - **What it would take:** an aim capped at the one-cell limit would fix it. That would be a change after seeing results, so it is not made here. It is left as an open choice: a dated amendment, with both results reported.
+  - **What was done:** at the student's request, a dated amendment (committed before the code changed or the benchmark was re-run) caps the aim at the one-cell limit minus 0.05. The third run above shows the result: every Stage 2 recommendation now uses less energy than the drawn settings.
 - **Checked in the browser:**
   - **Stage 2, 3-log:** three candidates at 0.12 kJ/L, all confirmed by the twin.
   - **Stage 1, n_e = 3 × 10¹⁶:** met at 31.9 W, 36 % less than the default 50 W.
@@ -1351,10 +1366,10 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
 - Both impossible targets are reported as unreachable, with the closest twin-verified option.
 - Each objective takes ≤ 60 s, including its twin runs.
 - 3-log *E. coli* with the least energy at the default configuration is confirmed by the twin, and is cheaper than the default run.
-- The twin repair, its limit (no repair when the setting is fixed), the search scoring, the distinct top 3 and the what-if are tested on their own.
+- The twin repair, its limit (no repair when the setting is fixed), the search scoring, the aim capped at the one-cell limit (amendment), the distinct top 3 and the what-if are tested on their own.
 
 **Exit gate**
-- [x] Tests pass. Every Phase 13 pass mark is met: the benchmark 30 of 30, both impossible goals unreachable, at most 2.9 s, and the headline example confirmed.
+- [x] Tests pass. Every Phase 13 pass mark is met, before and after the amendment: the benchmark 30 of 30, both impossible goals unreachable, at most 2.9 s, and the headline example confirmed.
 - [x] No recommendation is ever shown without its twin re-simulation. The recommender cannot return a candidate without a twin outcome; M14 shows only those, and lists any dropped ones.
 
 **Commit:** `Phase 13: AI counterfactual recommendations verified by the twin`

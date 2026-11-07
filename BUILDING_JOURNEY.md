@@ -548,7 +548,7 @@ It is written so that either of us can explain any decision to the evaluation co
 
 **How Phase 12 closed:** 449 tests pass, and 6 are marked as expected failures (the same six as after Phase 11; Phase 12 adds none). The per-fault detection table is on the model card, in MLflow and on M13. Version 0.12.0.
 
-## Phase 13: AI suggests settings, and the twin checks every one (built 7 November 2026; one finding left open)
+## Phase 13: AI suggests settings, and the twin checks every one (complete, 7 November 2026)
 
 **What we made**
 - **A recommender:** you state a goal, and the AI searches for settings that reach it. The goals are:
@@ -570,7 +570,7 @@ It is written so that either of us can explain any decision to the evaluation co
 **Problems and how we handled them**
 - **A pre-check before the rules:** the twin kills *E. coli* very fast. At the default power share, even 10 W for 6 seconds leaves less than one live cell, so "3-log with the least energy" always lands on the lowest-energy corner. At low power shares that is no longer true. The Stage 2 surrogate had learned only from runs that reached the one-cell cap, so it cannot see that. We wrote this down before building, and planned the twin repair for it.
 - **A bug that halved Stage 2's score:** the first benchmark run gave 20 of 30. The ten Stage 2 goals had reached their target exactly but were marked "not met", because the code applied the 0.01-log tolerance in the wrong direction. The code was fixed to match the rules, and the benchmark run again.
-- **The "least energy" finding** (see below): we did not change the search rule after seeing it, and left the choice open.
+- **The "least energy" finding** (see below): we did not quietly change the search rule after seeing it. We wrote the change down as a dated amendment and reported both results.
 - **Small screen fixes:**
   - one sentence mixed up the open run's value with the candidate's;
   - tiny OH values showed as 0.00;
@@ -585,6 +585,10 @@ It is written so that either of us can explain any decision to the evaluation co
 - **Found, not hidden:** the tests check that the goal is met, not that the energy is the least.
   - **The cause:** when a Stage 2 target sits exactly at the one-cell cap, the search's "aim 0.1 log higher" rule asks the surrogate for something it can never predict, so the search stops caring about energy.
   - **The effect:** in 4 of the 10 Stage 2 goals, the suggestion used more energy than the settings that defined the target. In one it used 137 kJ/L where 23 was enough.
-  - **The fix:** capping the aim at the one-cell limit would fix it. That is left as a choice for a dated amendment, with both results reported.
+  - **The fix, chosen by us afterwards:** we wrote a dated amendment (committed before any code changed) that caps the aim just below the one-cell limit. We then ran the same 30 goals again:
+    - **Still met:** 30 of 30.
+    - **Energy:** every Stage 2 suggestion now uses less energy than the settings that defined its target, 0.014–0.098 kJ/L where it was up to 146 kJ/L before.
+    - **The repair does most of the work:** in 9 of the 10 Stage 2 goals, because the surrogate cannot see low power shares (the blind spot we expected).
+  - **Both results are recorded:** before and after the amendment.
 
-**How Phase 13 closed:** 471 tests pass, and 6 are marked as expected failures (the same six as after Phase 12; Phase 13 adds none). The benchmark is on M14 and in BUILD_STEPS.md. Version 0.13.0.
+**How Phase 13 closed:** 472 tests pass, and 6 are marked as expected failures (the same six as after Phase 12; Phase 13 adds none). The benchmark is on M14 and in BUILD_STEPS.md. Version 0.13.0.

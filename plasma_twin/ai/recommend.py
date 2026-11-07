@@ -34,6 +34,7 @@ POPULATION = 20
 GENERATIONS = 60
 DISTINCT = 0.10
 REPAIR_RUNS = 12
+CAP_MARGIN = 0.05  # amendment (7 Nov 2026): the aim never asks for more than cap - 0.05 (about 8x the surrogate's MAE)
 INTEGER = ("gap_mm", "water_vapour")
 ALWAYS_FIXED = {1: (), 2: ("power_share",)}
 WATER = ("water_volume_ml", "water_ph", "water_temperature_c", "water_vapour")
@@ -179,22 +180,29 @@ def _candidate_config(stage: int, values: np.ndarray, base: dict[str, Any]) -> d
 
 
 # ------------------------------------------------------------------------------------ scoring
-def _miss(goal: Goal, value: np.ndarray, judging: bool) -> np.ndarray:
+def _miss(goal: Goal, value: np.ndarray, judging: bool, cap: np.ndarray | None = None) -> np.ndarray:
     """How far a value is from the goal (0 = good enough).
 
     judging=True: the twin's test of the rules (n_e within ±10 %, T_gas within ±0.5 K, log reduction >= target - 0.01).
-    judging=False: the search's aim on the surrogate, tighter to leave room for its error (±5 %, ±0.25 K, >= target + 0.1).
+    judging=False: the search's aim on the surrogate, tighter to leave room for its error (±5 %, ±0.25 K, >= target + 0.1;
+    amended: never above the one-cell cap - 0.05, which `cap` gives for each point).
     """
     s = goal.spec
     if s.kind == "band":
         margin = s.tolerance if judging else s.aim
         distance = np.abs(value / goal.target - 1.0) if s.relative else np.abs(value - goal.target)
         return np.maximum(0.0, distance - margin) / s.tolerance
-    floor = goal.target - s.tolerance if judging else goal.target + s.aim  # at_least
+    if judging:  # at_least
+        floor = goal.target - s.tolerance
+    else:
+        floor = goal.target + s.aim
+        if cap is not None:
+            floor = np.minimum(floor, cap - CAP_MARGIN)
     return np.maximum(0.0, floor - value)
 
 
-def _search_scores(goal: Goal, predicted: np.ndarray, costs: np.ndarray, cost_range: tuple[float, float]) -> np.ndarray:
+def _search_scores(goal: Goal, predicted: np.ndarray, costs: np.ndarray, cost_range: tuple[float, float],
+                   cap: np.ndarray | None = None) -> np.ndarray:
     """Lower is better. Meeting the aim always beats missing it (rules: cost in 0-1, a miss scores 1 + miss)."""
     s = goal.spec
     scaled = (costs - cost_range[0]) / (cost_range[1] - cost_range[0])
@@ -203,8 +211,13 @@ def _search_scores(goal: Goal, predicted: np.ndarray, costs: np.ndarray, cost_ra
             over = np.maximum(0.0, costs - goal.budget_kj_l) / goal.budget_kj_l
             return np.where(over > 0, 100.0 + over, -predicted + 1e-3 * scaled)
         return -np.log10(np.maximum(predicted, 1e-300))
-    miss = _miss(goal, predicted, judging=False)
+    miss = _miss(goal, predicted, judging=False, cap=cap)
     return np.where(miss > 0, 1.0 + miss, scaled)
+
+
+def one_cell_cap(initial_cfu_ml: float, volume_ml: np.ndarray) -> np.ndarray:
+    """The largest possible log reduction: one live cell left in the whole volume (hom.py), exact, never learned."""
+    return np.log10(initial_cfu_ml * np.asarray(volume_ml, dtype=float))
 
 
 def _costs(stage: int, x: np.ndarray) -> np.ndarray:
@@ -409,7 +422,9 @@ def recommend(goal: Goal, sur: surrogate.Surrogate, config: dict[str, Any], fixe
         x = np.repeat(base[None, :], x_free.shape[1], axis=0)
         x[:, columns] = x_free.T
         values = sur.predict(x)[:, index]
-        f = _search_scores(goal, values, _costs(stage, x), cost_range)
+        cap = (one_cell_cap(config["initial_count_cfu_ml"], x[:, names.index("water_volume_ml")])
+               if goal.objective == "lr_least_energy" else None)
+        f = _search_scores(goal, values, _costs(stage, x), cost_range, cap)
         seen_x.append(x)
         seen_f.append(f)
         return f
@@ -524,13 +539,17 @@ def run_benchmark(models: dict[int, tuple[surrogate.Surrogate, str]],
                      "met": found.reachable, "met_without_repair": found.reachable_without_repair,
                      "twin_value": best.value if best else None, "cost": best.cost if best else None,
                      "repair_runs": best.repair_runs if best else 0, "seconds": found.seconds,
-                     "candidates": len(found.candidates), "dropped": len(found.dropped)})
+                     "candidates": len(found.candidates), "dropped": len(found.dropped),
+                     "drawn_cost": cost_of(goal.stage, config),
+                     "cost_not_above_drawn": bool(best is not None and best.met and best.cost <= cost_of(goal.stage, config) * (1 + 1e-9))})
     summary: dict[str, Any] = {"goals": len(rows), "met": sum(r["met"] for r in rows),
                                "met_without_repair": sum(r["met_without_repair"] for r in rows),
                                "longest_seconds": max(r["seconds"] for r in rows),
                                "models": {str(s): m[1] for s, m in models.items()}}
     summary["success_rate"] = summary["met"] / summary["goals"]
     summary["success_rate_without_repair"] = summary["met_without_repair"] / summary["goals"]
+    stage2 = [r for r in rows if r["stage"] == 2]
+    summary["stage2_energy_not_above_drawn"] = f"{sum(r['cost_not_above_drawn'] for r in stage2)}/{len(stage2)}"
     for objective in sorted({r["objective"] for r in rows}):
         part = [r for r in rows if r["objective"] == objective]
         summary[f"{objective}_met"] = f"{sum(r['met'] for r in part)}/{len(part)}"
