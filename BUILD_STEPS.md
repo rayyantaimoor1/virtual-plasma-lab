@@ -1392,6 +1392,73 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
   Report failing results honestly.
 - Update the SRS and scope document if anything changed (new revision-history row), write the final report, and prepare the demo and viva.
 
+**Rules** (fixed 9 November 2026, before any Phase 14 measurement)
+- **What Phase 14 may change:**
+  - **Allowed:** documentation and labels found missing by these checks: docstrings, type hints, units in labels, the wording of messages. It also adds measurement code, tests and the coverage tool.
+  - **Not allowed:** physics, AI models, datasets, tolerances and pass marks stay as they are.
+  - **Gaps that are fixed:** the count before the fix and the count after it are both reported, as in the Phase 6 check.
+- **The report (decided with the student):**
+  - **In this phase:** every measurement is recorded in `docs/validation/phase14_results.md`, with the raw numbers in `docs/validation/phase14_measurements.json` (timings and counts only, no private data). Every FR is checked in `docs/validation/phase14_fr_checklist.md`.
+  - **Later, as a separate task:** the department-template Word report, and the SRS and scope revision rows. The results file lists every change those documents need.
+- **The machine:** this laptop, an Intel i7-1355U (10 cores: 2 performance, 8 efficiency; 1.7 GHz base, turbo above 2.0 GHz), 15.6 GB RAM, Windows 11 Pro, Python 3.14.7.
+  - **Against the SRS reference computer** ("4-core, 2.0 GHz or faster"): its base clock is lower, but it has more cores and a much higher turbo speed. That difference is stated next to the timings.
+  - **One measurement run:** the measurement script runs once, and its first complete run is the one reported. There is no picking of a best run. If a bug in the script breaks a run, the bug is fixed and the script run again, and both runs are recorded.
+- **Performance (PER), timed by `scripts/measure_phase14.py`, wall clock, without the app's caches:**
+  - **PER-1 (Stage 1 runs):**
+    - **0D:** 100 Stage 1 configurations drawn with seed 20261109, uniformly across the envelope (power, pressure, flow, the four mixtures, admixture 1–10 %, both EEDFs). Each is run once through the service the Results screen uses. **Pass:** the 95th percentile ≤ 2 s.
+    - **0D+1D:** the first 20 of those configurations, run as 0D+1D. **Pass:** the 95th percentile ≤ 5 s.
+  - **PER-2 (spectrum):** 300–900 nm at 0.005 nm, for the default plasma and the first four PER-1 configurations, timed after the plasma is solved. **Pass:** each ≤ 3 s, and the spectrum has about 120,000 points.
+  - **PER-3 (probe):** −100 to +100 V in 0.1 V steps (2,001 points), generation plus analysis, for the same five plasmas. **Pass:** each ≤ 2 s.
+  - **PER-4 (sweep):** a 200-point power sweep from 10 to 100 W at the defaults, with the sweep's progress callback timed. **Pass:** total ≤ 120 s, and the longest gap between progress updates ≤ 2 s.
+  - **PER-5 (Stage 2):** the default Stage 2 run (1 min treatment) and 9 configurations drawn with seed 20261109 (each with 1 min treatment). **Pass:** each ≤ 10 s.
+  - **PER-6 (input feedback):** M2 and M8 opened in Streamlit's AppTest. One field per screen (RF power, average power) is changed 10 times, including out-of-range values, and each rerun is timed until the screen has redrawn. **Pass:** the slowest rerun ≤ 0.5 s. The time of the validation function alone is reported beside it.
+  - **PER-7 (import):** a 50 MB OES text file and a 50 MB probe CSV, generated with a seed. Each is parsed by the importer and its downsampled preview made. **Pass:** each ≤ 15 s.
+  - **PER-8 (start-up):**
+    - **(a)** the time from starting `streamlit run app/Home.py` to its health check answering;
+    - **(b)** the time for a fresh Python process to import the app and draw Home in AppTest.
+
+    **Pass:** a + b ≤ 15 s.
+  - **PER-9 (AI inference):** the Phase 10 XGBoost model on 20 synthetic spectra. The first call, which includes loading the model, is reported. **Pass:** the slowest later call ≤ 1 s (the SRS caches the model, so later calls are what a user waits for).
+  - **PER-10 (recommendation):** the five objectives at the default configuration. **Pass:** each ≤ 60 s, with at least three progress messages.
+- **Reliability (REL):**
+  - **REL-1 (solver convergence):** a grid of 4 mixtures × 5 powers × 5 pressures × 5 Ar flows × 2 EEDFs = 1,000 configurations (5 % admixture, envelope limits included). **Pass:** 100 % converge, meaning no error and every residual below 10⁻⁸. The existing 500-run test is kept.
+  - **REL-2 (events):** for each event E1–E27, the test or screen check that triggers it and confirms its message is listed. An event with no automated check is triggered by hand in the browser and recorded. **Pass:** 27 of 27.
+  - **REL-3 (sessions survive a crash):** a child process saves sessions to a temporary database in a loop and is killed at a time drawn with seed 20261109, 50 times. After each kill: the database opens, SQLite's `integrity_check` says ok, and every session the child reported as committed is still there. **Pass:** 0 sessions lost and 0 corrupt files.
+  - **REL-4 (reproducible):** the existing tests are listed. Also, 10 of the PER-1 configurations are run twice. **Pass:** the largest relative difference of any numeric output < 10⁻⁹.
+- **Usability (USE):**
+  - **USE-1 (quick start):** the existing one-click test.
+  - **USE-2 (student test):** not measurable by me. `docs/validation/use2_test_sheet.md` gives the task and a results table for at least 5 students. It is recorded as "not yet measured" until the student runs it.
+  - **USE-3 (inputs and errors):**
+    - **Inputs:** every input widget on every screen, in its default state and in both roles, is listed with AppTest. **Pass:** its unit is in the label (or it has no unit), and its range is visible, either as a slider or stated in the label, help or caption next to it.
+    - **Errors:** every message from the configuration validators, the importers and the screens' error statuses is listed and judged by hand. **Pass:** it states the cause and what to do.
+  - **USE-4 (axes and glossary):**
+    - **Axes:** every Plotly figure on every screen (default state, plus after the main button where needed) is listed. **Pass:** each axis title has a name or symbol and a unit in brackets, with "(-)" for dimensionless.
+    - **Glossary:** the symbols in axis titles and metric labels are compared with the Home glossary. **Pass:** the glossary covers 100 %.
+  - **USE-5 (colour and contrast):**
+    - **Status:** an automated check finds no direct `st.success`, `st.info`, `st.warning` or `st.error` in `app/` outside `status()`, which always adds a word label.
+    - **Contrast:** the body text and background colours are read from the running app in the browser, in both themes. **Pass:** ratio ≥ 4.5:1.
+- **Security (SEC):**
+  - **SEC-1 (loopback only):** the running server's listening sockets are read from Windows. **Pass:** every listener on the app's port is 127.0.0.1 or ::1. A port scan from a second computer is not possible here, so that is stated.
+  - **SEC-2 and SEC-3:** the existing tests.
+  - **SEC-4 (parameterised SQL):** the existing injection tests, plus an automated check that every `execute()` call in `plasma_twin/` gets a literal SQL string (no f-string, `%` or `+`).
+  - **SEC-5 (no outbound connection):** a new test makes any non-loopback socket connection fail. Inside it the test runs a Stage 1 run, a spectrum, a probe curve, a Stage 2 run, and the AI inference, surrogate, anomaly check and recommendation where their models exist. **Pass:** none tries to connect. Also, Streamlit's usage statistics are off in its config.
+- **Accuracy (ACC):** no new comparison is run, and none is re-run.
+  - **ACC-1 and the ±30 % tables:** reported from the recorded Phase 2 and Phase 7 runs, with their failures.
+  - **ACC-2:** the existing tests.
+  - **ACC-3:** on the REL-1 grid: power shares sum to 100 ± 0.5 % and the particle-balance residual is below 10⁻⁸, for every run.
+  - **ACC-4:** from the git history of `envelope.toml` and `data/reference/constants/benchmarks.csv`. **Pass:** no change to a reference value or the tolerance after a comparison without a dated note.
+- **AI quality (AIQ):** reported from the model cards and tests. No model is retrained.
+  - **AIQ-5:** every card's dataset is S1-/S2- (twin data, none measured), and every model was trained after the 4 November lock.
+  - **AIQ-6:** the registry status of every card.
+- **Maintainability (MNT):**
+  - **MNT-1 (coverage):** `coverage.py` (installed and pinned in requirements.txt) runs the whole test suite. Line coverage is reported for `plasma_twin/` as a whole, for the physics part (`stage1`, `stage2`, `oes`, `probe`, `compare`, `reference`, `config`) and for `ai/`. **Pass:** each ≥ 80 %. Each module is mapped to its test file, and any without one is listed.
+  - **MNT-2 (constants in data files):** an automated scan of the physics modules lists numeric literals with 3 or more significant figures inside functions. Each is judged by hand: either a physical constant, which should be in a data file (a gap), or a numerical setting such as a tolerance or grid size (allowed).
+  - **MNT-3 (type hints and docstrings):** an automated scan of every public function and method in `plasma_twin/` (name not starting with `_`). **Pass:** every parameter (except self and cls) and the return are annotated, and a docstring is present. Gaps are fixed by adding hints and docstrings only, and the count is taken before and after. Whether each docstring explains the physics or statistics reason is judged on a sample of 20, stated as such.
+- **Portability (POR-1):**
+  - **Ubuntu:** CI (Ubuntu, Python 3.14) installs from the one requirements file and runs the tests. Phase 14 adds a CI step that starts the app with one command and checks its health endpoint. CI's Ubuntu is "latest" (24.04), which is newer than 22.04, so that is stated.
+  - **Windows:** Windows 11 is this laptop. Windows 10 is not available to test.
+- **Known failures carried in:** the six strict expected failures and the open items (supervisor questions Q3, Q13 and Q19, the sample files, the Phase 10 physics-fit runaway) are listed as they are. Phase 14 does not try to fix them.
+
 **Exit gate**
 - [ ] All tests pass.
 - [ ] Every FR is ticked off.
