@@ -1516,6 +1516,62 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
 
 ---
 
+## Phase 15 — Fix what Phase 14 found
+
+**Goal:** close the four gaps Phase 14 measured, chosen by the student on 10 November 2026:
+- messages for a solver failure (E4) and a failed session save (E18);
+- sweep progress (PER-4);
+- the primary-button contrast (USE-5);
+- constants still written inside functions (MNT-2).
+
+Each is then measured again by the Phase 14 method.
+
+**Rules** (fixed 10 November 2026, before any Phase 15 code)
+- **What may change:** the screens' error handling, the sweep's progress reporting, the theme colour, and where constants are stored.
+- **What may not:** no model equation, value, tolerance or pass mark changes. Every model output must stay **bit-identical**, which is checked as below.
+- **E4, solver failure (FR17.4, REL-2):**
+  - **Stage 1:** when the model raises `SolverFailure` or `InputOutOfRange`, every Stage 1 screen shows an error message instead of an error trace. The message gives the reason and says that no partial result is shown and what to try (a nearby setting). The screen stops there.
+  - **The retry:** the solver already retries with a second method (Levenberg-Marquardt after the hybrid method) before it fails. That is FR17.4's retry, and it is not changed.
+  - **Stage 2:** M9 does the same for errors from the Stage 2 model (`BubbleModelError`, `PulseBlocked`, `ValueError`).
+  - **Pass mark:** the Phase 14 test `test_a_solver_failure_shows_a_message_not_a_trace` passes without its expected-failure mark, and its assertion is unchanged.
+- **E18, session save failure (FR17.15, REL-2):**
+  - **The retry:** saving a session (M3 and M9) is retried once automatically after 0.5 s.
+  - **If it still fails:** the screen says "Not saved", gives the reason, and says the results stay on the screen and can be downloaded as CSV. Nothing is lost from the screen.
+  - **Pass marks:**
+    - the Phase 14 test `test_a_failed_session_save_shows_a_message_and_keeps_the_results` passes without its mark;
+    - a new test shows that the save is tried exactly twice;
+    - a new test shows that a save which fails once and then works is stored.
+- **Sweep progress (PER-4, FR17.14):**
+  - **The change:** `sweep()` gains an optional progress callback, called after every point. M3 shows a progress bar with "point k of N", and keeps the finished sweep for the same configuration and plan, so it is not re-run on every redraw.
+  - **Pass mark:** on the PER-4 sweep (200 points, 10–100 W, defaults), the longest time between two progress updates is ≤ 2 s and the total ≤ 120 s. Measured once by `scripts/measure_phase14.py per4`.
+- **Button contrast (USE-5):**
+  - **The change:** `.streamlit/config.toml` sets `primaryColor = "#B71C1C"`, a darker red.
+  - **Its contrast:** white text on it is 6.6:1 by the WCAG formula, before any measurement.
+  - **Pass mark:** measured in the browser, as in Phase 14, in both themes: the primary button text ≥ 4.5:1, and the body text and statuses still ≥ 4.5:1.
+- **Constants (MNT-2):**
+  - **Moved to a cited data file:** every fitted coefficient written inside a physics function goes to `data/reference/constants/stage1_constants.csv`. The file uses the same columns as `stage2_constants.csv` (name, value, unit, source, where), gets a manifest entry with its checksum, and a loader `load_stage1_constants()`. Its values are copied exactly as written in the code, from the same sources:
+    - argon `electron_rates` (Kemaneci et al. 2016, Table III, rows 7–22);
+    - `oxygen_electron_rates` (rows 16, 21, 23–26) and `ion_ion_recombination` (row 19);
+    - the Peck & Reeder (1972) air-dispersion formula in `n2_band.py`.
+  - **The three textbook factors** 1.73, 1.68 and 1.52 (Lieberman & Lichtenberg's ohmic-heating, collisional Child-law and RF-current equations) are not measured data; they are part of the equations. They become named module constants, each citing its equation, so no unexplained number sits inside a function.
+  - **Stays as it is:** named module-level constants that already carry their citation (level energies, radiative rates, pooling rates, diffusion data). MNT-2 forbids constants hard-coded in *functions*, and these are not.
+  - **Bit-identical check:** before any change, `scripts/compare_outputs.py save` stores every numeric output of 100 Stage 1 configurations (the PER-1 draw: all mixtures, both EEDFs, 0D) and the N₂-band line positions. After the change, `compare` must find a largest relative difference of exactly 0.
+  - **Pass marks:**
+    - the Phase 14 MNT-2 scan (numbers with 3 or more significant figures inside physics functions) finds only the "allowed" categories it listed (grid sizes, iteration limits, table bounds, search windows, reference temperatures of cited formulas, the J₀ zero, data-validity bands), and no rate fits or formula coefficients;
+    - the checksum test covers the new file.
+- **Version and records:** version 0.15.0.
+  - `phase14_results.md` and `phase14_fr_checklist.md` get the new measurements beside the old ones; nothing earlier is overwritten.
+  - The full test suite runs at the end.
+
+**Exit gate**
+- [ ] Tests pass, with the two REL-2 expected failures now passing.
+- [ ] PER-4, USE-5, MNT-2 and REL-2 measured again and recorded beside the Phase 14 values.
+- [ ] Every model output bit-identical before and after.
+
+**Commit:** `Phase 15: messages for solver and save failures, sweep progress, button contrast, constants in data files`
+
+---
+
 ## Open items to settle before the phase that needs them
 
 | Item | Needed by | Source |
