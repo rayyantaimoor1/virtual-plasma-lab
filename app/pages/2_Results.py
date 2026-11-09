@@ -1,5 +1,5 @@
 """M3 Results (FR3.1-FR3.10): the plasma state of the open configuration."""
-from common import PAGES, __version__, axis, config_json, metric_grid, need_result, page_setup, sci, status, store, svc  # noqa: I001
+from common import PAGES, axis, config_json, metric_grid, need_result, page_setup, save_session, sci, status, svc  # noqa: I001
 
 import json
 
@@ -82,14 +82,18 @@ if plan:
     label = plan.get("label", plan["parameter"])
     st.subheader(f"Sweep over {label}")
 
-    @st.cache_data(show_spinner="Running the sweep...")
-    def run_sweep(config_text: str, plan_text: str) -> list[dict]:
-        p = json.loads(plan_text)
-        points = sweep(svc.to_inputs(json.loads(config_text)), p["parameter"], p["values"])
-        return [{"value": pt.value, "te": pt.result.te_ev if pt.solved else None,
-                 "ne": pt.result.ne_center_m3 if pt.solved else None, "error": pt.error} for pt in points]
-
-    rows = run_sweep(config_json(config), json.dumps(plan, sort_keys=True))
+    # PER-4, FR17.14: a progress bar updated after every point; the finished sweep is kept for this configuration
+    # and plan, so redrawing the screen does not run it again.
+    sweep_key = config_json(config) + json.dumps(plan, sort_keys=True)
+    if st.session_state.get("sweep_rows_key") != sweep_key:
+        bar = st.progress(0.0, text="Running the sweep...")
+        points = sweep(svc.to_inputs(config), plan["parameter"], plan["values"],
+                       progress=lambda done, total: bar.progress(done / total, text=f"Sweep point {done} of {total}"))
+        bar.empty()
+        st.session_state["sweep_rows"] = [{"value": pt.value, "te": pt.result.te_ev if pt.solved else None,
+                                           "ne": pt.result.ne_center_m3 if pt.solved else None, "error": pt.error} for pt in points]
+        st.session_state["sweep_rows_key"] = sweep_key
+    rows = st.session_state["sweep_rows"]
     ok = [r for r in rows if r["te"] is not None]
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=[r["value"] for r in ok], y=[r["ne"] for r in ok], name="n_e (m⁻³)", mode="lines+markers"))
@@ -109,9 +113,13 @@ s1, s2 = st.columns(2)
 with s1.form("save_session"):
     note = st.text_input("Note for this session")
     if st.form_submit_button("Save as session (FR3.9)"):
-        session_id = store().save(1, config, svc.config_hash(config), {"plasma_state": summary}, note, __version__)
-        st.session_state["session_id"] = session_id
-        status("ok", f"Saved as {session_id}.")
+        session_id, reason = save_session(1, config, svc.config_hash(config), {"plasma_state": summary}, note)
+        if session_id:
+            st.session_state["session_id"] = session_id
+            status("ok", f"Saved as {session_id}.")
+        else:  # E18: tried twice; the results stay on this screen
+            status("error", f"Not saved (E18), even after one retry: {reason}. The results stay on this screen; "
+                            "download them as CSV with the button beside this form, then try saving again.")
 s2.download_button("Download results (CSV)", svc.results_csv(summary, config, st.session_state.get("session_id")), file_name="stage1_results.csv",
                    mime="text/csv")
 n1, n2 = st.columns(2)

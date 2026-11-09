@@ -30,6 +30,7 @@ import numpy as np
 from scipy import constants as codata
 from scipy.optimize import root
 
+from plasma_twin.reference.loaders import load_stage1_constants
 from plasma_twin.stage1 import argon_kinetics as kin
 from plasma_twin.stage1 import gas_flow
 from plasma_twin.stage1.eedf import SHAPES
@@ -61,18 +62,20 @@ O2A_ENERGY_EV = 0.977  # Biagi O2(a1Delta) excitation threshold
 
 def ion_ion_recombination(gas_temperature_k: float) -> float:
     """Row 19 (O2+ + O-), used for O- with every positive ion; see BUILD_STEPS.md, 3e."""
-    return 1.5e-13 * (300.0 / gas_temperature_k) ** 0.5
+    c = load_stage1_constants()
+    return c["o_ion_ion_A"] * (c["o_ion_ion_T_ref"] / gas_temperature_k) ** c["o_ion_ion_n"]
 
 
 def oxygen_electron_rates(te: float) -> dict[str, float]:
     """Electron reactions with O-, O2+ and O2(a) (Maxwellian fits, rows 16, 21, 23-26), m^3/s."""
+    c = load_stage1_constants()  # the fits are in data/reference/constants/stage1_constants.csv (Phase 15, MNT-2)
     return {
-        "detach": 1.73e-13 * np.exp(-5.76 / te + 7.3 / te**2 - 3.48 / te**3),  # row 16: e + O- -> O + 2e
-        "recombine_o2p": 2.2e-14 * te**-0.5,  # row 21: e + O2+ -> O + O
-        "a_attach": 2.28e-16 * np.exp(-2.29 / te),  # row 23: e + O2(a) -> O + O-
-        "a_ionize": 9.0e-16 * np.exp(-11.6 / te),  # row 24: e + O2(a) -> O2+ + 2e
-        "a_dissociate": 4.2e-15 * np.exp(-4.6 / te),  # row 25: e + O2(a) -> 2O + e
-        "a_deexcite": 5.6e-15 * np.exp(-2.2 / te),  # row 26: e + O2(a) -> O2 + e
+        "detach": c["o_detach_A"] * np.exp(-c["o_detach_c1"] / te + c["o_detach_c2"] / te**2 - c["o_detach_c3"] / te**3),  # row 16
+        "recombine_o2p": c["o_recombine_o2p_A"] * te ** c["o_recombine_o2p_n"],  # row 21: e + O2+ -> O + O
+        "a_attach": c["o_a_attach_A"] * np.exp(-c["o_a_attach_E"] / te),  # row 23: e + O2(a) -> O + O-
+        "a_ionize": c["o_a_ionize_A"] * np.exp(-c["o_a_ionize_E"] / te),  # row 24: e + O2(a) -> O2+ + 2e
+        "a_dissociate": c["o_a_dissociate_A"] * np.exp(-c["o_a_dissociate_E"] / te),  # row 25: e + O2(a) -> 2O + e
+        "a_deexcite": c["o_a_deexcite_A"] * np.exp(-c["o_a_deexcite_E"] / te),  # row 26: e + O2(a) -> O2 + e
     }
 
 
@@ -242,7 +245,8 @@ class MixtureModel:
         if self.has_o2:
             nu_m += n_o2 * self.o2_rates.k("momentum_transfer", te)
         v_e = w.mean_speed_ratio * np.sqrt(E * te / ELECTRON_MASS_KG)
-        from plasma_twin.stage1.global_model import bulk_ohmic_power, collisional_child_width, sheath_heating_power
+        from plasma_twin.stage1.global_model import (RF_CURRENT_FACTOR, bulk_ohmic_power, collisional_child_width,
+                                                     sheath_heating_power)
         p_ohm_bulk = bulk_ohmic_power(te, vrf, nu_m, h_e, x.electrode_gap_m, sheath, d.area, d.omega)
         one_ohmic, one_stochastic = sheath_heating_power(nu_m, sheath, v_e, vrf, d.area, d.omega)
         heating_electrons = p_ohm_bulk + 2 * one_ohmic + 2 * one_stochastic
@@ -268,7 +272,7 @@ class MixtureModel:
                 loss_w["attachment"] = base * rates.k("attachment_energy", te)
         if self.has_o2:
             loss_w["ionization"] += E * volume * ne * n_a * ox["a_ionize"] * (O2_IONIZATION_EV - O2A_ENERGY_EV)
-            loss_w["excitation"] += E * volume * ne * n_a * ox["a_dissociate"] * 4.6  # row 25 activation energy
+            loss_w["excitation"] += E * volume * ne * n_a * ox["a_dissociate"] * load_stage1_constants()["o_a_dissociate_E"]  # row 25 activation energy
             loss_w["superelastic_return"] -= E * volume * ne * n_a * ox["a_deexcite"] * O2A_ENERGY_EV
             loss_w["detachment"] = E * volume * ne * n_neg * ox["detach"] * O_ELECTRON_AFFINITY_EV
         e_e, v_f = w.escape_energy_ratio * te, w.floating_ratio * te
@@ -303,7 +307,7 @@ class MixtureModel:
             "heating": {"ohmic_bulk": p_ohm_bulk, "ohmic_sheaths": 2 * one_ohmic, "stochastic": 2 * one_stochastic,
                         "ion_acceleration_rf_sheaths": p_ion_rf},
             "losses": loss_w, "p_abs": p_abs,
-            "rf_current": 1.52 * d.omega * EPS0 * d.area * vrf / sheath,
+            "rf_current": RF_CURRENT_FACTOR * d.omega * EPS0 * d.area * vrf / sheath,
             "flux_electrode": total_flux, "flux_radial": sum(ions[i] * h[i][2] * h[i][1] for i in self.ions),
             "mixture": {
                 "ion_densities_m3": ions, "negative_ion_density_m3": n_neg, "electronegativity": alpha,

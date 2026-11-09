@@ -6,6 +6,7 @@ point never throws away the others.
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 
 import numpy as np
@@ -28,8 +29,13 @@ class SweepPoint:
         return self.result is not None
 
 
-def sweep(base: Stage1Inputs, parameter: str, values: list[float] | np.ndarray) -> list[SweepPoint]:
-    """Solve the model at each value of `parameter`, everything else as in `base`."""
+def sweep(base: Stage1Inputs, parameter: str, values: list[float] | np.ndarray,
+          progress: Callable[[int, int], None] | None = None) -> list[SweepPoint]:
+    """Solve the model at each value of `parameter`, everything else as in `base`.
+
+    `progress(done, total)` is called after every point, so a screen can show progress at least every
+    2 s (PER-4, FR17.14): the slowest single point takes about 0.2 s (Phase 14).
+    """
     if parameter not in SWEEPABLE:
         raise ValueError(f"cannot sweep {parameter!r}; choose one of {SWEEPABLE}")
     limit = load_envelope()["stage1"]["options"]["sweep_max_points"]
@@ -45,4 +51,6 @@ def sweep(base: Stage1Inputs, parameter: str, values: list[float] | np.ndarray) 
             start_temperature = result.inputs.gas_temperature_k  # the next point starts from here
         except (InputOutOfRange, SolverFailure, ValueError) as problem:
             points.append(SweepPoint(float(value), None, f"{type(problem).__name__}: {problem}"))
+        if progress:
+            progress(len(points), len(values))
     return points

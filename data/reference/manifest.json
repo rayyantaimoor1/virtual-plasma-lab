@@ -138,6 +138,17 @@
       "in_repository": true,
       "retrieved": "2026-11-04",
       "sha256": "5905cc06752d9fa9c2b2d73839779a62e26e703ee7b91c3333f23b2dddee4975"
+    },
+    {
+      "id": "stage1_constants",
+      "path": "constants/stage1_constants.csv",
+      "title": "Stage 1 constants: argon excited-state and oxygen electron-rate fits, air dispersion formula",
+      "source": "One named source per row (Kemaneci et al. 2016, Dong et al. 2026, Peck & Reeder 1972); see the file header",
+      "url": "https://arxiv.org/abs/1612.07268",
+      "citation": "See the source and where columns of each row.",
+      "in_repository": true,
+      "retrieved": "2026-11-10",
+      "sha256": "c5fb52f72110d9ce91984090a4d149142d4f2a85f1e09d7dec67912c875f8124"
     }
   ]
 }

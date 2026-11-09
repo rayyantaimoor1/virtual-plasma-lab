@@ -1475,7 +1475,7 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
   - **Run 2** completed PER-1 to PER-10, then broke at REL-1: PER-6's AppTest replaces `__main__`, so the process pool lost its worker. The script now runs each part in its own process.
   - **Run 3** ran REL-1, REL-3, REL-4 and SEC-1.
   - **SEC-1:** the script's socket queries came back empty twice, because its commands run in a sandbox that cannot see other processes' sockets. SEC-1 was then measured on the running app from PowerShell.
-- **Results:** 39 non-functional requirements: 27 met, 6 partly met, 5 not met, 1 not yet measured.
+- **Results:** 38 non-functional requirements: 29 met, 4 partly met, 4 not met, 1 not yet measured. *(Corrected in Phase 15, 10 November 2026: this line first said "39 … 27 met, 6 partly met, 5 not met", a counting error that mixed in two FR items; the table in `phase14_results.md` was right.)*
   - **Performance:** every timing is far inside its limit. Examples: Stage 1 95th percentile 1.03 s (limit 2 s), start-up 8.1 s (15 s), recommendation 1.0 s (60 s).
   - **Not met:**
     - **REL-2:** E4 (solver failure) and E18 (session save failure) reach the user as an error trace.
@@ -1563,10 +1563,35 @@ Each is then measured again by the Phase 14 method.
   - `phase14_results.md` and `phase14_fr_checklist.md` get the new measurements beside the old ones; nothing earlier is overwritten.
   - The full test suite runs at the end.
 
+**As built (10 November 2026)**
+- **E4 and E18:**
+  - **Where:** `need_result()` in `app/common.py` catches `SolverFailure` and `InputOutOfRange` for every Stage 1 screen; M9 catches the Stage 2 model errors. A new `save_session()` helper retries once after 0.5 s, and M3 and M9 use it.
+  - **Tests:** the two Phase 14 expected-failure tests pass unchanged. Two new tests show the save is tried exactly twice, and that a save which fails once is stored by the retry.
+- **Sweep progress:**
+  - **Code:** `sweep()` reports after every point, and M3 shows "Sweep point k of N" and keeps the finished sweep for the same configuration and plan.
+  - **Measured once** (`measure_phase14.py per4`): 200 points in 8.3 s, longest gap between updates 0.055 s (limit 2 s).
+  - **In the browser:** the bar counted to 199 of 200, changing every 0.15–0.2 s.
+- **Button contrast:** `#B71C1C`; white text on it measures 6.57:1 in both themes (Phase 14: 3.3:1).
+  - **Found while checking:** a plain `[theme]` section switched off Streamlit's automatic dark theme. The colour is now set under `[theme.light]` and `[theme.dark]`, and both themes were measured again.
+- **Constants:**
+  - **The data file:** `data/reference/constants/stage1_constants.csv` holds 47 values, with a manifest checksum, and a cached `load_stage1_constants()` loads them.
+  - **Its sources:** the argon fits (Kemaneci 2016, rows 7–22), the oxygen fits (Dong et al. 2026, Table A1 rows 16, 19, 21, 23–26) and the Peck & Reeder air-dispersion formula.
+  - **The textbook factors:** the slide-283 factors 1.73, 1.68 and 1.52, and also 0.24 and 0.92 from the same equations, are named module constants.
+  - **Bit-identical:** 7,624 outputs compared before and after; largest relative difference 0.
+  - **The scan:** it finds only the 26 allowed numbers, and a new test keeps it that way.
+- **Fixed while building:**
+  - **The first draft of the data file** attributed the oxygen rows to Kemaneci and gave a paper title from memory. `mixtures.py` cites Dong et al. 2026 for them, so the file was corrected to the sources the code cites, before any test was run.
+  - **The dark theme regression** above.
+- **A correction to Phase 14:** its summary line said "39 requirements: 27 met, 6 partly, 5 not met". The table has 38 rows: 29 met, 4 partly, 4 not met, 1 not measured. It was corrected with a note in `phase14_results.md`, the Phase 14 as-built above, and the journey.
+- **After Phase 15:**
+  - **Non-functional requirements:** 33 of 38 met, 2 partly met (AIQ-3, MNT-3), 2 not met (ACC-1, AIQ-1), 1 not yet measured (USE-2).
+  - **FRs:** 138 met, 10 met with a note, 1 partly met (FR9.3), 0 not met.
+  - **Version:** 0.15.0.
+
 **Exit gate**
-- [ ] Tests pass, with the two REL-2 expected failures now passing.
-- [ ] PER-4, USE-5, MNT-2 and REL-2 measured again and recorded beside the Phase 14 values.
-- [ ] Every model output bit-identical before and after.
+- [x] Tests pass: 484 passed, 6 strict expected failures (the six from Phases 2, 10 and 11). The two REL-2 expected failures now pass.
+- [x] PER-4, USE-5, MNT-2 and REL-2 measured again and recorded beside the Phase 14 values (`phase14_results.md`, "Phase 15 re-measurements").
+- [x] Every model output bit-identical before and after (7,624 numbers, largest difference 0).
 
 **Commit:** `Phase 15: messages for solver and save failures, sweep progress, button contrast, constants in data files`
 

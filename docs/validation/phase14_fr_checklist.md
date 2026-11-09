@@ -4,7 +4,7 @@ Checked on 9 November 2026 against the SRS text (`docs/srs/build/build_srs.py`),
 
 **Status words:** **Met**; **Met, with a note** (met, with a recorded difference); **Partly met**; **Not met**.
 
-**Summary:** 135 met, 10 met, with a note, 3 partly met, 1 not met (149 in all).
+**Summary after Phase 15 (10 November 2026):** 138 met, 10 met with a note, 1 partly met (FR9.3, waiting for published survival data), 0 not met (149 in all). In Phase 14 it was 135 met, 10 met with a note, 3 partly met, 1 not met; Phase 15 closed FR17.4, FR17.14 and FR17.15.
 
 ## M1 Home (FR1)
 
@@ -254,7 +254,7 @@ Evidence: see the event table in phase14_results.md (REL-2).
 | FR17.1 E1 | The system shall verify the presence and checksum of every reference data file and open or create the session database at start-up. | Met |  |
 | FR17.2 E2 | The system shall compute the Stage 1 plasma state by solving the particle balance for T_e and then the power balance for n_e, reusing a cached result for an identical configuration. | Met, with a note | Runs are cached by the configuration's JSON. The cache lives for one app process, so a new model version is picked up on restart. |
 | FR17.3 E3 | The system shall block a run while any input is outside its allowed range and shall state the allowed range. | Met |  |
-| FR17.4 E4 | The system shall retry a non-converged solve once with a widened bracket and otherwise report failure without showing partial results. | Partly met | The solver tries a second method (Levenberg-Marquardt after hybrid) and raises SolverFailure without partial results, but the screens catch no SolverFailure, so a user would see an error trace instead of a message (REL-2 finding, confirmed in AppTest). No run in the 1,000-point REL-1 grid fails, so a user is unlikely to meet it. |
+| FR17.4 E4 | The system shall retry a non-converged solve once with a widened bracket and otherwise report failure without showing partial results. | Met (Phase 15) | Phase 14: partly met (the solver retries with a second method, but the screens showed an error trace). Phase 15: every Stage 1 screen and M9 show a 'did not converge' message with the reason and no partial result. |
 | FR17.5 E5 | The system shall block a Stage 2 run whose duty cycle is 1 or more. | Met |  |
 | FR17.6 E6 | The system shall disable features whose reference data are missing or corrupt and show this on the Home screen. | Met |  |
 | FR17.7 E7 | The system shall synthesise spectra from CR-model populations and NIST line data with a seeded instrument noise model. | Met |  |
@@ -264,8 +264,8 @@ Evidence: see the event table in phase14_results.md (REL-2).
 | FR17.11 E12 | The system shall flag probe-derived n_e as approximate when r_p/λ_D > 1. | Met |  |
 | FR17.12 E13, E14 | The system shall parse uploaded files and reject wrong-type, oversized or unparsable files with the exact reason. | Met |  |
 | FR17.13 E15, E16 | The system shall evaluate every validation check against the ±30 % tolerance loaded from the versioned file and record failures without changing model parameters. | Met |  |
-| FR17.14 E17 | The system shall show sweep progress and keep all solved points when some points fail. | Partly met | All solved points are kept when some fail (tests/test_sweep.py); a 200-point sweep takes well under 120 s, but M3 shows a spinner, not progress updated every 2 s (PER-4 finding). |
-| FR17.15 E18 | The system shall keep results in memory and offer CSV export when a session cannot be saved. | Not met | A failed save rolls back cleanly (REL-3), and the CSV download sits next to the save button, but there is no automatic retry and no message: the error reaches the user as a trace (REL-2 finding, confirmed in AppTest). |
+| FR17.14 E17 | The system shall show sweep progress and keep all solved points when some points fail. | Met (Phase 15) | Phase 14: partly met (a spinner, not progress). Phase 15: a progress bar after every point; longest gap 0.055 s over 200 points (PER-4). |
+| FR17.15 E18 | The system shall keep results in memory and offer CSV export when a session cannot be saved. | Met (Phase 15) | Phase 14: not met (no retry, an error trace). Phase 15: one automatic retry after 0.5 s, then 'Not saved (E18)' with the reason; the results stay on screen with the CSV download beside it. |
 | FR17.16 E19 | The system shall exclude non-citable measured data from every export and report the number excluded. | Met |  |
 | FR17.17 E20 | The system shall compute the Stage 2 bubble plasma, liquid species, Hom survival, water chemistry and underwater spectrum in one run. | Met |  |
 | FR17.18 E21, E22 | The system shall withhold AI estimates outside the training range and shall not use any AI model that is missing or trained on an older twin version. | Met |  |

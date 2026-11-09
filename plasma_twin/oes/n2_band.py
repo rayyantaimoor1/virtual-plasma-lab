@@ -26,7 +26,7 @@ import numpy as np
 from scipy import constants as codata
 from scipy.linalg import eigh_tridiagonal
 
-from plasma_twin.reference.loaders import load_diatomic_constants, load_n2_second_positive
+from plasma_twin.reference.loaders import load_diatomic_constants, load_n2_second_positive, load_stage1_constants
 
 N2_MASS_KG = 2 * 14.003074 * codata.atomic_mass  # 14N2
 REDUCED_MASS_KG = N2_MASS_KG / 4  # mu = m m / (m + m) = m / 2, with m = N2_MASS / 2
@@ -68,7 +68,9 @@ def honl_london(branch: str, j_lower: np.ndarray) -> np.ndarray:
 def vacuum_to_air_nm(wavenumber_cm1: np.ndarray) -> np.ndarray:
     """Air wavelength (nm) from a vacuum wavenumber, with the Peck & Reeder (1972) dispersion formula."""
     sigma2 = (np.asarray(wavenumber_cm1, dtype=float) * 1e-4) ** 2  # (inverse micrometres)^2
-    n = 1 + 1e-8 * (8060.51 + 2480990.0 / (132.274 - sigma2) + 17455.7 / (39.32957 - sigma2))
+    c = load_stage1_constants()  # the formula's coefficients, in stage1_constants.csv (Phase 15, MNT-2)
+    n = 1 + c["air_dispersion_scale"] * (c["air_dispersion_a"] + c["air_dispersion_b"] / (c["air_dispersion_c"] - sigma2)
+                                         + c["air_dispersion_d"] / (c["air_dispersion_e"] - sigma2))
     return 1e7 / (np.asarray(wavenumber_cm1, dtype=float) * n)
 
 

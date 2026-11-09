@@ -126,6 +126,13 @@ class Stage1Inputs:
 
 # ---------------------------------------------------------------- sheath and heating formulas
 # Lieberman (2015) slide 283, one function per line, so a test can feed in the slide's own example.
+# The numeric factors below are part of those slide-283 equations, not measured data, so they stay in the code as
+# named constants rather than going to a data file (Phase 15, MNT-2).
+OHMIC_BULK_FACTOR = 1.73  # bulk ohmic heating
+SHEATH_OHMIC_FACTOR = 0.24  # ohmic heating in one sheath
+STOCHASTIC_FACTOR = 0.92  # stochastic heating in one sheath
+CHILD_LAW_FACTOR = 1.68  # collisional Child law (equation in the module docstring)
+RF_CURRENT_FACTOR = 1.52  # RF current through the sheath (equation in the module docstring)
 def _heating_constant(omega: float) -> float:
     return ELECTRON_MASS_KG / (2 * E) * EPS0 * omega**2
 
@@ -133,7 +140,7 @@ def _heating_constant(omega: float) -> float:
 def bulk_ohmic_power(te: float, v_rf_sheath: float, nu_m: float, h_l: float, gap: float, sheath: float,
                      area: float, omega: float) -> float:
     """P_ohm: electrons pushed back and forth by the RF field lose energy in collisions with atoms."""
-    return float(1.73 * _heating_constant(omega) * np.sqrt(te * v_rf_sheath) * nu_m * h_l
+    return float(OHMIC_BULK_FACTOR * _heating_constant(omega) * np.sqrt(te * v_rf_sheath) * nu_m * h_l
                  * (gap + 2 * sheath * (np.log(2 / h_l) / np.pi - 1)) * area)
 
 
@@ -141,12 +148,12 @@ def sheath_heating_power(nu_m: float, sheath: float, mean_speed: float, v_rf_she
                          omega: float) -> tuple[float, float]:
     """(ohmic, stochastic) heating in ONE sheath. Stochastic: electrons bounce off the moving edge."""
     c = _heating_constant(omega) * v_rf_sheath * area
-    return float(c * 0.24 * nu_m * sheath), float(c * 0.92 * mean_speed)
+    return float(c * SHEATH_OHMIC_FACTOR * nu_m * sheath), float(c * STOCHASTIC_FACTOR * mean_speed)
 
 
 def collisional_child_width(v_dc: float, lambda_i: float, ion_flux: float, mass_kg: float = ARGON_MASS_KG) -> float:
     """s_m from the collisional Child law, given the ion flux n_s u_B (and the ion mass, argon by default)."""
-    return float((1.68 * EPS0 * np.sqrt(2 * E / mass_kg) * v_dc**1.5 * np.sqrt(lambda_i)
+    return float((CHILD_LAW_FACTOR * EPS0 * np.sqrt(2 * E / mass_kg) * v_dc**1.5 * np.sqrt(lambda_i)
                   / (E * ion_flux)) ** 0.4)
 
 
@@ -337,7 +344,7 @@ class _Discharge:
             "loss_elastic": E * n_ions * loss["elastic"],
             "loss_electron_kinetic": E * n_ions * e_e,
             "loss_ion": E * n0 * u_b * (electrode_area * t_s / 2 + radial_area * (t_s / 2 + v_f)) + p_ion_rf,
-            "rf_current": 1.52 * self.omega * EPS0 * self.area * v_rf_sheath / sheath,
+            "rf_current": RF_CURRENT_FACTOR * self.omega * EPS0 * self.area * v_rf_sheath / sheath,
             "flux_electrode": n_s * u_b, "flux_radial": h_r * n0 * u_b,
         }
 
@@ -439,7 +446,7 @@ class _Discharge:
             "heating": {"ohmic_bulk": p_ohm_bulk, "ohmic_sheaths": 2 * one_ohmic, "stochastic": 2 * one_stochastic,
                         "ion_acceleration_rf_sheaths": p_ion_rf},
             "losses": losses, "p_abs": p_abs, "equations": equations,
-            "rf_current": 1.52 * self.omega * EPS0 * self.area * v_rf_sheath / sheath,
+            "rf_current": RF_CURRENT_FACTOR * self.omega * EPS0 * self.area * v_rf_sheath / sheath,
             "flux_electrode": n_s * u_b, "flux_radial": h_r * n0 * u_b,
         }
 

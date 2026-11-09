@@ -21,7 +21,7 @@
 | PER-1 Stage 1 run | 95 % of 0D runs ≤ 2 s; 0D+1D ≤ 5 s | 95th percentile 1.03 s (0D, 100 runs); 0.35 s (0D+1D, 20 runs) | **Met** |
 | PER-2 spectrum | ≤ 3 s | 0.28 s at most (600,001 points, see note) | **Met** |
 | PER-3 probe | ≤ 2 s for 2,001 points | 0.007 s at most | **Met** |
-| PER-4 sweep | ≤ 120 s, progress at least every 2 s | 17.5 s for 200 points (slowest point 0.20 s), but a spinner, not progress | **Partly met** |
+| PER-4 sweep | ≤ 120 s, progress at least every 2 s | Phase 14: 17.5 s, but a spinner, not progress (partly met). **Phase 15:** a progress bar; 8.3 s, longest gap between updates 0.055 s | **Met (Phase 15)** |
 | PER-5 Stage 2 run | ≤ 10 s | 0.57 s at most (10 runs) | **Met** |
 | PER-6 input feedback | ≤ 0.5 s | 0.082 s at most (20 screen reruns); the validator alone 3–5 ms | **Met** |
 | PER-7 50 MB import | ≤ 15 s | 0.71 s at most | **Met** |
@@ -29,14 +29,14 @@
 | PER-9 AI inference | ≤ 1 s | 0.31 s at most (first call with model loading: 5.0 s) | **Met** |
 | PER-10 recommendation | ≤ 60 s, with progress | 1.0 s at most, 4 progress messages each | **Met** |
 | REL-1 convergence | 100 % of ≥ 500 configurations | 1,000 of 1,000 | **Met** |
-| REL-2 events | 27 of 27 give a message | 25 of 27 (E4 and E18 reach the user as an error trace) | **Not met** |
+| REL-2 events | 27 of 27 give a message | Phase 14: 25 of 27, E4 and E18 gave an error trace (not met). **Phase 15:** 27 of 27; E18 retries once | **Met (Phase 15)** |
 | REL-3 crash safety | 0 sessions lost in 50 kills | 0 lost of 1,176 committed; 0 corrupt | **Met** |
 | REL-4 reproducibility | < 10⁻⁹ | 0 (identical, 697 numbers × 10 runs) | **Met** |
 | USE-1 quick start | ≤ 2 interactions | 1 click | **Met** |
 | USE-2 student test | ≥ 80 % of ≥ 5 students | not yet measured (sheet: `use2_test_sheet.md`) | **Not yet measured** |
 | USE-3 inputs and errors | 100 % | inputs 44 of 44 (after fixes; before: 7 of 44 with a range); messages: see below | **Met after fixes** |
 | USE-4 axes and glossary | 100 % | 24 of 27 axes (the 3 others are category axes); glossary 15 of 15 symbols (before: 6) | **Met, with a note** |
-| USE-5 colour and contrast | never colour alone; ≥ 4.5:1 | labels on every status; text 9–18:1; red primary buttons 3.3:1 | **Partly met** |
+| USE-5 colour and contrast | never colour alone; ≥ 4.5:1 | labels on every status; text 9–18:1. Phase 14: primary buttons 3.3:1 (partly met). **Phase 15:** 6.6:1 in both themes | **Met (Phase 15)** |
 | SEC-1 loopback only | no outside access | listens on 127.0.0.1 only; refused on all 3 network addresses | **Met** |
 | SEC-2 files as data | 100 % | existing tests pass | **Met** |
 | SEC-3 non-citable data | 0 in exports | existing tests pass | **Met** |
@@ -53,15 +53,30 @@
 | AIQ-5 data discipline | settings fixed; runs logged; 0 trained on measured data | all 9 models on twin data, after the lock, logged | **Met** |
 | AIQ-6 no stale model | 0 results from another twin version | all 9 models current; out-of-date models refused (test) | **Met** |
 | MNT-1 tests and coverage | a test per module; ≥ 80 % | every module tested; 95.0 % overall (physics 98.0 %, AI 90.4 %) | **Met** |
-| MNT-2 constants in data files | 100 % | rate-coefficient fits and one dispersion formula still in code (with citations) | **Not met** |
+| MNT-2 constants in data files | 100 % | Phase 14: rate fits and a dispersion formula in code (not met). **Phase 15:** moved to `stage1_constants.csv`; outputs bit-identical | **Met (Phase 15)** |
 | MNT-3 hints and docstrings | 100 %, explaining the reason | present 342 of 342 (before: 214); a reason in 12 of a sample of 20 | **Partly met** |
 | POR-1 install and start | one requirements file, one command, Windows and Ubuntu | Windows 11 here; Ubuntu in CI (install, tests, and now start-up) | **Met, with a note** |
 
-**Count:** 39 requirements:
-- 27 met (including "met after fixes" and "met, with a note");
-- 6 partly met;
-- 5 not met;
-- 1 not yet measured.
+**Count, after Phase 15 (10 November 2026):** 38 requirements:
+- 33 met (including "met after fixes" and "met, with a note");
+- 2 partly met (AIQ-3, MNT-3);
+- 2 not met (ACC-1, AIQ-1);
+- 1 not yet measured (USE-2).
+
+**Correction (Phase 15, 10 November 2026):** the Phase 14 version of this line said "39 requirements: 27 met, 6 partly met, 5 not met, 1 not yet measured". That was a counting error: the table has 38 rows, and in Phase 14 they gave 29 met, 4 partly met (PER-4, USE-5, AIQ-3, MNT-3), 4 not met (REL-2, ACC-1, AIQ-1, MNT-2) and 1 not yet measured. The table rows themselves were right.
+
+## Phase 15 re-measurements (10 November 2026)
+
+The four gaps Phase 14 found were fixed by Phase 15 (rules in `BUILD_STEPS.md`, commit `7731b97`) and measured again by the same methods:
+
+| Requirement | Phase 14 | Phase 15 |
+|---|---|---|
+| PER-4 sweep progress | a spinner for the whole sweep | a progress bar after every point: the longest gap between updates is 0.055 s over 200 points (limit 2 s); total 8.3 s (Phase 14: 17.5 s for the same solver work, probably the laptop's load at the time). In the browser the bar counted to 199 of 200, changing every 0.15–0.2 s |
+| REL-2 events | 25 of 27 | 27 of 27. **E4:** every Stage 1 screen and M9 show "did not converge" with the reason, and no partial result. **E18:** the save is retried once after 0.5 s; then "Not saved (E18)", the reason, and the CSV download beside it. Both Phase 14 expected-failure tests now pass, plus two new ones (tried exactly twice; a save that fails once is stored) |
+| USE-5 primary button | 3.3 : 1 | 6.57 : 1 in the light and the dark theme (`#B71C1C`). Body text, statuses and sidebar unchanged |
+| MNT-2 constants | 14 rate-fit and formula numbers, plus 5 borderline factors, inside functions | 0. The fits (Kemaneci 2016 rows 7–22; Dong 2026 rows 16, 19, 21, 23–26; Peck & Reeder 1972) are in `data/reference/constants/stage1_constants.csv`, with a checksum. The textbook factors (1.73, 1.68, 1.52, 0.24, 0.92) are named, cited constants. Every model output is bit-identical (7,624 numbers compared, largest difference 0). The scan finds only the 26 allowed numbers |
+
+**Found during the Phase 15 browser check:** setting `primaryColor` under `[theme]` silently turned off Streamlit's automatic dark theme. It is set under `[theme.light]` and `[theme.dark]` instead, and both themes were measured.
 
 ## Performance (PER) in detail
 
@@ -273,20 +288,20 @@ No comparison was run or re-run in Phase 14.
 
 ## Known failures and open items carried forward
 
-- **Strict expected failures (8):**
+- **Strict expected failures (6 after Phase 15; 8 in Phase 14):**
   - **AIQ-1:** T_e coverage (2 tests) and trees against the ridge (2 tests).
   - **AIQ-3:** the Stage 2 median error.
   - **ACC-1:** the Stage 1 benchmark.
-  - **REL-2 (new in Phase 14):** E4 and E18 (2 tests).
+  - **REL-2:** E4 and E18 (2 tests) were expected failures in Phase 14; they pass since Phase 15.
 - **Open questions:** supervisor Q3 (generator or absorbed power), Q13 (published survival data), Q19 (the power share), the sample measured files, and the final deadline.
 - **Open finding from Phase 10:** the physics line-ratio fit runs away to 6–9 eV for a quarter of the low-pressure spectra.
 - **Follow-ups found by Phase 14:**
-  1. **E4 and E18:** catch both errors with a message; E18 also needs one retry.
-  2. **Sweep progress (PER-4):** a per-point progress bar on M3.
-  3. **Button contrast:** a darker primary colour (USE-5).
-  4. **Constants (MNT-2):** move the in-code rate fits and the dispersion formula to cited data files.
-  5. **Docstrings:** give the 8 small helpers a reason, not just a description.
-  6. **USE-2:** run the student test.
+  1. **E4 and E18:** done in Phase 15.
+  2. **Sweep progress (PER-4):** done in Phase 15.
+  3. **Button contrast (USE-5):** done in Phase 15.
+  4. **Constants (MNT-2):** done in Phase 15.
+  5. **Docstrings:** give the 8 small helpers a reason, not just a description (still open).
+  6. **USE-2:** run the student test (still open).
 
 ## What the Word report and the SRS/scope revision need
 

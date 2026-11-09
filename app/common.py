@@ -19,7 +19,10 @@ import streamlit as st  # noqa: E402
 from plasma_twin import __version__  # noqa: E402
 from plasma_twin.services import stage1 as svc  # noqa: E402
 from plasma_twin.services import stage2 as svc2  # noqa: E402
+from plasma_twin.stage1.global_model import InputOutOfRange, SolverFailure  # noqa: E402
 from plasma_twin.storage.sessions import SessionStore  # noqa: E402
+
+SAVE_RETRY_SECONDS = 0.5  # E18 (FR17.15): one automatic retry after this pause (Phase 15 rules)
 
 ROLES = ("Student", "Researcher")
 PAGES = {
@@ -96,8 +99,15 @@ def current_result():
 
 
 def need_result():
-    """Stop the screen with a clear message when there is no plasma state yet (FR3.8)."""
-    result = current_result()
+    """Stop the screen with a clear message when there is no plasma state yet (FR3.8), or when the model failed (E4)."""
+    try:
+        result = current_result()
+    except (SolverFailure, InputOutOfRange) as problem:
+        status("error", f"The model did not converge for this configuration (E4): {problem}. No partial results are shown. "
+                        "The solver already tried a second method; try a nearby setting on the chamber configuration screen.")
+        if st.button("Go to chamber configuration", key="e4_back"):
+            st.switch_page(PAGES["chamber"])
+        st.stop()
     if result is None:
         status("info", "No plasma has been simulated yet. Run one from the Home screen or the chamber configuration.")
         if st.button("Go to chamber configuration"):
@@ -111,8 +121,31 @@ def run_and_open_results(config: dict) -> None:
     st.session_state["config"] = dict(config)
     st.session_state["has_run"] = True
     st.session_state.pop("session_id", None)
-    cached_run(config_json(config))
+    try:
+        cached_run(config_json(config))  # start the run now; a failure is shown on the Results screen (E4)
+    except (SolverFailure, InputOutOfRange):
+        pass
     st.switch_page(PAGES["results"])
+
+
+def save_session(stage: int, config: dict, config_hash: str, results: dict, note: str) -> tuple[str | None, str | None]:
+    """Save a session, retrying once after SAVE_RETRY_SECONDS (E18, FR17.15). Returns (session ID, None) or (None, reason).
+
+    A failed save changes nothing in the database (REL-3), so the retry and the message are all that is needed; the
+    results stay on the screen, where they can still be downloaded as CSV.
+    """
+    import sqlite3
+    import time
+    from plasma_twin.storage.sessions import SessionError
+    reason = None
+    for attempt in range(2):
+        try:
+            return store().save(stage, config, config_hash, results, note, __version__), None
+        except (sqlite3.Error, OSError, SessionError) as problem:
+            reason = f"{type(problem).__name__}: {problem}"
+            if attempt == 0:
+                time.sleep(SAVE_RETRY_SECONDS)
+    return None, reason
 
 
 def range_help(low: float, high: float | None, unit: str = "", extra: str = "") -> str:

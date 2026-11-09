@@ -1,0 +1,55 @@
+# Stage 1 constants that used to be written inside functions (moved here in Phase 15, MNT-2; values copied unchanged
+# from the code, with the sources the code cited).
+# Kemaneci 2016 = Kemaneci et al., arXiv:1612.07268 (2016), Table III (the Gudmundsson argon set): argon excited-state
+#   electron rates, each a Maxwellian fit k = A Te^n exp(-E/Te) [m3 s-1] with Te in eV; a missing n or E is 0.
+# Dong 2026 = Dong et al., arXiv:2601.08138 (2026), Table A1: the oxygen rows of the Ar/N2/O2 mixture model (Phase 3e).
+# Peck & Reeder 1972 = E. R. Peck and K. Reeder, J. Opt. Soc. Am. 62, 958 (1972): dispersion of air, used by NIST for
+#   air wavelengths: n - 1 = scale (a + b / (c - s2) + d / (e - s2)), s2 = (vacuum wavenumber in inverse micrometres)^2.
+name,value,unit,source,where
+ar_m_to_ground_A,4.3e-16,m3 s-1,Kemaneci 2016,Table III row 7: e + Ar(4s_m) -> e + Ar (superelastic)
+ar_m_to_ground_n,0.74,-,Kemaneci 2016,Table III row 7
+ar_m_ionization_A,6.8e-15,m3 s-1,Kemaneci 2016,Table III row 8: e + Ar(4s_m) -> 2e + Ar+
+ar_m_ionization_n,0.67,-,Kemaneci 2016,Table III row 8
+ar_m_ionization_E,4.20,eV,Kemaneci 2016,Table III row 8
+ar_m_to_r_A,3.7e-13,m3 s-1,Kemaneci 2016,Table III row 9: e + Ar(4s_m) -> e + Ar(4s_r)
+ar_m_to_p_A,8.9e-13,m3 s-1,Kemaneci 2016,Table III row 10: e + Ar(4s_m) -> e + Ar(4p)
+ar_m_to_p_n,0.51,-,Kemaneci 2016,Table III row 10
+ar_m_to_p_E,1.59,eV,Kemaneci 2016,Table III row 10
+ar_p_ionization_A,1.8e-13,m3 s-1,Kemaneci 2016,Table III row 15: e + Ar(4p) -> 2e + Ar+
+ar_p_ionization_n,0.61,-,Kemaneci 2016,Table III row 15
+ar_p_ionization_E,2.61,eV,Kemaneci 2016,Table III row 15
+ar_p_to_r_A,3.0e-13,m3 s-1,Kemaneci 2016,Table III row 16: e + Ar(4p) -> e + Ar(4s_r)
+ar_p_to_r_n,0.51,-,Kemaneci 2016,Table III row 16
+ar_p_to_m_A,3.0e-13,m3 s-1,Kemaneci 2016,Table III row 17: e + Ar(4p) -> e + Ar(4s_m)
+ar_p_to_m_n,0.51,-,Kemaneci 2016,Table III row 17
+ar_p_to_ground_A,3.9e-16,m3 s-1,Kemaneci 2016,Table III row 18: e + Ar(4p) -> e + Ar
+ar_p_to_ground_n,0.71,-,Kemaneci 2016,Table III row 18
+ar_r_to_ground_A,4.3e-16,m3 s-1,Kemaneci 2016,Table III row 20: e + Ar(4s_r) -> e + Ar
+ar_r_to_ground_n,0.74,-,Kemaneci 2016,Table III row 20
+ar_r_to_m_A,9.1e-13,m3 s-1,Kemaneci 2016,Table III row 21: e + Ar(4s_r) -> e + Ar(4s_m)
+ar_r_to_p_A,8.9e-13,m3 s-1,Kemaneci 2016,Table III row 22: e + Ar(4s_r) -> e + Ar(4p)
+ar_r_to_p_n,0.51,-,Kemaneci 2016,Table III row 22
+ar_r_to_p_E,1.59,eV,Kemaneci 2016,Table III row 22
+o_detach_A,1.73e-13,m3 s-1,Dong 2026,Table A1 row 16: e + O- -> O + 2e; k = A exp(-c1/Te + c2/Te^2 - c3/Te^3)
+o_detach_c1,5.76,eV,Dong 2026,Table A1 row 16
+o_detach_c2,7.3,eV2,Dong 2026,Table A1 row 16
+o_detach_c3,3.48,eV3,Dong 2026,Table A1 row 16
+o_ion_ion_A,1.5e-13,m3 s-1,Dong 2026,Table A1 row 19: O2+ + O-; k = A (T_ref/T_gas)^n
+o_ion_ion_T_ref,300.0,K,Dong 2026,Table A1 row 19
+o_ion_ion_n,0.5,-,Dong 2026,Table A1 row 19
+o_recombine_o2p_A,2.2e-14,m3 s-1,Dong 2026,Table A1 row 21: e + O2+ -> O + O
+o_recombine_o2p_n,-0.5,-,Dong 2026,Table A1 row 21
+o_a_attach_A,2.28e-16,m3 s-1,Dong 2026,Table A1 row 23: e + O2(a) -> O + O-
+o_a_attach_E,2.29,eV,Dong 2026,Table A1 row 23
+o_a_ionize_A,9.0e-16,m3 s-1,Dong 2026,Table A1 row 24: e + O2(a) -> O2+ + 2e
+o_a_ionize_E,11.6,eV,Dong 2026,Table A1 row 24
+o_a_dissociate_A,4.2e-15,m3 s-1,Dong 2026,Table A1 row 25: e + O2(a) -> 2O + e
+o_a_dissociate_E,4.6,eV,Dong 2026,Table A1 row 25
+o_a_deexcite_A,5.6e-15,m3 s-1,Dong 2026,Table A1 row 26: e + O2(a) -> O2 + e
+o_a_deexcite_E,2.2,eV,Dong 2026,Table A1 row 26
+air_dispersion_scale,1e-8,-,Peck & Reeder 1972,dispersion formula (see header)
+air_dispersion_a,8060.51,-,Peck & Reeder 1972,dispersion formula (see header)
+air_dispersion_b,2480990.0,um-2,Peck & Reeder 1972,dispersion formula (see header)
+air_dispersion_c,132.274,um-2,Peck & Reeder 1972,dispersion formula (see header)
+air_dispersion_d,17455.7,um-2,Peck & Reeder 1972,dispersion formula (see header)
+air_dispersion_e,39.32957,um-2,Peck & Reeder 1972,dispersion formula (see header)

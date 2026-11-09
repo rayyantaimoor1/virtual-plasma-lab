@@ -30,6 +30,7 @@ from dataclasses import dataclass
 import numpy as np
 from scipy import constants as codata
 
+from plasma_twin.reference.loaders import load_stage1_constants
 from plasma_twin.stage1.rates import ARGON_MASS_KG, RateTable
 
 # Lumped level energies in eV. E_m and E_p follow from the published two-step thresholds
@@ -60,21 +61,23 @@ D_TEMPERATURE_EXPONENT = 1.92
 WALL_DEEXCITATION_PROBABILITY = 1.0  # every excited atom that reaches a wall returns to the ground state
 
 
+ELECTRON_PROCESSES = ("m_to_ground", "m_ionization", "m_to_r", "m_to_p", "p_ionization", "p_to_r", "p_to_m", "p_to_ground",
+                      "r_to_ground", "r_to_m", "r_to_p")  # Table III rows 7-10, 15-18, 20-22
+
+
+def _electron_fits() -> tuple[tuple[str, float, float, float], ...]:
+    """(process, A, n, E) of k = A Te^n exp(-E/Te), from data/reference/constants/stage1_constants.csv (Phase 15, MNT-2)."""
+    c = load_stage1_constants()
+    return tuple((p, c[f"ar_{p}_A"], c.get(f"ar_{p}_n", 0.0), c.get(f"ar_{p}_E", 0.0)) for p in ELECTRON_PROCESSES)
+
+
 def electron_rates(te: float) -> dict[str, float]:
-    """Rate coefficients (m^3/s) of electron collisions with excited atoms, Table III rows 7-22."""
-    return {
-        "m_to_ground": 4.3e-16 * te**0.74,  # row 7 (superelastic)
-        "m_ionization": 6.8e-15 * te**0.67 * np.exp(-4.20 / te),  # row 8
-        "m_to_r": 3.7e-13,  # row 9
-        "m_to_p": 8.9e-13 * te**0.51 * np.exp(-1.59 / te),  # row 10
-        "p_ionization": 1.8e-13 * te**0.61 * np.exp(-2.61 / te),  # row 15
-        "p_to_r": 3.0e-13 * te**0.51,  # row 16
-        "p_to_m": 3.0e-13 * te**0.51,  # row 17
-        "p_to_ground": 3.9e-16 * te**0.71,  # row 18
-        "r_to_ground": 4.3e-16 * te**0.74,  # row 20
-        "r_to_m": 9.1e-13,  # row 21
-        "r_to_p": 8.9e-13 * te**0.51 * np.exp(-1.59 / te),  # row 22
-    }
+    """Rate coefficients (m^3/s) of electron collisions with excited atoms, Table III rows 7-22.
+
+    Each is the published Maxwellian fit k = A Te^n exp(-E/Te). A missing n or E is 0, and te**0 and exp(-0/te) are
+    exactly 1, so the values are the same, bit for bit, as when the fits were written out here (Phase 15 check).
+    """
+    return {p: a * te**n * np.exp(-e / te) for p, a, n, e in _electron_fits()}
 
 
 # Energy each electron collision takes from (+) or gives to (-) the electron, in eV.

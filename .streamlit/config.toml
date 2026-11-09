@@ -9,3 +9,12 @@ maxUploadSize = 50
 [browser]
 serverAddress = "localhost"
 gatherUsageStats = false
+
+# USE-5 (Phase 15): Streamlit's default primary red (#FF4B4B) gives white button text only 3.3:1 contrast.
+# This darker red gives 6.6:1 (WCAG asks for at least 4.5:1). It is set for the light and the dark theme separately:
+# a plain [theme] section would turn off the automatic dark theme (found in the Phase 15 browser check).
+[theme.light]
+primaryColor = "#B71C1C"
+
+[theme.dark]
+primaryColor = "#B71C1C"

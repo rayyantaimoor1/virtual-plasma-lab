@@ -18,6 +18,7 @@ import json
 import re
 from dataclasses import dataclass
 from enum import Enum
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -261,6 +262,16 @@ def load_n2_second_positive(manifest_path: Path = MANIFEST_PATH) -> list[dict[st
 def load_itikawa_h2o(manifest_path: Path = MANIFEST_PATH) -> list[CrossSection]:
     """Itikawa (Itikawa & Mason 2005) electron collisions with water vapour (Phase 7)."""
     return read_lxcat(verified_path("lxcat_itikawa_h2o", manifest_path))
+
+
+@lru_cache(maxsize=4)
+def load_stage1_constants(manifest_path: Path = MANIFEST_PATH) -> dict[str, float]:
+    """Stage 1 rate fits and the air-dispersion formula, by name (moved out of functions in Phase 15, MNT-2).
+
+    Cached: the solver evaluates these rates thousands of times per run, so the file is read and its checksum
+    verified once per program run. Callers must not modify the returned dict.
+    """
+    return {r["name"]: float(r["value"]) for r in _read_csv("stage1_constants", manifest_path)}
 
 
 def load_stage2_constants(manifest_path: Path = MANIFEST_PATH) -> dict[str, float]:

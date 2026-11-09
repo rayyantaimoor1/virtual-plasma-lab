@@ -430,8 +430,24 @@ def rel4() -> dict[str, Any]:
     return {"configurations": 10, "numbers_compared": compared, "largest_relative_difference": worst, "pass": worst < 1e-9}
 
 
-PARTS = {"per": per, "rel1": rel1, "rel3": rel3, "rel4": rel4, "sec1": sec1}
-KEYS = {"rel3": "REL-3", "rel4": "REL-4", "sec1": "SEC-1"}
+def per4() -> dict[str, Any]:
+    """Phase 15: the PER-4 sweep again, timing the gaps between the progress updates M3 now shows."""
+    from plasma_twin.services import stage1
+    from plasma_twin.stage1.sweep import sweep
+    stage1.run(stage1.default_config())  # imports and rate tables, as in PER-1
+    stamps: list[float] = []
+    started = time.perf_counter()
+    points = sweep(stage1.to_inputs(stage1.default_config()), "rf_power_w", np.linspace(10, 100, 200),
+                   progress=lambda done, total: stamps.append(time.perf_counter()))
+    total = time.perf_counter() - started
+    gaps = np.diff([started] + stamps)
+    return {"points": len(points), "solved": sum(p.solved for p in points), "progress_updates": len(stamps),
+            "total_s": total, "longest_gap_between_updates_s": float(gaps.max()), "median_gap_s": float(np.median(gaps)),
+            "pass": total <= 120.0 and float(gaps.max()) <= 2.0, "measured_in": "Phase 15"}
+
+
+PARTS = {"per": per, "rel1": rel1, "rel3": rel3, "rel4": rel4, "sec1": sec1, "per4": per4}
+KEYS = {"rel3": "REL-3", "rel4": "REL-4", "sec1": "SEC-1", "per4": "PER-4 (Phase 15)"}
 
 
 def main() -> None:

@@ -406,8 +406,6 @@ def test_ai_recommend_screen_verifies_candidates_and_applies_one(ai_folders) -> 
 
 # ------------------------------------------------------------------ REL-2 (Phase 14): every event gives a message, never a trace
 @needs_data
-@pytest.mark.xfail(strict=True, reason="measured 9 Nov 2026 (Phase 14, REL-2): the Results screen catches no SolverFailure, so E4 "
-                                       "reaches the user as an error trace, not a message (FR17.4)")
 def test_a_solver_failure_shows_a_message_not_a_trace(monkeypatch) -> None:
     import common
 
@@ -425,8 +423,6 @@ def test_a_solver_failure_shows_a_message_not_a_trace(monkeypatch) -> None:
 
 
 @needs_data
-@pytest.mark.xfail(strict=True, reason="measured 9 Nov 2026 (Phase 14, REL-2): saving a session catches no database error, so E18 "
-                                       "reaches the user as an error trace; there is no retry and no message (FR17.15)")
 def test_a_failed_session_save_shows_a_message_and_keeps_the_results(monkeypatch) -> None:
     import sqlite3
 
@@ -439,3 +435,42 @@ def test_a_failed_session_save_shows_a_message_and_keeps_the_results(monkeypatch
     monkeypatch.setattr(common.store(), "save", locked)
     next(b for b in at.button if "Save as session" in b.label).click().run()
     assert not at.exception and "not saved" in text_of(at).lower()
+
+
+# Phase 15: E18 retries once (FR17.15). Was a strict expected failure in Phase 14 (no message, no retry).
+@needs_data
+def test_a_failing_save_is_tried_exactly_twice(monkeypatch) -> None:
+    import sqlite3
+
+    import common
+    calls = []
+
+    def locked(*args, **kwargs):
+        calls.append(1)
+        raise sqlite3.OperationalError("database is locked")
+
+    monkeypatch.setattr(common, "SAVE_RETRY_SECONDS", 0.0)
+    at = open_screen("pages/2_Results.py")
+    monkeypatch.setattr(common.store(), "save", locked)
+    next(b for b in at.button if "Save as session" in b.label).click().run()
+    assert len(calls) == 2 and "Not saved (E18)" in text_of(at) and not at.exception
+
+
+@needs_data
+def test_a_save_that_fails_once_is_stored_by_the_retry(monkeypatch) -> None:
+    import sqlite3
+
+    import common
+    real_save, calls = common.store().save, []
+
+    def once_locked(*args, **kwargs):
+        calls.append(1)
+        if len(calls) == 1:
+            raise sqlite3.OperationalError("database is locked")
+        return real_save(*args, **kwargs)
+
+    monkeypatch.setattr(common, "SAVE_RETRY_SECONDS", 0.0)
+    at = open_screen("pages/2_Results.py")
+    monkeypatch.setattr(common.store(), "save", once_locked)
+    next(b for b in at.button if "Save as session" in b.label).click().run()
+    assert len(calls) == 2 and "Saved as S-0001" in text_of(at) and [r.session_id for r in common.store().list()] == ["S-0001"]

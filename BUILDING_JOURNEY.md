@@ -596,7 +596,7 @@ It is written so that either of us can explain any decision to the evaluation co
 ## Phase 14: measuring every requirement (complete, 9 November 2026; the Word report comes later)
 
 **What we did**
-- **Measured all 39 non-functional requirements** on this laptop, and recorded each one:
+- **Measured all 38 non-functional requirements** on this laptop, and recorded each one:
   - speed, reliability, usability, security and accuracy;
   - the AI quality targets, and the code quality targets.
 - **Checked all 149 functional requirements** against the screens and the tests.
@@ -634,8 +634,37 @@ It is written so that either of us can explain any decision to the evaluation co
   - killing the program 50 times while it saved lost none of 1,176 sessions;
   - reruns are bit-identical.
 - **Test coverage:** 95 % of the code (physics 98 %, AI 90 %).
-- **Overall:** 27 of the 39 requirements are met, 6 partly, 5 not met, and 1 is waiting for the student test.
+- **Overall:** 29 of the 38 requirements are met, 4 partly, 4 not met, and 1 is waiting for the student test. *(Corrected in Phase 15: this first said "27 of the 39 … 6 partly, 5 not met", a counting mistake.)*
   - **Not met:** the published benchmark (since Phase 2), the AI inference significance (since Phase 10), the two missing error messages, and constants still written in code.
   - **Partly met:** the sweep shows a spinner rather than progress, and Streamlit's red buttons are a little too low in contrast.
 
 **How Phase 14 closed:** 478 tests pass, and 8 are marked as expected failures (the six carried in, plus the two REL-2 findings). Version 0.14.0.
+
+## Phase 15: fixing what Phase 14 found (complete, 10 November 2026)
+
+**What we did**
+- **Clear messages instead of raw errors:** if the plasma model cannot solve a configuration, every screen now says so in a sentence, with the reason and what to try, and shows no half-finished result. If saving a session fails, the app tries once more. If that also fails, it says "Not saved", gives the reason, and keeps the results on the screen next to the CSV download.
+- **A progress bar for sweeps:** a 200-point sweep now shows "Sweep point k of 200" while it runs, instead of a spinning circle.
+- **Readable buttons:** the red primary buttons used Streamlit's default red, where white text was too faint (3.3:1, while 4.5:1 is the accessibility minimum). A darker red gives 6.6:1.
+- **Constants moved to a data file:** the published rate formulas that were written inside the code now sit in a cited data file, like every other constant, with a checksum. They are 47 numbers from three sources.
+
+**Techniques and why**
+- **Proving nothing changed:** moving numbers out of the code could easily change a result by a typo. So before touching anything, we saved 7,624 model outputs (100 different plasmas). Afterwards every one was identical, to the last bit.
+- **One retry for saving:** a database can be briefly busy, so trying once more after half a second fixes most failures without bothering the user.
+- **The same rules as always:** written and committed before any code, and the same measurement methods as Phase 14, so the before and after numbers can be compared fairly.
+
+**Problems and how we handled them**
+- **The darker button colour switched off dark mode.** Setting a theme colour in Streamlit's settings quietly made the app always light. We noticed it because we measured the dark theme too. The colour is now set separately for the light and the dark theme, and both were measured again.
+- **A wrong citation in the first draft of the data file.** It credited the oxygen rate formulas to the wrong paper. The code itself names the right one (Dong et al. 2026), so the file was corrected before any test ran.
+- **A counting mistake in Phase 14's summary.** It said 39 requirements with 27 met. The table actually has 38, with 29 met. We corrected it with a dated note wherever it appeared, instead of quietly rewriting it.
+
+**What happened, reported as it came**
+- **Every Phase 15 target met:**
+  - all 27 events give a message;
+  - the sweep updates every 0.055 s at most (limit 2 s);
+  - the buttons measure 6.57:1 in both themes;
+  - no rate formula is left inside a function, and all 7,624 outputs are unchanged.
+- **Non-functional requirements:** 33 of 38 met (Phase 14: 29). Two are partly met (the Stage 2 surrogate's accuracy, and docstrings that explain *why*). Two are not met (the published benchmark, and the spectrum AI's significance test). One waits for the student test.
+- **Functional requirements:** 148 of 149 met (10 with a note). The last, FR9.3, waits for published survival data.
+
+**How Phase 15 closed:** 484 tests pass, and 6 are marked as expected failures (the six from Phases 2, 10 and 11; the two Phase 14 ones now pass). Version 0.15.0.

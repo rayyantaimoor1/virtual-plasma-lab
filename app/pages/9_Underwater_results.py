@@ -1,9 +1,12 @@
 """M9 Underwater plasma and disinfection results (FR9.1-FR9.6)."""
-from common import (PAGES, __version__, axis, cached_power_share, cached_stage2, config_json, metric_grid,  # noqa: I001
-                    page_setup, sci, spectrometer_settings_text, status, store, svc, svc2)
+from common import (PAGES, axis, cached_power_share, cached_stage2, config_json, metric_grid,  # noqa: I001
+                    page_setup, save_session, sci, spectrometer_settings_text, status, svc, svc2)
 
 import plotly.graph_objects as go
 import streamlit as st
+
+from plasma_twin.stage2.bubble_model import BubbleModelError
+from plasma_twin.stage2.pulse import PulseBlocked
 
 page_setup("Underwater results")
 st.title("Underwater plasma and disinfection results (Stage 2)")
@@ -17,7 +20,14 @@ problems, _ = svc2.validate_config(config)
 if problems:
     status("error", "The configuration has errors; fix them on the configuration screen.")
     st.stop()
-result = cached_stage2(config_json(config), spectrometer_settings_text())
+try:
+    result = cached_stage2(config_json(config), spectrometer_settings_text())
+except (BubbleModelError, PulseBlocked, ValueError) as problem:  # E4 for Stage 2: a message, never a trace
+    status("error", f"The Stage 2 model could not finish this run: {problem}. No partial results are shown. "
+                    "Try a nearby setting on the underwater configuration screen.")
+    if st.button("Go to underwater configuration", key="e4_back2"):
+        st.switch_page(PAGES["underwater"])
+    st.stop()
 summary = svc2.summarise(result)
 b, w, s = result.bubble, result.liquid, result.survival
 
@@ -103,8 +113,12 @@ with c1.form("save_session2"):
     note = st.text_input("Note for this session")
     if st.form_submit_button("Save as session"):
         plain = {k: (float(v) if hasattr(v, "dtype") else v) for k, v in summary.items()}
-        session_id = store().save(2, config, svc2.config_hash(config), {"stage2": plain}, note, __version__)
-        st.session_state["session_id2"] = session_id
-        status("ok", f"Saved as {session_id}.")
+        session_id, reason = save_session(2, config, svc2.config_hash(config), {"stage2": plain}, note)
+        if session_id:
+            st.session_state["session_id2"] = session_id
+            status("ok", f"Saved as {session_id}.")
+        else:  # E18: tried twice; the results stay on this screen
+            status("error", f"Not saved (E18), even after one retry: {reason}. The results stay on this screen; "
+                            "download them as CSV with the button beside this form, then try saving again.")
 c2.download_button("Download results (CSV)", svc2.results_csv(summary, config, result, st.session_state.get("session_id2")),
                    file_name="stage2_results.csv", mime="text/csv")

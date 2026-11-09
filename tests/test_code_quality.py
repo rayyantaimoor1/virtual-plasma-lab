@@ -98,3 +98,25 @@ def test_streamlit_sends_no_usage_statistics_and_listens_on_loopback() -> None:
     import tomllib
     config = tomllib.loads((ROOT / ".streamlit" / "config.toml").read_text(encoding="utf-8"))
     assert config["browser"]["gatherUsageStats"] is False and config["server"]["address"] == "127.0.0.1"
+
+
+# Reviewed by hand in Phase 14 and kept in Phase 15: numerical settings and reference temperatures of cited formulas, not
+# physical data (grid sizes, iteration limits, rate-table bounds, spectral search windows, the 273.15 K offset, the 293.15 K
+# and 298 K reference temperatures, the J0 Bessel zero, the validity bands of the NIST Antoine data).
+ALLOWED_NUMBERS = {
+    ("plasma_twin/compare/diagnostics.py", 305.0), ("plasma_twin/oes/cr_model.py", 101.0), ("plasma_twin/probe/retardation.py", 201.0),
+    ("plasma_twin/stage1/argon_kinetics.py", 2.404825557695773), ("plasma_twin/stage1/global_model.py", 19.5),
+    ("plasma_twin/stage1/global_model.py", 19.4), ("plasma_twin/stage1/mixtures.py", 19.4), ("plasma_twin/stage1/mixtures.py", 2.404825557695773),
+    ("plasma_twin/stage1/profile1d.py", 201.0), ("plasma_twin/stage2/bubble_model.py", 298.0), ("plasma_twin/stage2/bubble_model.py", 273.15),
+    ("plasma_twin/stage2/bubble_model.py", 303.0), ("plasma_twin/stage2/bubble_model.py", 273.0), ("plasma_twin/stage2/bubble_model.py", 333.0),
+    ("plasma_twin/stage2/hom.py", 273.15), ("plasma_twin/stage2/hom.py", 293.15), ("plasma_twin/stage2/liquid.py", 241.0),
+    ("plasma_twin/stage2/liquid.py", 273.15), ("plasma_twin/stage2/uw_oes.py", 776.9), ("plasma_twin/stage2/uw_oes.py", 777.8),
+    ("plasma_twin/stage2/uw_oes.py", 844.4), ("plasma_twin/stage2/uw_oes.py", 844.9), ("plasma_twin/stage2/uw_oes.py", 656.0),
+    ("plasma_twin/stage2/uw_oes.py", 656.6),
+}
+
+
+def test_no_physical_constant_is_written_inside_a_physics_function() -> None:
+    """MNT-2 (Phase 15): rate fits and formula coefficients live in cited data files or named, cited module constants."""
+    found = {(where.split(":")[0], value) for where, value in checks.numeric_literals()}
+    assert found <= ALLOWED_NUMBERS, sorted(found - ALLOWED_NUMBERS)

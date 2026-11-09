@@ -45,3 +45,11 @@ def test_two_hundred_points_within_two_minutes() -> None:
     assert time.perf_counter() - start <= 120  # PER-4
     assert len(points) == 200 and all(p.solved for p in points)
     assert np.all(np.diff([p.result.ne_center_m3 for p in points]) > 0)
+
+
+@needs_lxcat
+def test_progress_is_reported_after_every_point_including_failed_ones() -> None:
+    """PER-4, FR17.14 (Phase 15): one progress call per point, so the screen updates far more often than every 2 s."""
+    calls: list[tuple[int, int]] = []
+    sweep(default_inputs(), "rf_power_w", [20, 150, 60], progress=lambda done, total: calls.append((done, total)))
+    assert calls == [(1, 3), (2, 3), (3, 3)]
