@@ -11,6 +11,7 @@ click==8.5.0
 cloudpickle==3.1.2
 colorama==0.4.6
 contourpy==1.4.0
+coverage==7.17.2
 cryptography==50.0.2
 cycler==0.12.1
 databricks-sdk==0.161.0

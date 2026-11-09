@@ -1,5 +1,5 @@
 """M2 Chamber configuration (FR2.1-FR2.13): every input checked live against envelope.toml."""
-from common import PAGES, page_setup, run_and_open_results, status, store, svc  # noqa: I001
+from common import PAGES, page_setup, range_help, run_and_open_results, status, store, svc  # noqa: I001
 
 import numpy as np
 import streamlit as st
@@ -68,9 +68,11 @@ m1, m2 = st.columns(2)
 # FR2.5: a gas not in the mixture keeps its field, disabled and showing 0; its stored value comes back if re-added.
 for column, gas, field, label in ((m1, "N2", "n2_percent", "N₂ flow (% of Ar flow)"), (m2, "O2", "o2_percent", "O₂ flow (% of Ar flow)")):
     if gas in config["mixture"]:
-        config[field] = column.number_input(label, float(mix["min"]), float(mix["max"]), float(config[field]), 0.5, key=f"w_{gas}")
+        config[field] = column.number_input(label, float(mix["min"]), float(mix["max"]), float(config[field]), 0.5, key=f"w_{gas}",
+                                            help=range_help(mix["min"], mix["max"], "% of the Ar flow"))
     else:
-        column.number_input(label, value=0.0, disabled=True, key=f"w_{gas}_off")
+        column.number_input(label, value=0.0, disabled=True, key=f"w_{gas}_off",
+                            help=range_help(mix["min"], mix["max"], "% of the Ar flow", "Choose a mixture with this gas to set it."))
 flows = svc.admixture_flows_sccm(config)
 st.caption(f"Resulting admixture flows: N₂ {flows['N2']:.1f} sccm, O₂ {flows['O2']:.1f} sccm (FR2.5)")
 if config["mixture"] == "Ar+N2+O2":
@@ -78,10 +80,14 @@ if config["mixture"] == "Ar+N2+O2":
 
 st.subheader("Geometry (cm) (FR2.6)")
 g1, g2, g3, g4 = st.columns(4)
-config["chamber_diameter_cm"] = g1.number_input("Chamber diameter", value=float(config["chamber_diameter_cm"]), step=1.0, key="w_cd")
-config["chamber_height_cm"] = g2.number_input("Chamber height", value=float(config["chamber_height_cm"]), step=1.0, key="w_ch")
-config["electrode_diameter_cm"] = g3.number_input("Electrode diameter", value=float(config["electrode_diameter_cm"]), step=0.5, key="w_ed")
-config["electrode_gap_cm"] = g4.number_input("Electrode gap", value=float(config["electrode_gap_cm"]), step=0.1, key="w_eg")
+config["chamber_diameter_cm"] = g1.number_input("Chamber diameter (cm)", value=float(config["chamber_diameter_cm"]), step=1.0, key="w_cd",
+                                                  help="Allowed: greater than 0 cm, and larger than the electrode diameter.")
+config["chamber_height_cm"] = g2.number_input("Chamber height (cm)", value=float(config["chamber_height_cm"]), step=1.0, key="w_ch",
+                                                help="Allowed: greater than 0 cm, and larger than the electrode gap.")
+config["electrode_diameter_cm"] = g3.number_input("Electrode diameter (cm)", value=float(config["electrode_diameter_cm"]), step=0.5, key="w_ed",
+                                                    help="Allowed: greater than 0 cm, and smaller than the chamber diameter.")
+config["electrode_gap_cm"] = g4.number_input("Electrode gap (cm)", value=float(config["electrode_gap_cm"]), step=0.1, key="w_eg",
+                                               help="Allowed: greater than 0 cm, and smaller than the chamber height.")
 
 st.subheader("Model options")
 o1, o2 = st.columns(2)
@@ -95,8 +101,12 @@ st.session_state["config"] = config
 # ------------------------------------------------------------------ live validation (FR2.10)
 problems = svc.validate_config(config)
 if problems:
+    labels = {"rf_power_w": "RF power", "pressure_mbar": "Pressure", "ar_flow_sccm": "Argon flow", "mixture": "Mixture",
+              "n2_percent": "N₂ flow", "o2_percent": "O₂ flow", "chamber_diameter_cm": "Chamber diameter",
+              "chamber_height_cm": "Chamber height", "electrode_diameter_cm": "Electrode diameter", "electrode_gap_cm": "Electrode gap",
+              "eedf": "EEDF", "spatial": "Spatial model"}  # USE-3: the screen's names, not the code's
     for field, message in problems.items():
-        status("error", f"{field}: {message}")
+        status("error", f"{labels.get(field, field)}: {message}. Change it to run.")
 else:
     status("ok", "Every parameter is inside the operating envelope.")
     for note in svc.regime_notes(config):
@@ -125,9 +135,10 @@ with st.expander("Parameter sweep (FR2.12)"):
     parameter = st.selectbox("Parameter to sweep", list(sweepable), format_func=lambda k: sweepable[k][0])
     rng = sweepable[parameter][1]
     s1, s2, s3 = st.columns(3)
-    start = s1.number_input("From", value=float(rng["min"]))
-    end = s2.number_input("To", value=float(rng["max"]))
-    points = s3.number_input("Points", 2, env["options"]["sweep_max_points"], 10)
+    unit = sweepable[parameter][0].rsplit("(", 1)[1].rstrip(")")
+    start = s1.number_input(f"From ({unit})", value=float(rng["min"]), help=range_help(rng["min"], rng["max"], unit, "Start must be below end."))
+    end = s2.number_input(f"To ({unit})", value=float(rng["max"]), help=range_help(rng["min"], rng["max"], unit))
+    points = s3.number_input("Points", 2, env["options"]["sweep_max_points"], 10, help=range_help(2, env["options"]["sweep_max_points"], "points"))
     sweep_ok = float(rng["min"]) <= start < end <= float(rng["max"])
     if not sweep_ok:
         status("error", f"The sweep must start below its end, both within {rng['min']}-{rng['max']}.")

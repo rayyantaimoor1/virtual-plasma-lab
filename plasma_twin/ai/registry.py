@@ -13,9 +13,12 @@ import pickle
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from plasma_twin import TWIN_VERSION, __version__
+
+if TYPE_CHECKING:  # used in annotations only (MNT-3): nothing extra is imported at run time
+    import pandas as pd
 
 os.environ.setdefault("MLFLOW_ALLOW_FILE_STORE", "true")
 os.environ.setdefault("MLFLOW_DISABLE_AGENT_HINT", "1")
@@ -49,6 +52,7 @@ class ModelCard:
 
     @property
     def out_of_date(self) -> bool:
+        """True when the model was trained on a different twin version (AIQ-6, E22)."""
         return self.twin_version != TWIN_VERSION
 
 
@@ -96,6 +100,7 @@ class Registry:
         return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
 
     def cards(self) -> list[ModelCard]:
+        """Every registered model card, newest first."""
         if not self.models_dir.exists():
             return []
         out = []
@@ -104,6 +109,7 @@ class Registry:
         return sorted(out, key=lambda c: c.created_at, reverse=True)
 
     def status(self, card: ModelCard) -> str:
+        """'current', 'out of date' (other twin version) or 'missing' (file gone), so no stale model is used (AIQ-6)."""
         if not (self.models_dir / card.model_id / "model.pkl").exists():
             return "missing"
         return "out of date" if card.out_of_date else "current"
@@ -121,17 +127,19 @@ class Registry:
         with open(self.models_dir / model_id / "model.pkl", "rb") as handle:
             return pickle.load(handle), card
 
-    def runs(self):
+    def runs(self) -> pd.DataFrame:
         """Every logged training run, newest first (FR16.5)."""
         mlflow = self._mlflow()
         return mlflow.search_runs(experiment_names=[EXPERIMENT], order_by=["attributes.start_time DESC"])
 
 
 def new_model_id(task: str) -> str:
+    """A unique model ID from the task and the time, so every training run is kept (FR16.4)."""
     return f"{task}-{datetime.now():%Y%m%d-%H%M%S-%f}"
 
 
 def make_card(model_id: str, task: str, algorithm: str, dataset_id: str, seed: int, hyperparameters: dict[str, Any],
               features: list[str], targets: list[str], metrics: dict[str, Any], notes: list[str] | None = None) -> ModelCard:
+    """A model card stamped with the twin and software versions (AIQ-6, FR16.4)."""
     return ModelCard(model_id, task, algorithm, dataset_id, TWIN_VERSION, __version__, seed, hyperparameters, features, targets,
                      metrics, datetime.now().isoformat(timespec="seconds"), "", notes or [])

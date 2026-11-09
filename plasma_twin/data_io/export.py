@@ -11,6 +11,8 @@ that decides what a check may show. The renderers never see a non-citable check'
 """
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import csv
 import io
 from datetime import datetime
@@ -23,6 +25,10 @@ from matplotlib.backends.backend_pdf import PdfPages  # noqa: E402
 
 from plasma_twin import __version__  # noqa: E402
 from plasma_twin.data_io.validation import Check, tolerance  # noqa: E402
+
+if TYPE_CHECKING:  # used in annotations only (MNT-3): nothing extra is imported at run time
+    from matplotlib.figure import Figure
+    from plasma_twin.storage.sessions import SessionRecord
 
 COLUMNS = ("Check", "Source", "Model", "Reference", "Deviation", "Result")
 ROWS_PER_PAGE = 22
@@ -62,6 +68,7 @@ def _summary(checks: list[Check]) -> list[str]:
 
 
 def validation_csv(checks: list[Check]) -> str:
+    """The validation checks as CSV with a summary header (FR10.6)."""
     buffer = io.StringIO()
     for line in _summary(checks):
         buffer.write(f"# {line}\n")
@@ -110,7 +117,8 @@ def _session_rows(records) -> list[tuple[str, ...]]:
     return rows
 
 
-def sessions_csv(records) -> str:
+def sessions_csv(records: list[SessionRecord]) -> str:
+    """Sessions and their headline results as CSV with a version header (FR11.5)."""
     buffer = io.StringIO()
     buffer.write(f"# Plasma Digital Twin sessions, software version {__version__}\n")
     writer = csv.writer(buffer)
@@ -123,7 +131,7 @@ def sessions_csv(records) -> str:
     return buffer.getvalue()
 
 
-def sessions_figure(records):
+def sessions_figure(records: list[SessionRecord]) -> Figure:
     """One bar chart of the sessions' headline quantity (T_e for Stage 1, log reduction for Stage 2)."""
     fig, ax = plt.subplots(figsize=(7, 4))
     stage = records[0].stage if records else 1
@@ -136,7 +144,8 @@ def sessions_figure(records):
     return fig
 
 
-def sessions_png(records) -> bytes:
+def sessions_png(records: list[SessionRecord]) -> bytes:
+    """The sessions' headline-quantity chart as a PNG image (FR11.5)."""
     fig = sessions_figure(records)
     buffer = io.BytesIO()
     fig.savefig(buffer, format="png", dpi=150)
@@ -144,7 +153,8 @@ def sessions_png(records) -> bytes:
     return buffer.getvalue()
 
 
-def sessions_pdf(records) -> bytes:
+def sessions_pdf(records: list[SessionRecord]) -> bytes:
+    """A PDF report of the sessions: chart, configurations and results (FR11.5)."""
     buffer = io.BytesIO()
     with PdfPages(buffer, metadata={"Title": "Plasma Digital Twin sessions", "Creator": f"plasma_twin {__version__}"}) as pdf:
         fig = plt.figure(figsize=(11.69, 8.27))

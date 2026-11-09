@@ -44,6 +44,7 @@ class ParsedFile:
 
     @property
     def rows(self) -> int:
+        """The number of data rows read."""
         return len(self.columns[0])
 
 

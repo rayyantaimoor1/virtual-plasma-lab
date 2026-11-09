@@ -37,6 +37,7 @@ ALGORITHMS = {"spectrum_to_plasma": ("random_forest", "xgboost"), "spectrum_to_t
 
 # ------------------------------------------------------------------------------------ features
 def line_columns(frame: pd.DataFrame) -> list[str]:
+    """The line-area columns of a dataset, in wavelength order."""
     return sorted((c for c in frame.columns if c.startswith("line_")), key=lambda c: float(c[5:]))
 
 
@@ -66,6 +67,7 @@ def targets(frame: pd.DataFrame) -> np.ndarray:
 
 # ------------------------------------------------------------------------------------ metrics
 def regression_metrics(true: np.ndarray, predicted: np.ndarray) -> dict[str, float]:
+    """MAE, RMSE, R2 and median relative error: the regression metrics fixed in the Phase 9 rules."""
     error = predicted - true
     total = np.sum((true - true.mean()) ** 2)
     return {"mae": float(np.mean(np.abs(error))), "median_relative_error": float(np.median(np.abs(error) / np.abs(true))),
@@ -82,6 +84,7 @@ def paired_bootstrap_p(model_abs_error: np.ndarray, baseline_abs_error: np.ndarr
 
 
 def detection_metrics(is_fault: np.ndarray, flagged: np.ndarray) -> dict[str, float]:
+    """Recall on faulty rows and false-alarm rate on clean rows (AIQ-2)."""
     faults, clean = is_fault.astype(bool), ~is_fault.astype(bool)
     return {"recall": float(flagged[faults].mean()) if faults.any() else float("nan"),
             "false_alarm_rate": float(flagged[clean].mean()) if clean.any() else float("nan")}
@@ -92,10 +95,12 @@ class RangeCheck:
     """The anomaly baseline: flag a run if any feature lies outside the range seen in clean training runs."""
 
     def fit(self, features: np.ndarray) -> "RangeCheck":
+        """Learn each feature's minimum and maximum on clean training data (the baseline detector)."""
         self.low, self.high = features.min(axis=0), features.max(axis=0)
         return self
 
     def flag(self, features: np.ndarray) -> np.ndarray:
+        """Flag rows with any feature outside the learned range."""
         return np.any((features < self.low) | (features > self.high), axis=1)
 
 
@@ -105,6 +110,7 @@ class TwoTargetRegressor:
     models: list[Any]
 
     def predict(self, features: np.ndarray) -> np.ndarray:
+        """Predict each target with its own model, one column per target."""
         return np.column_stack([m.predict(features) for m in self.models])
 
 
@@ -125,6 +131,7 @@ XGBOOST_PARAMETERS = {"n_estimators": 400, "max_depth": 4, "learning_rate": 0.05
 
 
 def fit_regressor(algorithm: str, features: np.ndarray, target: np.ndarray, seed: int) -> TwoTargetRegressor:
+    """Train one model per target with the fixed Phase 9 hyperparameters."""
     make = _ridge if algorithm == "ridge" else (lambda: _xgboost(seed))
     return TwoTargetRegressor([make().fit(features, target[:, k]) for k in range(target.shape[1])])
 

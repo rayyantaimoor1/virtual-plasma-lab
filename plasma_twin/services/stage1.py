@@ -15,11 +15,14 @@ import json
 import tomllib
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
 from plasma_twin.config.loader import load_envelope
+
+if TYPE_CHECKING:  # used in annotations only (MNT-3): nothing extra is imported at run time
+    from plasma_twin.stage1.global_model import Stage1Inputs, Stage1Result
 
 PRESETS_PATH = Path(__file__).resolve().parents[1] / "config" / "presets.toml"
 MIXTURES = ("Ar", "Ar+N2", "Ar+O2", "Ar+N2+O2")
@@ -118,7 +121,7 @@ def regime_notes(config: dict[str, Any]) -> list[str]:
     return notes
 
 
-def sheath_regime(result) -> tuple[bool, str]:
+def sheath_regime(result: Stage1Result) -> tuple[bool, str]:
     """FR2.10 after a run: the sheath is collisional when the ion mean free path is shorter than the sheath."""
     ratio = result.ion_mean_free_path_m / result.sheath_width_m
     if ratio < 1:
@@ -141,7 +144,7 @@ def config_hash(config: dict[str, Any]) -> str:
     return hashlib.sha256(json.dumps(config, sort_keys=True).encode("utf-8")).hexdigest()
 
 
-def to_inputs(config: dict[str, Any]):
+def to_inputs(config: dict[str, Any]) -> Stage1Inputs:
     """The model's inputs (SI) for a valid configuration."""
     from plasma_twin.stage1.global_model import default_inputs
     return default_inputs(
@@ -155,7 +158,7 @@ def to_inputs(config: dict[str, Any]):
 
 
 # ------------------------------------------------------------------------------ running and summarising
-def run(config: dict[str, Any]):
+def run(config: dict[str, Any]) -> Stage1Result:
     """Run the global model for a configuration (raises if the configuration is invalid)."""
     from plasma_twin.stage1.global_model import InputOutOfRange, solve
     problems = validate_config(config)
@@ -177,7 +180,7 @@ def _plain(value: Any) -> Any:
     return value
 
 
-def summarise(result) -> dict[str, Any]:
+def summarise(result: Stage1Result) -> dict[str, Any]:
     """The plain-JSON record of a run: what M3 shows, what a session stores, what CSV export writes."""
     from plasma_twin.stage1.profile1d import axial_profile
     x = result.inputs
@@ -204,7 +207,7 @@ def summarise(result) -> dict[str, Any]:
     })
 
 
-def assumptions(result) -> list[str]:
+def assumptions(result: Stage1Result) -> list[str]:
     """FR3.6: the regime assumptions of the run, written from the settings actually used."""
     x = result.inputs
     out = [
@@ -259,6 +262,6 @@ def downsample_peaks(x: np.ndarray, y: np.ndarray, bins: int = 4000) -> tuple[np
     return x[keep], y[keep]
 
 
-def inputs_record(result) -> dict[str, Any]:
+def inputs_record(result: Stage1Result) -> dict[str, Any]:
     """The model inputs of a run, as plain JSON (stored with each session)."""
     return _plain(asdict(result.inputs))

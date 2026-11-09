@@ -33,6 +33,7 @@ def _peak(wavelength: np.ndarray, intensity: np.ndarray, centre: float, half: fl
 
 def normalise(model_wavelength: np.ndarray, model_intensity: np.ndarray, model_fwhm_nm: float, line_power: dict[float, float],
               measured_wavelength: np.ndarray, measured_intensity: np.ndarray, measured_fwhm_nm: float) -> Normalisation:
+    """Scale a model spectrum to a measured one on their common range by matching line areas, so different instrument widths compare fairly (FR10.4)."""
     low = max(model_wavelength[0], measured_wavelength[0])
     high = min(model_wavelength[-1], measured_wavelength[-1])
     candidates = [(power, wl) for wl, power in line_power.items() if low <= wl <= high and power > 0]

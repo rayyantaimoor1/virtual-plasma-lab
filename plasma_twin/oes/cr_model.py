@@ -26,6 +26,8 @@ factors are known, so they are solved as a linear system and repeated until the 
 """
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import re
 from dataclasses import dataclass
 from functools import lru_cache
@@ -43,6 +45,9 @@ from plasma_twin.reference.loaders import (
 from plasma_twin.stage1 import argon_kinetics as kin
 from plasma_twin.stage1.eedf import EEDF
 from plasma_twin.stage1.rates import ARGON_MASS_KG, ENERGY_GRID_EV, _SPEED, _WEIGHTS
+
+if TYPE_CHECKING:  # used in annotations only (MNT-3): nothing extra is imported at run time
+    from plasma_twin.stage1.global_model import Stage1Result
 
 LEVELS_1S = ("1s5", "1s4", "1s3", "1s2")
 LEVELS_2P = tuple(f"2p{i}" for i in range(10, 0, -1))  # 2p10 (lowest) ... 2p1
@@ -251,7 +256,7 @@ def solve_cr(te_ev: float, ne_m3: float, argon_density_m3: float, shape: float, 
     return CRResult(pops, escape, emission, data.lines, iteration, residual)
 
 
-def solve_cr_for(result) -> CRResult:
+def solve_cr_for(result: Stage1Result) -> CRResult:
     """Run the CR model on a solved global-model point (Stage1Result)."""
     from plasma_twin.stage1.eedf import SHAPES
     from plasma_twin.stage1.mixtures import K_QUENCH_N2, K_QUENCH_O2_DISSOCIATING, K_QUENCH_O2_TO_GROUND

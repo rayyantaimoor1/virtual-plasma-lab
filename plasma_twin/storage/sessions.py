@@ -26,10 +26,12 @@ class SessionError(ValueError):
 
 
 def format_id(number: int) -> str:
+    """A session ID such as S-0001 from its row number."""
     return f"S-{number:04d}"
 
 
 def parse_id(session_id: str) -> int:
+    """The row number from a session ID, refusing anything else."""
     match = ID_PATTERN.match(session_id.strip())
     if not match:
         raise SessionError(f"{session_id!r} is not a session ID (expected S-0001, S-0002, ...)")
@@ -110,6 +112,7 @@ class SessionStore:
         return records if limit is None else records[: int(limit)]
 
     def get(self, session_id: str) -> SessionRecord:
+        """One saved session by ID, with its configuration and results."""
         conn = connect(self.path)
         try:
             row = conn.execute(self._SELECT + " WHERE s.id = ?", (parse_id(session_id),)).fetchone()
@@ -167,6 +170,7 @@ class SessionStore:
             conn.close()
 
     def named_configurations(self, stage: int) -> dict[str, dict[str, Any]]:
+        """Saved configurations of one stage, by name (FR2.13)."""
         conn = connect(self.path)
         try:
             return {row["name"]: json.loads(row["params_json"]) for row in conn.execute(

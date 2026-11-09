@@ -20,7 +20,7 @@ from __future__ import annotations
 import time
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -29,6 +29,9 @@ from plasma_twin.ai import datasets
 from plasma_twin.ai.registry import ModelCard, Registry, make_card, new_model_id
 from plasma_twin.ai.training import (BOOTSTRAP_RESAMPLES, BOOTSTRAP_SEED, XGBOOST_PARAMETERS, fit_regressor, line_columns,
                                      log_line_ratios, paired_bootstrap_p, ratio_features, regression_metrics)
+
+if TYPE_CHECKING:  # used in annotations only (MNT-3): nothing extra is imported at run time
+    from plasma_twin.oes.spectrum import Spectrum
 
 TASK = "spectrum_to_plasma"
 ALGORITHMS = ("random_forest", "xgboost")
@@ -272,7 +275,7 @@ class Estimate:
     areas: dict[float, float] = field(default_factory=dict)
 
 
-def spectrum_features(spectrum, wavelengths_nm: list[float]) -> tuple[np.ndarray | None, dict[float, float], list[str]]:
+def spectrum_features(spectrum: Spectrum, wavelengths_nm: list[float]) -> tuple[np.ndarray | None, dict[float, float], list[str]]:
     """Measure the model's lines on a spectrum exactly as on M5; (features, areas, problems)."""
     from plasma_twin.oes.boltzmann import integrated_intensities
     from plasma_twin.oes.cr_model import level_data
@@ -293,7 +296,7 @@ def spectrum_features(spectrum, wavelengths_nm: list[float]) -> tuple[np.ndarray
     return ratio_features(areas), measured, []
 
 
-def estimate(spectrum, model: ConformalModel) -> Estimate:
+def estimate(spectrum: Spectrum, model: ConformalModel) -> Estimate:
     """T_e, n_e and (if informative) T_gas from one spectrum, or withheld with the reasons (rules above)."""
     started = time.perf_counter()
     features, areas, problems = spectrum_features(spectrum, model.wavelengths_nm)

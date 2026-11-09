@@ -91,6 +91,7 @@ class Composition:
 
     @property
     def fractions(self) -> tuple[float, float, float]:
+        """Ar, N2 and O2 feed fractions; the admixtures are a percentage of the Ar flow (LI-2)."""
         f_n2, f_o2 = self.n2_percent / 100, self.o2_percent / 100
         total = 1 + f_n2 + f_o2
         return 1 / total, f_n2 / total, f_o2 / total
@@ -123,12 +124,14 @@ class MixtureModel:
 
     # ------------------------------------------------------------------ feed densities at the current step
     def feed(self) -> tuple[float, float, float]:
+        """The feed fractions after the admixture scaling used to reach a hard mixture step by step."""
         n2 = Composition(self.composition.n2_percent * self.scale, self.composition.o2_percent * self.scale)
         x_ar, x_n2, x_o2 = n2.fractions
         n = self.d.n_g
         return x_ar * n, x_n2 * n, x_o2 * n
 
     def unpack(self, y: np.ndarray) -> dict[str, float]:
+        """The solver's log-variables as physical values, with T_e kept inside the rate table."""
         values = dict(zip(self.names, np.exp(y)))
         values["te"] = float(np.clip(values["te"], 0.56, 19.4))
         values["sheath"] = float(min(values["sheath"], 0.49 * self.d.x.electrode_gap_m))
@@ -136,6 +139,7 @@ class MixtureModel:
 
     # ------------------------------------------------------------------ every balance at once
     def evaluate(self, y: np.ndarray) -> dict[str, Any]:
+        """Every balance equation (particles, power, sheath) at one solver state."""
         d, x, w, v = self.d, self.d.x, self.d.wall, self.unpack(y)
         te, ne, sheath, vrf = v["te"], v["ne"], v["sheath"], v["v"]
         n_ar, n_n2, n_o2_feed = self.feed()
@@ -311,6 +315,7 @@ class MixtureModel:
         }
 
     def residuals(self, y: np.ndarray) -> np.ndarray:
+        """The balance equations as residuals for the root finder (ACC-3)."""
         eq = self.evaluate(y)["equations"]
         if "oxygen_conservation" in eq:
             return np.full(len(self.names), 50.0)

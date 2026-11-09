@@ -13,11 +13,18 @@ made from 2p -> 1s lines alone is always flagged. That is a property of argon, n
 """
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from dataclasses import dataclass, field
 
 import numpy as np
 
 from plasma_twin.config.loader import load_envelope
+
+if TYPE_CHECKING:  # used in annotations only (MNT-3): nothing extra is imported at run time
+    from collections.abc import Iterable
+    from plasma_twin.oes.cr_model import CRResult, Line
+    from plasma_twin.oes.spectrum import Spectrum
 
 
 @dataclass(frozen=True)
@@ -30,6 +37,7 @@ class LinePoint:
 
     @property
     def y(self) -> float:
+        """The Boltzmann-plot ordinate ln(I lambda / (g A)), which is linear in the upper-level energy."""
         return float(np.log(self.intensity * self.wavelength_nm / (self.g_upper * self.a_per_s)))
 
 
@@ -74,7 +82,7 @@ def fit(points: list[LinePoint]) -> BoltzmannFit:
                         not reasons, tuple(reasons), tuple(usable))
 
 
-def integrated_intensities(spectrum, lines, half_width_fwhm: float = 3.0) -> list[LinePoint]:
+def integrated_intensities(spectrum: Spectrum, lines: Iterable[Line], half_width_fwhm: float = 3.0) -> list[LinePoint]:
     """Measure each line's area in a spectrum, after removing a flat background.
 
     The window is +/- `half_width_fwhm` line widths. The background is the median of the edges of a
@@ -114,10 +122,11 @@ class LevelPopulation:
 
     @property
     def ratio(self) -> float:
+        """The CR-model population over the Boltzmann population at T_e (1 means equilibrium)."""
         return self.density_m3 / self.boltzmann_m3
 
 
-def populations_vs_boltzmann(cr, ground_density_m3: float, te_ev: float) -> tuple[list[LevelPopulation], bool]:
+def populations_vs_boltzmann(cr: CRResult, ground_density_m3: float, te_ev: float) -> tuple[list[LevelPopulation], bool]:
     """FR5.4: each CR-model level against a Boltzmann distribution at T_e, and whether all of them are in it."""
     from plasma_twin.oes.cr_model import level_data
     data = level_data()

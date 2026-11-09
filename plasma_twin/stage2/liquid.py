@@ -73,6 +73,7 @@ def transfer_coefficient(flow_sccm: float) -> float:
 
 
 def henry_ozone(temperature_k: float) -> float:
+    """Henry's law constant of ozone at the water temperature, from the cited fit."""
     c = load_stage2_constants()
     return float(np.exp(c["henry_o3_A"] + c["henry_o3_B"] / temperature_k))
 

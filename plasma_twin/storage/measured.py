@@ -30,10 +30,12 @@ class MeasuredDataError(ValueError):
 
 
 def format_id(number: int) -> str:
+    """A measured-file ID such as M-0001 from its row number."""
     return f"M-{number:04d}"
 
 
 def parse_id(file_id: str) -> int:
+    """The row number from a measured-file ID, refusing anything else."""
     if not (file_id.startswith("M-") and file_id[2:].isdigit()):
         raise MeasuredDataError(f"'{file_id}' is not a measured-file ID such as M-0001")
     return int(file_id[2:])
@@ -130,6 +132,7 @@ class MeasuredStore:
                             self.files_dir / row["stored_path"])
 
     def list(self, diagnostic: str | None = None, stage: int | None = None) -> list[MeasuredFile]:
+        """Imported files, optionally of one diagnostic or stage, newest first."""
         query, args = "SELECT * FROM imported_files WHERE 1 = 1", []
         if diagnostic:
             query += " AND diagnostic = ?"
@@ -144,6 +147,7 @@ class MeasuredStore:
             conn.close()
 
     def get(self, file_id: str) -> MeasuredFile:
+        """One imported file's record by ID."""
         conn = connect(self.db_path)
         try:
             row = conn.execute("SELECT * FROM imported_files WHERE id = ?", (parse_id(file_id),)).fetchone()

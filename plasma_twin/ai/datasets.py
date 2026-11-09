@@ -39,6 +39,7 @@ AIR_N2, AIR_O2 = 0.78, 0.21  # air composition used for the leak (ai_datasets.to
 
 
 def load_settings(path: Path = SETTINGS_PATH) -> dict[str, Any]:
+    """The locked dataset settings (ai_datasets.toml), fixed before any training (AIQ-5)."""
     with open(path, "rb") as handle:
         return tomllib.load(handle)
 
@@ -149,6 +150,7 @@ def stage1_row(row: dict[str, Any], settings: dict[str, Any]) -> dict[str, Any]:
 
 # ------------------------------------------------------------------------------------ Stage 2
 def stage2_plan(settings: dict[str, Any], runs: int | None = None) -> list[dict[str, Any]]:
+    """The Stage 2 run plan: a Latin hypercube over the continuous inputs plus the discrete choices, from the locked seed."""
     s2 = settings["stage2"]
     n = runs or s2["runs"]
     env = load_envelope()["stage2"]
@@ -173,6 +175,7 @@ def stage2_plan(settings: dict[str, Any], runs: int | None = None) -> list[dict[
 
 
 def stage2_row(row: dict[str, Any], settings: dict[str, Any]) -> dict[str, Any]:
+    """Run the Stage 2 twin chain (bubble plasma, water, survival) for one planned row; the row is noise-free by design."""
     from plasma_twin.services import stage2
     from plasma_twin.stage2.bubble_model import solve
     from plasma_twin.stage2.hom import survival
@@ -234,6 +237,7 @@ def build(stage: int, runs: int | None = None, workers: int = 1, progress: Calla
 
 
 def save(frame: pd.DataFrame, card: DatasetCard, folder: Path | None = None) -> Path:
+    """Write a dataset and its card (settings, seed, twin version), so the exact training data can be traced (FR16.1)."""
     folder = folder or data_dir()
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / f"{card.dataset_id}.parquet"
@@ -243,18 +247,21 @@ def save(frame: pd.DataFrame, card: DatasetCard, folder: Path | None = None) -> 
 
 
 def load(dataset: str, folder: Path | None = None) -> tuple[pd.DataFrame, DatasetCard]:
+    """Read a saved dataset and its card by dataset ID."""
     folder = folder or data_dir()
     card = DatasetCard(**json.loads((folder / f"{dataset}.json").read_text(encoding="utf-8")))
     return pd.read_parquet(folder / f"{dataset}.parquet"), card
 
 
 def cards(folder: Path | None = None) -> list[DatasetCard]:
+    """The cards of every saved dataset, for the AI training screen (FR16.1)."""
     folder = folder or data_dir()
     return [DatasetCard(**json.loads(p.read_text(encoding="utf-8"))) for p in sorted(folder.glob("S*.json"))] if folder.exists() else []
 
 
 # ------------------------------------------------------------------------------------ splits (FR16.3)
 def in_region(frame: pd.DataFrame, stage: int, settings: dict[str, Any] | None = None) -> np.ndarray:
+    """Rows inside the held-out corner of the envelope, used by the region split to test extrapolation (FR16.3)."""
     region = (settings or load_settings())["splits"][f"stage{stage}_region"]
     if stage == 1:
         return ((frame["rf_power_w"] >= region["rf_power_w_min"]) & (frame["pressure_mbar"] >= region["pressure_mbar_min"])).to_numpy()

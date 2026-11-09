@@ -1,0 +1,248 @@
+{
+ "machine": {
+  "processor": "Intel64 Family 6 Model 186 Stepping 3, GenuineIntel",
+  "system": "Windows 11 10.0.26300",
+  "python": "3.14.7",
+  "logical_cpus": 12
+ },
+ "PER-1": {
+  "runs_0d": 100,
+  "p95_0d_s": 1.0291307149978821,
+  "max_0d_s": 1.4907433000043966,
+  "median_0d_s": 0.7151156000036281,
+  "runs_0d_1d": 20,
+  "p95_0d_1d_s": 0.34510243999538964,
+  "max_0d_1d_s": 0.6449535999854561,
+  "pass": true
+ },
+ "PER-2": {
+  "times_s": [
+   0.18920379999326542,
+   0.22118150000460446,
+   0.27626820001751184,
+   0.03119199999491684,
+   0.03290380001999438
+  ],
+  "max_s": 0.27626820001751184,
+  "points": [
+   600001,
+   600001,
+   600001,
+   600001,
+   600001
+  ],
+  "pass": true
+ },
+ "PER-3": {
+  "points": 2001,
+  "times_s": [
+   0.006225900026038289,
+   0.006315900012850761,
+   0.006641900021350011,
+   0.007076399982906878,
+   0.006090300012147054
+  ],
+  "max_s": 0.007076399982906878,
+  "analysis_messages": [],
+  "pass": true
+ },
+ "PER-4": {
+  "points": 200,
+  "solved": 200,
+  "total_s": 17.485937699995702,
+  "longest_point_s": 0.19914160002372228,
+  "progress_shown": "a spinner while the whole sweep runs (no per-point progress bar on M3)",
+  "pass_total": true,
+  "pass": false,
+  "note": "the SRS asks for progress updated at least every 2 s; M3 shows a spinner, not progress"
+ },
+ "PER-5": {
+  "runs": 10,
+  "times_s": [
+   0.5745614999905229,
+   0.10792270000092685,
+   0.18171790000633337,
+   0.14450399999623187,
+   0.2052941000147257,
+   0.17095460000564344,
+   0.11677680001594126,
+   0.12807100001373328,
+   0.2387688999879174,
+   0.11293089998071082
+  ],
+  "max_s": 0.5745614999905229,
+  "pass": true
+ },
+ "PER-6": {
+  "pages/1_Chamber_configuration.py": {
+   "field": "RF power P (W)",
+   "times_s": [
+    0.07708680001087487,
+    0.05439730000216514,
+    0.04695910000009462,
+    0.05901240001549013,
+    0.053646799991838634,
+    0.05995480000274256,
+    0.06013699999311939,
+    0.04518280000775121,
+    0.06399399999645539,
+    0.042235200002323836
+   ],
+   "max_s": 0.07708680001087487,
+   "median_s": 0.056704850008827634,
+   "exceptions": []
+  },
+  "pages/8_Underwater_configuration.py": {
+   "field": "Pulse width (\u00b5s)",
+   "times_s": [
+    0.033439199993154034,
+    0.03052240001852624,
+    0.027869500016095117,
+    0.032499599998118356,
+    0.04242159999557771,
+    0.03671290000784211,
+    0.08208410002407618,
+    0.05697789997793734,
+    0.037618399976054206,
+    0.040238400019006804
+   ],
+   "max_s": 0.08208410002407618,
+   "median_s": 0.03716564999194816,
+   "exceptions": []
+  },
+  "validator_stage1_s": 0.0029284893999865745,
+  "validator_stage2_s": 0.004950559800025076,
+  "max_s": 0.08208410002407618,
+  "pass": true
+ },
+ "PER-7": {
+  "oes": {
+   "megabytes": 49.99901103973389,
+   "rows": 2395047,
+   "seconds": 0.6374532000045292
+  },
+  "probe": {
+   "megabytes": 49.999006271362305,
+   "rows": 2459546,
+   "seconds": 0.7063918999920134
+  },
+  "max_s": 0.7063918999920134,
+  "pass": true
+ },
+ "PER-8": {
+  "server_to_health_s": 3.041163999994751,
+  "fresh_process_to_home_drawn_s": 5.063277899986133,
+  "home_output": "exceptions 0",
+  "total_s": 8.104441899980884,
+  "pass": true
+ },
+ "SEC-1": {
+  "method": "on the running app (port 8501, started by the Browser preview from .streamlit/config.toml), from Windows PowerShell",
+  "listening_addresses": [
+   "127.0.0.1"
+  ],
+  "connect_from_non_loopback_addresses": {
+   "three private 192.168.x.x addresses": "refused (all three)"
+  },
+  "connect_127_0_0_1": "accepted",
+  "pass": true,
+  "script_attempts": [
+   "run 2: Get-NetTCPConnection from the script returned nothing",
+   {
+    "run 3": {
+     "port": 51428,
+     "get_nettcpconnection": [],
+     "get_nettcpconnection_errors": "Get-NetTCPConnection : No matching MSFT_NetTCPConnection objects found by CIM query for instances of the \nROOT/StandardCimv2/MSFT_NetTCPConnection class on the  CIM server: SELECT * FROM MSFT_NetTCPConnection  WHERE \n((LocalPort = 51428)) AND ((State = 2)). Verify query parameters and retry.\nAt line",
+     "netstat": [],
+     "pass": false
+    }
+   },
+   "the script's commands run in a sandbox that cannot see other processes' sockets, so SEC-1 was measured on the running app instead"
+  ],
+  "measured_at": "2026-11-09"
+ },
+ "PER-9": {
+  "model": "spectrum_to_plasma-20261105-022515-403612",
+  "first_call_with_loading_s": 5.035520500008715,
+  "later_calls": 19,
+  "max_later_s": 0.30733509999117814,
+  "median_later_s": 0.2687203000241425,
+  "pass": true
+ },
+ "PER-10": {
+  "runs": [
+   {
+    "objective": "ne_target",
+    "seconds": 1.00128590001259,
+    "progress_messages": 4,
+    "twin_verified": true,
+    "reachable": true
+   },
+   {
+    "objective": "tgas_target",
+    "seconds": 0.8466271000215784,
+    "progress_messages": 4,
+    "twin_verified": true,
+    "reachable": true
+   },
+   {
+    "objective": "line_max",
+    "seconds": 0.5520906000165269,
+    "progress_messages": 4,
+    "twin_verified": true,
+    "reachable": true
+   },
+   {
+    "objective": "lr_least_energy",
+    "seconds": 0.7786122999968939,
+    "progress_messages": 4,
+    "twin_verified": true,
+    "reachable": true
+   },
+   {
+    "objective": "lr_budget",
+    "seconds": 0.5330940999847371,
+    "progress_messages": 4,
+    "twin_verified": true,
+    "reachable": true
+   }
+  ],
+  "max_s": 1.00128590001259,
+  "pass": true
+ },
+ "measured_at": {
+  "per": "2026-11-09 18:41:01",
+  "rel1": "2026-11-09 18:43:45",
+  "rel3": "2026-11-09 18:44:32",
+  "rel4": "2026-11-09 18:44:39",
+  "sec1": "2026-11-09 18:44:44"
+ },
+ "REL-1": {
+  "configurations": 1000,
+  "converged": 1000,
+  "failures": [],
+  "seconds": 55.25714329999755,
+  "pass": true
+ },
+ "ACC-3": {
+  "runs_checked": 1000,
+  "shares_within_0_5_percent": 1000,
+  "worst_residual": 9.808420294735679e-11,
+  "worst_heating_sum_percent": 2.842170943040401e-14,
+  "worst_loss_sum_percent": 3.836930773104541e-13,
+  "pass": true
+ },
+ "REL-3": {
+  "kills": 50,
+  "sessions_reported_committed": 1176,
+  "lost": 0,
+  "corrupt_checks": 0,
+  "pass": true
+ },
+ "REL-4": {
+  "configurations": 10,
+  "numbers_compared": 697,
+  "largest_relative_difference": 0.0,
+  "pass": true
+ }
+}

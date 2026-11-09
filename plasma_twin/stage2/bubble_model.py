@@ -88,6 +88,7 @@ class ElectronRates:
                          for name, sigma in columns.items()}
 
     def k(self, name: str, te_ev: float) -> float:
+        """One electron rate coefficient at T_e, refused outside the tabulated range."""
         if not TABLE_TE_EV[0] <= te_ev <= TABLE_TE_EV[-1]:
             raise BubbleModelError(f"T_e = {te_ev} eV is outside the rate table")
         return float(np.exp(self._splines[name](np.log(te_ev))))

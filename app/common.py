@@ -115,6 +115,13 @@ def run_and_open_results(config: dict) -> None:
     st.switch_page(PAGES["results"])
 
 
+def range_help(low: float, high: float | None, unit: str = "", extra: str = "") -> str:
+    """USE-3: the allowed range in words, for an input's help tooltip (from the same envelope the validator uses)."""
+    unit = f" {unit}" if unit else ""
+    text = f"Allowed: {low:g} to {high:g}{unit}." if high is not None else f"Allowed: {low:g}{unit} or more."
+    return f"{text} {extra}".strip()
+
+
 def status(kind: str, text: str) -> None:
     """USE-5: every status has words as well as colour: the label is part of the text."""
     labels = {"ok": ("OK", st.success), "info": ("Note", st.info), "warn": ("Warning", st.warning),

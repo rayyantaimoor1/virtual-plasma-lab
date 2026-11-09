@@ -1,5 +1,5 @@
 """M14 AI recommendations (FR14.1-FR14.8, FR17.21, E25, E26): settings for a goal, every candidate verified by the twin."""
-from common import PAGES, axis, config_json, page_setup, status  # noqa: I001
+from common import PAGES, axis, config_json, page_setup, range_help, status  # noqa: I001
 
 import json
 
@@ -65,17 +65,17 @@ objectives = [k for k, o in rc.OBJECTIVES.items() if o.stage == stage]
 g1, g2 = st.columns([3, 2])
 objective = g1.selectbox("Objective", objectives, format_func=lambda k: rc.OBJECTIVES[k].label)
 if objective == "ne_target":
-    goal = rc.Goal(objective, target=g2.number_input("Target n_e (10¹⁶ m⁻³)", 0.01, 1000.0, 3.0, 0.5) * 1e16)
+    goal = rc.Goal(objective, target=g2.number_input("Target n_e (10¹⁶ m⁻³)", 0.01, 1000.0, 3.0, 0.5, help=range_help(0.01, 1000, "× 10¹⁶ m⁻³")) * 1e16)
 elif objective == "tgas_target":
-    goal = rc.Goal(objective, target=g2.number_input("Target T_gas (K)", 250.0, 600.0, 303.0, 0.5))
+    goal = rc.Goal(objective, target=g2.number_input("Target T_gas (K)", 250.0, 600.0, 303.0, 0.5, help=range_help(250, 600, "K")))
 elif objective == "line_max":
     lines = [o for o in sg.OUTPUTS[1] if o.name.startswith("line_")]
     goal = rc.Goal(objective, line=g2.selectbox("Line", [o.name for o in lines], format_func=lambda n: rc.surrogate_label(n)))
 elif objective == "lr_least_energy":
     goal = rc.Goal(objective, target=g2.number_input(f"Target log reduction ({open_config.get('organism', 'E. coli')})",
-                                                     0.1, 15.0, 3.0, 0.5))
+                                                     0.1, 15.0, 3.0, 0.5, help=range_help(0.1, 15, "log")))
 else:
-    goal = rc.Goal(objective, budget_kj_l=g2.number_input("Energy budget (kJ/L)", 0.001, 10000.0, 1.0, 0.5, format="%.3f"))
+    goal = rc.Goal(objective, budget_kj_l=g2.number_input("Energy budget (kJ/L)", 0.001, 10000.0, 1.0, 0.5, format="%.3f", help=range_help(0.001, 10000, "kJ/L")))
 
 # ------------------------------------------------------------------ fixed settings (FR14.2)
 allowed = rc.searchable(stage, open_config)
@@ -194,8 +194,8 @@ else:
     if stage == 2 and setting == "width_us":
         high = 1000.0  # the run rule (E5), not the training range, limits a what-if
     current_value = float(open_config.get(setting, low))
-    value = w2.number_input("New value", float(low), float(high), min(max(current_value, float(low)), float(high)),
-                            key=f"m14_value_{stage}_{setting}")
+    value = w2.number_input(f"New {sg.INPUT_LABELS[setting]}", float(low), float(high), min(max(current_value, float(low)), float(high)),
+                            key=f"m14_value_{stage}_{setting}", help=range_help(low, high))
 if st.button("Re-simulate with the twin"):
     try:
         st.session_state["m14_whatif"] = (stage, setting, value, rc.what_if(stage, open_config, setting, value))

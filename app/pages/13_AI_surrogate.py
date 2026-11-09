@@ -1,5 +1,5 @@
 """M15 AI surrogate and explainability (FR15.1-FR15.6, FR17.22, E27): fast maps, SHAP, and a check with the twin."""
-from common import PAGES, axis, page_setup, sci, status  # noqa: I001
+from common import PAGES, axis, page_setup, range_help, sci, status  # noqa: I001
 
 import json
 import time
@@ -98,8 +98,10 @@ st.caption(f"{grid.shape[0]} surrogate points in {seconds * 1000:.0f} ms"
 # ------------------------------------------------------------------ check with twin (FR15.3, FR17.22, E27)
 st.subheader("Check a point with the twin")
 p1, p2, p3 = st.columns([2, 2, 1])
-xv = p1.number_input(sg.INPUT_LABELS[x_name], float(model.input_low[ix]), float(model.input_high[ix]), float(np.clip(open_x[ix], model.input_low[ix], model.input_high[ix])))
-yv = p2.number_input(sg.INPUT_LABELS[y_name], float(model.input_low[iy]), float(model.input_high[iy]), float(np.clip(open_x[iy], model.input_low[iy], model.input_high[iy])))
+xv = p1.number_input(sg.INPUT_LABELS[x_name], float(model.input_low[ix]), float(model.input_high[ix]), float(np.clip(open_x[ix], model.input_low[ix], model.input_high[ix])),
+                     help=range_help(model.input_low[ix], model.input_high[ix], extra="The surrogate's training range."))
+yv = p2.number_input(sg.INPUT_LABELS[y_name], float(model.input_low[iy]), float(model.input_high[iy]), float(np.clip(open_x[iy], model.input_low[iy], model.input_high[iy])),
+                     help=range_help(model.input_low[iy], model.input_high[iy], extra="The surrogate's training range."))
 if p3.button("Check with twin", type="primary"):
     point = open_x.copy()
     point[ix], point[iy] = xv, yv

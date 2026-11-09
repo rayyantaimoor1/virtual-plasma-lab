@@ -42,6 +42,7 @@ def kratzer_d(state: str) -> float:
 
 
 def rotational_constant(state: str, v: int) -> float:
+    """B_v = B_e - alpha_e (v + 1/2) from the cited diatomic constants (cm^-1)."""
     c = load_diatomic_constants("N2", STATES[state])
     return c["Be_cm1"] - c["alpha_e_cm1"] * (v + 0.5)
 

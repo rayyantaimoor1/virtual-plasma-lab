@@ -37,6 +37,7 @@ class Comparison:
 
     @property
     def within_tolerance(self) -> bool:
+        """True when the model is within the 30 % tolerance of the measurement (ACC-1)."""
         return abs(self.difference) <= load_envelope()["validation"]["agreement_tolerance_fraction"]
 
 

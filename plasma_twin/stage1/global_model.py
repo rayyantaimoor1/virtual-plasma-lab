@@ -240,6 +240,7 @@ class Stage1Result:
         return {k: 100.0 * v / self.absorbed_power_w for k, v in parts.items()}
 
     def as_dict(self) -> dict[str, Any]:
+        """The whole result as plain data (used to check reproducibility, REL-4)."""
         return asdict(self)
 
 

@@ -69,7 +69,7 @@ def test_quick_start_is_one_click_to_results() -> None:
 def test_chamber_screen_flags_an_out_of_range_value() -> None:
     at = open_screen("pages/1_Chamber_configuration.py", has_run=False)
     assert "Every parameter is inside the operating envelope" in text_of(at)
-    next(n for n in at.number_input if n.label == "Electrode gap").set_value(50.0).run()  # typed like a user
+    next(n for n in at.number_input if n.label == "Electrode gap (cm)").set_value(50.0).run()  # typed like a user
     assert "smaller than the chamber height" in text_of(at)
     run_button = next(b for b in at.button if "Run simulation" in b.label)
     assert run_button.disabled  # an invalid configuration cannot be run
@@ -402,3 +402,40 @@ def test_ai_recommend_screen_verifies_candidates_and_applies_one(ai_folders) -> 
     next(b for b in at.button if b.label == "Apply to the configuration screen").click().run()
     assert not at.exception, [e.value for e in at.exception]
     assert at.session_state["config2"]["power_w"] < 20 and not at.session_state["has_run2"]  # filled, not run
+
+
+# ------------------------------------------------------------------ REL-2 (Phase 14): every event gives a message, never a trace
+@needs_data
+@pytest.mark.xfail(strict=True, reason="measured 9 Nov 2026 (Phase 14, REL-2): the Results screen catches no SolverFailure, so E4 "
+                                       "reaches the user as an error trace, not a message (FR17.4)")
+def test_a_solver_failure_shows_a_message_not_a_trace(monkeypatch) -> None:
+    import common
+
+    from plasma_twin.stage1.global_model import SolverFailure
+
+    def fails(config):
+        raise SolverFailure("the particle balance has no T_e between 0.55 and 19.5 eV")
+
+    monkeypatch.setattr(common.svc, "run", fails)
+    common.cached_run.clear()
+    at = streamlit_testing.AppTest.from_file(str(APP / "pages/2_Results.py"), default_timeout=300)
+    at.session_state["has_run"] = True
+    at.run()
+    assert not at.exception and "converge" in text_of(at).lower()  # a message, not a trace
+
+
+@needs_data
+@pytest.mark.xfail(strict=True, reason="measured 9 Nov 2026 (Phase 14, REL-2): saving a session catches no database error, so E18 "
+                                       "reaches the user as an error trace; there is no retry and no message (FR17.15)")
+def test_a_failed_session_save_shows_a_message_and_keeps_the_results(monkeypatch) -> None:
+    import sqlite3
+
+    import common
+
+    def locked(*args, **kwargs):
+        raise sqlite3.OperationalError("database is locked")
+
+    at = open_screen("pages/2_Results.py")
+    monkeypatch.setattr(common.store(), "save", locked)
+    next(b for b in at.button if "Save as session" in b.label).click().run()
+    assert not at.exception and "not saved" in text_of(at).lower()

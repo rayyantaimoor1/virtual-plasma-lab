@@ -7,6 +7,8 @@ measured one (FR6.9): it only needs voltages, currents and the probe dimensions.
 """
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -15,6 +17,9 @@ from scipy import constants as codata
 from plasma_twin.config.loader import load_envelope
 from plasma_twin.probe.eepf import EEPF, derivatives, druyvesteyn, second_derivative_noise_gain
 from plasma_twin.stage1.rates import ARGON_MASS_KG
+
+if TYPE_CHECKING:  # used in annotations only (MNT-3): nothing extra is imported at run time
+    from plasma_twin.probe.iv_model import IVCurve, ProbePlasma
 
 E, EPS0, M_E = codata.e, codata.epsilon_0, codata.m_e
 # The EEPF is trusted only if the noise it picks up adds at most this fraction to n_e and to the mean energy.
@@ -71,7 +76,7 @@ def analyse(voltage: np.ndarray, current: np.ndarray, tip_radius_mm: float, expo
     # V_f, but above the true V_f the electron current only grows (robustness change, 3 Nov 2026).
     negative = np.where(current < 0)[0]
     if len(negative) == 0 or negative[-1] == len(current) - 1:
-        raise ProbeAnalysisError(step, "the current never changes from negative to positive")
+        raise ProbeAnalysisError(step, "the current never changes from negative to positive; widen the sweep so it starts below and ends above the floating potential")
     i = int(negative[-1])
     v_f = float(voltage[i] - current[i] * (voltage[i + 1] - voltage[i]) / (current[i + 1] - current[i]))
 
@@ -79,7 +84,7 @@ def analyse(voltage: np.ndarray, current: np.ndarray, tip_radius_mm: float, expo
     below = np.where(voltage < v_f)[0]
     fit_points = below[: max(5, int(0.4 * len(below)))]
     if len(below) < 5:
-        raise ProbeAnalysisError(step, "fewer than 5 points below the floating potential")
+        raise ProbeAnalysisError(step, "fewer than 5 points below the floating potential; start the sweep at a more negative voltage or use a smaller step")
     # OML: I_i^2 is a straight line in V. Fit it, then extend it to every voltage below where it reaches zero.
     # FALLBACK (added 3 Nov 2026, recorded in BUILD_STEPS.md): when noise is as large as the ion current,
     # the I^2 fit can come out rising. Then a straight line in I is tried, and if that also rises, the ion
@@ -104,7 +109,7 @@ def analyse(voltage: np.ndarray, current: np.ndarray, tip_radius_mm: float, expo
         first, second = derivatives(voltage, electron_current)
         sign_change = np.where((second[:-1] > 0) & (second[1:] <= 0) & (voltage[:-1] > v_f))[0]
         if len(sign_change) == 0:
-            raise ProbeAnalysisError(step, "d2I/dV2 never crosses zero above the floating potential")
+            raise ProbeAnalysisError(step, "d2I/dV2 never crosses zero above the floating potential; end the sweep above the plasma potential, or lower the noise")
         # Of all + to - crossings, take the one nearest the peak of dI/dV (the knee of the curve). The first
         # derivative is far less noisy than the second, so noise cannot pick a false crossing (3 Nov 2026).
         knee = voltage[np.argmax(np.where(voltage > v_f, first, -np.inf))]
@@ -134,12 +139,12 @@ def analyse(voltage: np.ndarray, current: np.ndarray, tip_radius_mm: float, expo
     step = STEPS[3]
     eepf = druyvesteyn(voltage, second, v_p, area)
     if not eepf.density_m3 > 0:
-        raise ProbeAnalysisError(step, "the second derivative gives no positive electron density")
+        raise ProbeAnalysisError(step, "the second derivative gives no positive electron density; lower the noise or the RF amplitude")
 
     step = STEPS[4]
     window = (voltage > v_f) & (voltage < v_p) & (electron > 0)
     if window.sum() < 3:
-        raise ProbeAnalysisError(step, "fewer than 3 points between V_f and V_p")
+        raise ProbeAnalysisError(step, "fewer than 3 points between V_f and V_p; use a smaller voltage step")
     t_slope = float(1.0 / np.polyfit(voltage[window], np.log(electron[window]), 1)[0])
 
     i_at_vp = float(np.interp(v_p, voltage, electron))
@@ -171,13 +176,13 @@ def analyse(voltage: np.ndarray, current: np.ndarray, tip_radius_mm: float, expo
                        eepf.effective_temperature_ev, t_slope, debye, ratio, oml_valid, eepf, tuple(warnings), ion_density)
 
 
-def analyse_curve(curve) -> ProbeResult:
+def analyse_curve(curve: IVCurve) -> ProbeResult:
     """Analyse an IVCurve from iv_model.generate."""
     s = curve.settings
     return analyse(curve.voltage_v, curve.current_a, s.tip_radius_mm, s.exposed_length_mm, mean_ion_mass(curve.plasma))
 
 
-def mean_ion_mass(plasma) -> float:
+def mean_ion_mass(plasma: ProbePlasma) -> float:
     """The single mass that gives the same OML current as the ion mixture: M = (sum n_k / sum n_k M_k^-1/2)^2."""
     total = sum(plasma.ion_densities_m3.values())
     weighted = sum(n / np.sqrt(plasma.ion_masses_kg[k]) for k, n in plasma.ion_densities_m3.items())

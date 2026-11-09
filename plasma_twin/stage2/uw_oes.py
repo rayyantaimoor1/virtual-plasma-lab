@@ -55,11 +55,13 @@ class UnderwaterSpectrum:
 
 
 def stark_fwhm_nm(ne_m3: float) -> float:
+    """H-alpha Stark width for an electron density, from the cited Gigosos fit."""
     c = load_stage2_constants()
     return c["stark_halpha_coeff"] * (ne_m3 / 1e20) ** c["stark_halpha_exponent"]
 
 
 def ne_from_stark(fwhm_nm: float) -> float:
+    """The electron density that gives a measured H-alpha Stark width (the inverse of stark_fwhm_nm)."""
     c = load_stage2_constants()
     return 1e20 * (fwhm_nm / c["stark_halpha_coeff"]) ** (1 / c["stark_halpha_exponent"])
 

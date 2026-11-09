@@ -24,6 +24,7 @@ class SweepPoint:
 
     @property
     def solved(self) -> bool:
+        """True when the model converged at this sweep point (E4 otherwise)."""
         return self.result is not None
 
 

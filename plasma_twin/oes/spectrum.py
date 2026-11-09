@@ -16,6 +16,8 @@ RULES (BUILD_STEPS.md, Phase 4b, fixed before this code):
 """
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from dataclasses import dataclass, replace
 
 import numpy as np
@@ -23,6 +25,9 @@ from scipy import constants as codata
 
 from plasma_twin.config.loader import load_envelope
 from plasma_twin.stage1.rates import ARGON_MASS_KG
+
+if TYPE_CHECKING:  # used in annotations only (MNT-3): nothing extra is imported at run time
+    from plasma_twin.stage1.global_model import Stage1Result
 
 FWHM_TO_SIGMA = 1.0 / (2.0 * np.sqrt(2.0 * np.log(2.0)))
 
@@ -46,6 +51,7 @@ class SpectrometerSettings:
 
     @classmethod
     def defaults(cls, **overrides: float) -> "SpectrometerSettings":
+        """The envelope's default instrument, with any settings overridden."""
         env = load_envelope()["oes"]
         values = {"fwhm_nm": env["resolution_fwhm_nm"]["default"], "start_nm": env["wavelength_start_nm"]["default"],
                   "end_nm": env["wavelength_end_nm"]["default"], "noise_percent": env["noise_percent_of_peak"]["default"]}
@@ -53,6 +59,7 @@ class SpectrometerSettings:
         return cls(**values)
 
     def validate(self) -> None:
+        """Refuse instrument settings outside the envelope (FR4.3)."""
         env = load_envelope()["oes"]
         for value, key in ((self.fwhm_nm, "resolution_fwhm_nm"), (self.start_nm, "wavelength_start_nm"),
                            (self.end_nm, "wavelength_end_nm"), (self.noise_percent, "noise_percent_of_peak")):
@@ -101,7 +108,7 @@ def build_spectrum(line_power_w_m3: dict[float, float], gas_temperature_k: float
     return Spectrum(grid, intensity, drawn, settings, gas_temperature_k)
 
 
-def species_contributions(result, settings: SpectrometerSettings | None = None) -> dict[str, np.ndarray]:
+def species_contributions(result: Stage1Result, settings: SpectrometerSettings | None = None) -> dict[str, np.ndarray]:
     """FR4.2: the noise-free part of the spectrum from each species, on the same grid as spectrum_for.
 
     Hiding a species means subtracting its part from the full spectrum, so the noise stays exactly as it was.
@@ -119,7 +126,7 @@ def species_contributions(result, settings: SpectrometerSettings | None = None) 
     return parts
 
 
-def spectrum_for(result, settings: SpectrometerSettings | None = None) -> Spectrum:
+def spectrum_for(result: Stage1Result, settings: SpectrometerSettings | None = None) -> Spectrum:
     """The spectrum of a solved global-model point (Stage1Result): CR model, then the spectrometer."""
     from plasma_twin.oes.cr_model import solve_cr_for
     from plasma_twin.oes.n2_band import N2_MASS_KG, n2_lines

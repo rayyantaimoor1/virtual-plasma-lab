@@ -73,17 +73,21 @@ class Goal:
 
     @property
     def spec(self) -> Objective:
+        """The objective's fixed definition (tolerance, aim, repair setting) from the Phase 13 rules."""
         return OBJECTIVES[self.objective]
 
     @property
     def stage(self) -> int:
+        """The stage this goal belongs to."""
         return self.spec.stage
 
     @property
     def output(self) -> str:
+        """The surrogate output the goal is about (the chosen line for a 'strongest line' goal)."""
         return self.spec.output or str(self.line)
 
     def describe(self) -> str:
+        """The goal in words, as M14 and the saved JSON show it."""
         s = self.spec
         if s.key == "ne_target":
             return f"n_e = {self.target:.3g} m⁻³ (±10 %), least RF power"
@@ -96,6 +100,7 @@ class Goal:
         return f"largest log reduction within {self.budget_kj_l:.3g} kJ/L"
 
     def check(self) -> None:
+        """Refuse an incomplete or impossible goal before any search is run."""
         if self.objective not in OBJECTIVES:
             raise ValueError(f"unknown objective {self.objective!r}")
         s = self.spec
@@ -110,6 +115,7 @@ class Goal:
 
 
 def surrogate_label(output: str) -> str:
+    """The display label of a surrogate output (for example 'Electron density n_e')."""
     for stage in (1, 2):
         for o in surrogate.OUTPUTS[stage]:
             if o.name == output:
@@ -267,14 +273,17 @@ class Recommendation:
 
     @property
     def reachable(self) -> bool:
+        """True when the twin confirms at least one candidate (otherwise E26: unreachable)."""
         return any(c.met for c in self.candidates)
 
     @property
     def reachable_without_repair(self) -> bool:
+        """True when a candidate met the goal before any twin repair (reported for the benchmark)."""
         return any(c.met_before_repair for c in self.candidates)
 
     @property
     def best(self) -> Candidate | None:
+        """The first-ranked twin-verified candidate, or None when every twin run failed."""
         return self.candidates[0] if self.candidates else None
 
     def to_json(self) -> str:
@@ -558,12 +567,14 @@ def run_benchmark(models: dict[int, tuple[surrogate.Surrogate, str]],
 
 
 def save_benchmark(result: dict[str, Any]) -> None:
+    """Store the benchmark result in data/ai (gitignored) for M14."""
     path = datasets.data_dir() / BENCHMARK_FILE
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(result, indent=2, default=float), encoding="utf-8")
 
 
 def load_benchmark() -> dict[str, Any] | None:
+    """The stored benchmark result, or None when it has not been run on this computer."""
     path = datasets.data_dir() / BENCHMARK_FILE
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
 

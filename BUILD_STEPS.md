@@ -1459,12 +1459,60 @@ Built in five steps, each tested and committed. The rules for 4a–4d were fixed
   - **Windows:** Windows 11 is this laptop. Windows 10 is not available to test.
 - **Known failures carried in:** the six strict expected failures and the open items (supervisor questions Q3, Q13 and Q19, the sample files, the Phase 10 physics-fit runaway) are listed as they are. Phase 14 does not try to fix them.
 
-**Exit gate**
-- [ ] All tests pass.
-- [ ] Every FR is ticked off.
-- [ ] Every NFR and AI-quality target is measured and recorded.
+**As built (9 November 2026)**
+- **Results:**
+  - **Requirements:** `docs/validation/phase14_results.md` (every requirement, with tables) and `phase14_measurements.json` (raw numbers).
+  - **FRs:** `phase14_fr_checklist.md` covers all 149: 135 met, 10 met with a note, 3 partly met, 1 not met.
+  - **USE-2:** `use2_test_sheet.md`.
+- **Code:**
+  - `scripts/measure_phase14.py`, `scripts/code_checks.py` and `scripts/ui_inventory.py`.
+  - `tests/test_code_quality.py`: MNT-1, MNT-3, SEC-4, SEC-5 and USE-5 kept as tests.
+  - Two REL-2 screen tests, as strict expected failures.
+  - A CI step that starts the app (POR-1); `coverage` pinned.
+  - Version 0.14.0.
+- **Measurement runs, as they came:**
+  - **Run 1** stopped at PER-3 (a script bug: `voltages` is a method).
+  - **Run 2** completed PER-1 to PER-10, then broke at REL-1: PER-6's AppTest replaces `__main__`, so the process pool lost its worker. The script now runs each part in its own process.
+  - **Run 3** ran REL-1, REL-3, REL-4 and SEC-1.
+  - **SEC-1:** the script's socket queries came back empty twice, because its commands run in a sandbox that cannot see other processes' sockets. SEC-1 was then measured on the running app from PowerShell.
+- **Results:** 39 non-functional requirements: 27 met, 6 partly met, 5 not met, 1 not yet measured.
+  - **Performance:** every timing is far inside its limit. Examples: Stage 1 95th percentile 1.03 s (limit 2 s), start-up 8.1 s (15 s), recommendation 1.0 s (60 s).
+  - **Not met:**
+    - **REL-2:** E4 (solver failure) and E18 (session save failure) reach the user as an error trace.
+    - **ACC-1:** the Stage 1 benchmark (since Phase 2) and the Stage 2 data (Q13).
+    - **AIQ-1:** carried in from Phase 10.
+    - **MNT-2:** rate fits and a dispersion formula are written in code.
+  - **Partly met:**
+    - **PER-4:** a spinner, not progress.
+    - **USE-5:** the red primary buttons are 3.3:1.
+    - **AIQ-3:** Stage 2 median error.
+    - **MNT-3:** a reason in 12 of 20 sampled docstrings.
+    - **FR17.4 and FR17.14:** the same E4 and sweep-progress gaps, counted in the FR checklist.
+  - **Measured well inside target:**
+    - **MNT-1:** coverage 95.0 % (physics 98.0 %, AI 90.4 %).
+    - **REL-1:** 1,000 of 1,000 converge.
+    - **REL-3:** 0 of 1,176 sessions lost in 50 kills.
+    - **REL-4:** identical reruns.
+    - **SEC-1:** loopback only.
+    - **SEC-5:** offline.
+- **Fixed in this phase (labels and documentation only, as the rules allow; counts before → after):**
+  - **MNT-3:** docstrings or type hints missing on 128 → 0 of 342 public functions.
+  - **USE-3:** inputs with their range shown 7 → 44 of 44, with a unit 36 → 44. Configuration errors now use screen names and say what to do, and the five probe-analysis failures say what to change.
+  - **USE-4:** glossary 6 → 15 of 15 symbols.
+- **Not fixed (follow-ups; each is new code or a physics-file change, which this phase does not make):**
+  - catch E4 and E18 with a message (E18 also needs a retry);
+  - a per-point sweep progress bar;
+  - a darker primary button colour;
+  - move the in-code constants to cited data files;
+  - give the small helpers' docstrings a reason;
+  - run the USE-2 student test.
 
-**Commit:** `Phase 14: full test pass, NFR and AI-quality measurements, final report`
+**Exit gate**
+- [x] All tests pass: 478 passed, 8 strict expected failures. These are the six carried in, and two new ones recording the REL-2 gaps E4 and E18.
+- [x] Every FR is ticked off (`phase14_fr_checklist.md`). Four are not fully met (FR9.3, FR17.4, FR17.14, FR17.15), each with its reason.
+- [x] Every NFR and AI-quality target is measured and recorded (`phase14_results.md`), except USE-2. USE-2 needs student testers, and its test sheet is ready.
+
+**Commit:** `Phase 14: full test pass, NFR and AI-quality measurements, results report` (the department-template Word report is a later task, decided with the student)
 
 ---
 

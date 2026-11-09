@@ -30,6 +30,7 @@ WASTE_TYPES = ("Municipal waste water", "Distilled water")
 
 
 def default_config() -> dict[str, Any]:
+    """Every Stage 2 field at its envelope default, in the screen's units."""
     env = load_envelope()["stage2"]
     d = env["defaults"]
     return {
@@ -47,6 +48,7 @@ def default_config() -> dict[str, Any]:
 
 
 def pulse_of(config: dict[str, Any]) -> PulseSettings:
+    """The pulsed-DC supply settings of a configuration."""
     return PulseSettings(config["voltage_kv"], config["frequency_khz"], config["width_us"], config["power_w"])
 
 
@@ -80,6 +82,7 @@ def validate_config(config: dict[str, Any]) -> tuple[dict[str, str], list[str]]:
 
 
 def config_hash(config: dict[str, Any]) -> str:
+    """A hash of the configuration, used to cache and identify runs (PER-1)."""
     return hashlib.sha256(json.dumps(config, sort_keys=True).encode("utf-8")).hexdigest()
 
 
@@ -95,12 +98,14 @@ class Stage2Run:
 
 
 def bubble_inputs(config: dict[str, Any], power_share: float | None = None) -> BubbleInputs:
+    """The bubble-plasma model's inputs for a configuration (optionally with another power share)."""
     return BubbleInputs(pulse_of(config), config["water_temperature_c"], config["gap_mm"], config["o2_flow_sccm"],
                         config["bubble_gas"] == "O2 + water vapour",
                         config["power_share"] if power_share is None else power_share)
 
 
 def water_inputs(config: dict[str, Any]) -> WaterInputs:
+    """The water model's inputs for a configuration."""
     return WaterInputs(config["water_volume_ml"], config["water_ph"], config["water_temperature_c"],
                        config["conductivity_us_cm"], config["cod_mg_l"], config["treatment_time_min"])
 

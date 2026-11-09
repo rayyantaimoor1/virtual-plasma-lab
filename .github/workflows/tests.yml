@@ -12,3 +12,11 @@ jobs:
           python-version: "3.14"
       - run: pip install -r requirements.txt
       - run: pytest
+      - name: Start the app with one command and check it answers (POR-1)
+        run: |
+          streamlit run app/Home.py --server.headless true &
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:8501/_stcore/health; then echo " - the app answered after ${i} s"; exit 0; fi
+            sleep 1
+          done
+          echo "the app did not answer within 60 s"; exit 1

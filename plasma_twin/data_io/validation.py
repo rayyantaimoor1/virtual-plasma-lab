@@ -16,6 +16,8 @@ RULES (BUILD_STEPS.md, Phase 8, fixed before this code):
 """
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from dataclasses import dataclass
 
 import numpy as np
@@ -24,6 +26,9 @@ from plasma_twin import __version__
 from plasma_twin.config.loader import load_envelope
 from plasma_twin.storage.db import connect
 from plasma_twin.storage.measured import MeasuredFile, MeasuredStore, parse_id
+
+if TYPE_CHECKING:  # used in annotations only (MNT-3): nothing extra is imported at run time
+    from plasma_twin.oes.spectrum import Spectrum
 
 
 @dataclass(frozen=True)
@@ -40,6 +45,7 @@ class Check:
 
     @property
     def deviation(self) -> float | None:
+        """Relative deviation of the computed value from the reference, or None when it cannot be formed."""
         if self.computed is None or self.reference is None or self.reference == 0:
             return None
         if not (np.isfinite(self.computed) and np.isfinite(self.reference)):
@@ -55,11 +61,13 @@ class Check:
 
 
 def tolerance() -> float:
+    """The agreement tolerance (30 %) from envelope.toml (ACC-4)."""
     return load_envelope()["validation"]["agreement_tolerance_fraction"]
 
 
 # ------------------------------------------------------------------------------------ literature
 def benchmark_checks() -> list[Check]:
+    """The model against the published Stage 1 benchmark points (ACC-1)."""
     from plasma_twin.reference.loaders import load_benchmarks
     from plasma_twin.stage1.benchmark import compare
     rows = {r["id"]: r for r in load_benchmarks()}
@@ -89,13 +97,15 @@ def probe_values(store: MeasuredStore, record: MeasuredFile) -> tuple[float, flo
     return result.slope_temperature_ev, result.ion_density_m3, "slope T_e and OML ion density (EEPF unreliable: noise)"
 
 
-def spectrum_from_arrays(wavelength: np.ndarray, intensity: np.ndarray, fwhm_nm: float, gas_temperature_k: float):
+def spectrum_from_arrays(wavelength: np.ndarray, intensity: np.ndarray, fwhm_nm: float, gas_temperature_k: float) -> Spectrum:
+    """Wrap measured arrays as a Spectrum, so the Phase 4 analysis runs on them unchanged (FR5.1)."""
     from plasma_twin.oes.spectrum import Spectrum, SpectrometerSettings
     settings = SpectrometerSettings(fwhm_nm, float(wavelength[0]), float(wavelength[-1]), 0.0)
     return Spectrum(wavelength, intensity, {}, settings, gas_temperature_k)
 
 
 def file_checks(store: MeasuredStore, record: MeasuredFile, probes: list[MeasuredFile]) -> list[Check]:
+    """Every check that applies to one measured file at its recorded conditions (FR10.5)."""
     from plasma_twin.probe.analysis import ProbeAnalysisError
     conditions = record.metadata.get("conditions", {})
     base = dict(reference_source=record.file_id, file_id=record.file_id, citable=record.citable)

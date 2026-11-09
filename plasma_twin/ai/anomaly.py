@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -27,6 +27,12 @@ from plasma_twin.ai import datasets
 from plasma_twin.ai.registry import ModelCard, Registry, make_card, new_model_id
 from plasma_twin.ai.training import RangeCheck, anomaly_features, detection_metrics, ratio_features
 from plasma_twin.config.loader import load_envelope
+
+if TYPE_CHECKING:  # used in annotations only (MNT-3): nothing extra is imported at run time
+    from plasma_twin.oes.spectrum import SpectrometerSettings
+    from plasma_twin.probe.iv_model import ProbeSettings
+    from plasma_twin.stage1.global_model import Stage1Result
+    from plasma_twin.storage.measured import MeasuredFile, MeasuredStore
 
 TASK = "anomaly_residual"
 ALGORITHM = "isolation_forest"
@@ -50,11 +56,13 @@ CONFIG_KEYS = ("rf_power_w", "pressure_mbar", "ar_flow_sccm", "mixture", "n2_per
 
 
 def thresholds() -> tuple[float, float]:
+    """The Warning and Critical anomaly scores from envelope.toml (FR13.3), so the SRS values live in one versioned file."""
     ai = load_envelope()["ai"]
     return float(ai["anomaly_warning_score"]), float(ai["anomaly_critical_score"])
 
 
 def severity(score: float) -> str:
+    """Normal, Warning or Critical for a calibrated score, using the versioned thresholds (FR13.3, E24)."""
     warning, critical = thresholds()
     return "Critical" if score >= critical else "Warning" if score >= warning else "Normal"
 
@@ -65,7 +73,7 @@ def _window() -> tuple[float, float, float]:
     return float(spec["window_nm"][0]), float(spec["window_nm"][1]), float(spec["fwhm_nm"])
 
 
-def expected_diagnostics(result, probe=None) -> dict[str, Any]:
+def expected_diagnostics(result: Stage1Result, probe: ProbeSettings | None = None) -> dict[str, Any]:
     """Noise-free line areas (as on M5) and probe curve for a solved plasma (RF 0, noise 0)."""
     from plasma_twin.oes.boltzmann import integrated_intensities
     from plasma_twin.oes.cr_model import level_data
@@ -182,9 +190,11 @@ class ResidualDetector:
     q95: float
 
     def raw(self, x: np.ndarray) -> np.ndarray:
+        """The Isolation Forest's raw score (minus score_samples): a shorter isolation path, so a more anomalous run, gives a larger value."""
         return -self.forest.score_samples(np.atleast_2d(x))  # the original paper's score: near 1 = anomalous
 
     def score(self, x: np.ndarray) -> np.ndarray:
+        """The raw score rescaled so a typical clean run scores 0.5 and the clean 95th percentile 0.6 (Phase 12 rules)."""
         return np.clip(0.5 + 0.1 * (self.raw(x) - self.median) / (self.q95 - self.median), 0.0, 1.0)
 
     def contributions(self, x: np.ndarray) -> np.ndarray:
@@ -194,6 +204,7 @@ class ResidualDetector:
 
 
 def fit_detector(x_clean: np.ndarray, features: tuple[str, ...], seed: int = SEED) -> ResidualDetector:
+    """Train an Isolation Forest on clean residuals and calibrate its score on a held-back quarter (Phase 12 rules)."""
     from sklearn.ensemble import IsolationForest
     order = np.random.default_rng(seed).permutation(len(x_clean))
     cut = int(round(len(x_clean) * (1 - CALIBRATION_FRACTION)))
@@ -294,6 +305,7 @@ class Assessment:
 
 
 def assess(model: AnomalyModel, which: str, residual_values: dict[str, float], raw_features: np.ndarray | None = None) -> Assessment:
+    """Score one run's residuals with one detector and name the residual that contributed most (FR13.5)."""
     detector = model.detectors[which]
     x = np.array([[residual_values[f] for f in detector.features]])
     score = float(detector.score(x)[0])
@@ -307,7 +319,8 @@ def assess(model: AnomalyModel, which: str, residual_values: dict[str, float], r
     return Assessment(which, score, level, cause, top, {f: float(residual_values[f]) for f in detector.features}, contributions, range_result)
 
 
-def assess_stage1_config(model: AnomalyModel, config: dict[str, Any], spectrometer=None, probe=None) -> Assessment:
+def assess_stage1_config(model: AnomalyModel, config: dict[str, Any], spectrometer: SpectrometerSettings | None = None,
+                         probe: ProbeSettings | None = None) -> Assessment:
     """The open plasma or a saved session: its synthetic diagnostics (with the given instruments) against the twin."""
     from plasma_twin.oes.boltzmann import integrated_intensities
     from plasma_twin.oes.cr_model import level_data
@@ -334,7 +347,8 @@ def assess_stage1_config(model: AnomalyModel, config: dict[str, Any], spectromet
     return assess(model, "full", values, raw)
 
 
-def assess_measured(model: AnomalyModel, store, record, open_config: dict[str, Any]) -> Assessment:
+def assess_measured(model: AnomalyModel, store: MeasuredStore, record: MeasuredFile,
+                    open_config: dict[str, Any]) -> Assessment:
     """A measured Stage 1 file against the twin at its recorded conditions (else the open plasma's settings)."""
     from plasma_twin.data_io.validation import spectrum_from_arrays
     from plasma_twin.oes.boltzmann import integrated_intensities
@@ -365,5 +379,6 @@ def assess_measured(model: AnomalyModel, store, record, open_config: dict[str, A
 
 
 def current_models(registry: Registry | None = None) -> list[ModelCard]:
+    """Anomaly detectors that match the current twin version (E22), newest first."""
     registry = registry or Registry()
     return [c for c in registry.cards() if c.task == TASK and registry.status(c) == "current"]

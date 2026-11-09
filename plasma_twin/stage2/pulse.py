@@ -26,6 +26,7 @@ class PulseSettings:
 
     @classmethod
     def defaults(cls, **overrides: float) -> "PulseSettings":
+        """The supervisor's pulse settings from the envelope, with any settings overridden."""
         env = load_envelope()["stage2"]
         values = {"voltage_kv": env["pulse_voltage_kv"]["default"], "frequency_khz": env["pulse_frequency_khz"]["default"],
                   "width_us": env["pulse_rules"]["default_width_us"], "power_w": env["average_power_w"]["default"]}
@@ -34,14 +35,17 @@ class PulseSettings:
 
     @property
     def frequency_hz(self) -> float:
+        """The repetition frequency in hertz."""
         return self.frequency_khz * 1e3
 
     @property
     def duty_cycle(self) -> float:
+        """Width times frequency: the fraction of time the pulse is on (E5 blocks it at 1)."""
         return self.width_us * 1e-6 * self.frequency_hz
 
     @property
     def energy_per_pulse_j(self) -> float:
+        """Average power over frequency: the energy each pulse delivers (FR8.5)."""
         return self.power_w / self.frequency_hz
 
     @property

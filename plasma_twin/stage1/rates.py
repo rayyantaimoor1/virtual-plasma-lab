@@ -300,4 +300,5 @@ class MoleculeRates:
 
 @lru_cache(maxsize=8)
 def molecule_table(gas: str, shape: float, manifest_path: Path = MANIFEST_PATH) -> MoleculeRates:
+    """Rate coefficients of one molecular gas for the given EEDF shape, from the LXCat cross sections."""
     return MoleculeRates(gas, shape, manifest_path)

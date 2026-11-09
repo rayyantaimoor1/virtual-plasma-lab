@@ -14,12 +14,18 @@ temperature, EEDF shape and geometry are taken as known.
 """
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from dataclasses import dataclass
 
 import numpy as np
 from scipy.optimize import least_squares
 
 from plasma_twin.oes.cr_model import solve_cr
+
+if TYPE_CHECKING:  # used in annotations only (MNT-3): nothing extra is imported at run time
+    from plasma_twin.oes.boltzmann import LinePoint
+    from plasma_twin.stage1.global_model import Stage1Result
 
 TE_BOUNDS_EV = (0.6, 19.0)
 NE_BOUNDS_M3 = (1e14, 1e18)
@@ -79,7 +85,7 @@ def fit_te_fixed_ne(measured: dict[float, float], ne_m3: float, argon_density_m3
                         bool(found.success))
 
 
-def fit_spectrum_points(points, result, fixed_ne_m3: float | None = None) -> LineRatioFit:
+def fit_spectrum_points(points: list[LinePoint], result: Stage1Result, fixed_ne_m3: float | None = None) -> LineRatioFit:
     """Fit from Boltzmann-style LinePoints measured on a spectrum, using a global-model point for the
     known quantities (gas density and temperature, EEDF, geometry, quenching in mixtures)."""
     from plasma_twin.stage1.eedf import SHAPES

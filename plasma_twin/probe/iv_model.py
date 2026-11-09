@@ -20,6 +20,8 @@ Sign convention: electron current collected by the probe is positive, ion curren
 """
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -29,6 +31,9 @@ from scipy.special import erfcx
 from plasma_twin.config.loader import load_envelope
 from plasma_twin.stage1.eedf import EEDF, SHAPES
 from plasma_twin.stage1.rates import ARGON_MASS_KG, wall_constants
+
+if TYPE_CHECKING:  # used in annotations only (MNT-3): nothing extra is imported at run time
+    from plasma_twin.stage1.global_model import Stage1Result
 
 E, M_E = codata.e, codata.m_e
 _ENERGY = np.geomspace(1e-5, 2000.0, 40000)
@@ -52,6 +57,7 @@ class ProbeSettings:
 
     @classmethod
     def defaults(cls, **overrides: float) -> "ProbeSettings":
+        """The envelope's default probe (the COMSATS laboratory tip), with any settings overridden."""
         env = load_envelope()["probe"]
         values = {"tip_radius_mm": env["tip_radius_mm"]["default"], "exposed_length_mm": env["exposed_length_mm"]["default"],
                   "sweep_start_v": env["sweep_start_v"]["default"], "sweep_end_v": env["sweep_end_v"]["default"],
@@ -66,10 +72,12 @@ class ProbeSettings:
         return 2 * np.pi * self.tip_radius_mm * 1e-3 * self.exposed_length_mm * 1e-3
 
     def voltages(self) -> np.ndarray:
+        """The swept bias voltages, start to end in equal steps."""
         n = int(round((self.sweep_end_v - self.sweep_start_v) / self.sweep_step_v)) + 1
         return self.sweep_start_v + self.sweep_step_v * np.arange(n)
 
     def validate(self) -> None:
+        """Refuse probe settings outside the envelope (FR6.1-FR6.4)."""
         env = load_envelope()["probe"]
         keys = {"tip_radius_mm": self.tip_radius_mm, "exposed_length_mm": self.exposed_length_mm,
                 "sweep_start_v": self.sweep_start_v, "sweep_end_v": self.sweep_end_v, "sweep_step_v": self.sweep_step_v,
@@ -97,10 +105,11 @@ class ProbePlasma:
 
     @property
     def screening_te_ev(self) -> float:
+        """The effective temperature that screens the probe for this EEDF shape."""
         return wall_constants(self.shape).screening_ratio * self.te_ev
 
 
-def plasma_from(result) -> ProbePlasma:
+def plasma_from(result: Stage1Result) -> ProbePlasma:
     """The probe's view of a solved global-model point (Stage1Result)."""
     from plasma_twin.stage1.mixtures import ION_MASS_KG
     shape = SHAPES[result.inputs.eedf]

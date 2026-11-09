@@ -592,3 +592,50 @@ It is written so that either of us can explain any decision to the evaluation co
   - **Both results are recorded:** before and after the amendment.
 
 **How Phase 13 closed:** 472 tests pass, and 6 are marked as expected failures (the same six as after Phase 12; Phase 13 adds none). The benchmark is on M14 and in BUILD_STEPS.md. Version 0.13.0.
+
+## Phase 14: measuring every requirement (complete, 9 November 2026; the Word report comes later)
+
+**What we did**
+- **Measured all 39 non-functional requirements** on this laptop, and recorded each one:
+  - speed, reliability, usability, security and accuracy;
+  - the AI quality targets, and the code quality targets.
+- **Checked all 149 functional requirements** against the screens and the tests.
+- **Wrote a test sheet** for the one requirement that needs real people: five students configuring a run and reading the gas temperature in five minutes.
+- **Decided with the student:** the measurements go into a results file now (`docs/validation/phase14_results.md`). The department-template Word report is a separate task for later.
+
+**Techniques and why**
+- **Rules before measurements:** every method and pass mark was written down and committed before anything was timed, as in every phase.
+- **One measurement run counts:** there is no picking of the best run. When a run broke because of a bug in the measuring script, the bug was fixed and the run repeated, and both runs are written down.
+- **Checks that stay:** several checks became permanent tests, so the project cannot quietly slip back:
+  - every public function has a docstring and type hints;
+  - no SQL is built from user text;
+  - no status relies on colour alone;
+  - nothing connects to the internet.
+- **Coverage** (which lines of code the tests run) was measured with the standard `coverage.py` tool.
+
+**Problems and how we handled them**
+- **The measuring script broke twice:**
+  - once on a simple bug (a method used like a list);
+  - once because Streamlit's test tool replaces Python's main module, which confused the parallel workers.
+
+  Each part now runs in its own process.
+- **The security check on open ports came back empty twice:** the script's commands run in a sandbox that cannot see other programs' network sockets. We measured it on the running app instead: it listens only on the computer itself, and refuses connections through every network address.
+- **Many inputs did not show their allowed range.** Only 7 of 44 did. Since labels may be fixed in this phase, every input now shows its range in its help tooltip (44 of 44). The glossary gained the 9 symbols it was missing.
+- **128 functions lacked a docstring or type hints.** All have them now. In a sample of 20, though, only 12 explain *why* the function exists, not just what it does.
+- **Two error paths show a raw error instead of a message:** a solver failure and a failed session save. They are written down as expected-failure tests. Fixing them is new code, so it is a follow-up.
+
+**What happened, reported as it came**
+- **Speed:** every timing is far inside its limit.
+  - a Stage 1 run takes 1.0 s at the 95th percentile (limit 2 s);
+  - the app starts in 8 s (limit 15);
+  - a recommendation takes 1 s (limit 60).
+- **Reliability:**
+  - all 1,000 grid configurations converge;
+  - killing the program 50 times while it saved lost none of 1,176 sessions;
+  - reruns are bit-identical.
+- **Test coverage:** 95 % of the code (physics 98 %, AI 90 %).
+- **Overall:** 27 of the 39 requirements are met, 6 partly, 5 not met, and 1 is waiting for the student test.
+  - **Not met:** the published benchmark (since Phase 2), the AI inference significance (since Phase 10), the two missing error messages, and constants still written in code.
+  - **Partly met:** the sweep shows a spinner rather than progress, and Streamlit's red buttons are a little too low in contrast.
+
+**How Phase 14 closed:** 478 tests pass, and 8 are marked as expected failures (the six carried in, plus the two REL-2 findings). Version 0.14.0.

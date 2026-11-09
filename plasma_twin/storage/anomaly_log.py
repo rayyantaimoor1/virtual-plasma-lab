@@ -37,6 +37,7 @@ class AnomalyLog:
 
     def add(self, source: str, detector: str, model_id: str, score: float, severity: str, likely_cause: str,
             range_check: str) -> int:
+        """Record one anomaly check with parameterised SQL (FR13.7, SEC-4); returns its entry number."""
         conn = connect(self.path)
         try:
             with conn:
@@ -57,6 +58,7 @@ class AnomalyLog:
             conn.close()
 
     def mark_reviewed(self, entry_id: int) -> None:
+        """Mark a flagged check as reviewed, with the time (FR13.7)."""
         conn = connect(self.path)
         try:
             with conn:
@@ -68,6 +70,7 @@ class AnomalyLog:
             conn.close()
 
     def to_csv(self) -> str:
+        """The whole log as CSV for export (FR13.7)."""
         buffer = io.StringIO()
         writer = csv.writer(buffer)
         writer.writerow(COLUMNS)

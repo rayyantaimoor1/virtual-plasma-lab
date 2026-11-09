@@ -113,4 +113,9 @@ with st.expander("Glossary"):
         "- **T_exc** (eV): excitation temperature from a Boltzmann plot. Not an electron temperature.\n"
         "- **V_f, V_p** (V): floating and plasma potential of the probe. **λ_D** (m): Debye length.\n"
         "- **OML**: orbital-motion-limited probe theory. **CR model**: collisional-radiative model of excited levels.\n"
-        "- **Metastable**: an excited atom that cannot radiate (Ar 1s5, 1s3).")
+        "- **Metastable**: an excited atom that cannot radiate (Ar 1s5, 1s3).\n"
+        "- **P_abs** (W): power absorbed by the plasma. **s_m** (m): sheath width. **Γ** (m⁻² s⁻¹): ion flux to a surface.\n"
+        "- **E_k** (eV): energy of the upper level k of a line. **g_k** (-): its statistical weight. "
+        "**A_ki** (s⁻¹): its transition probability (Einstein coefficient). **n_k** (m⁻³): population of level k.\n"
+        "- **r_p** (mm): probe tip radius. **T_eff** (eV): effective electron temperature from the probe's EEPF "
+        "(two-thirds of the mean energy).")

@@ -1,5 +1,5 @@
 """M6 Virtual Langmuir probe (FR6.1-FR6.10): simulate and analyse an I-V curve."""
-from common import (PAGES, axis, cached_probe, config_json, is_researcher, measured_store, metric_grid, need_result,  # noqa: I001
+from common import (PAGES, axis, range_help, cached_probe, config_json, is_researcher, measured_store, metric_grid, need_result,  # noqa: I001
                     page_setup, sci, status, svc)
 
 import csv
@@ -27,17 +27,24 @@ with st.form("probe"):
     t1.selectbox("Probe type (FR6.1)", ["Single cylindrical probe"], help="The COMSATS laboratory probe; the only type modelled.")
     t2.text_input("Tip material", "Tungsten", disabled=True)
     c = st.columns(5)
-    radius = c[0].number_input("Tip radius r_p (mm)", float(env["tip_radius_mm"]["min"]), float(env["tip_radius_mm"]["max"]), float(saved["tip_radius_mm"]), format="%.3f")
-    length = c[1].number_input("Exposed length L (mm)", float(env["exposed_length_mm"]["min"]), float(env["exposed_length_mm"]["max"]), float(saved["exposed_length_mm"]))
-    start = c[2].number_input("Sweep from (V)", float(env["sweep_start_v"]["min"]), float(env["sweep_start_v"]["max"]), float(saved["sweep_start_v"]))
-    end = c[3].number_input("Sweep to (V)", float(env["sweep_end_v"]["min"]), float(env["sweep_end_v"]["max"]), float(saved["sweep_end_v"]))
-    step = c[4].number_input("Step (V)", float(env["sweep_step_v"]["min"]), float(env["sweep_step_v"]["max"]), float(saved["sweep_step_v"]))
+    radius = c[0].number_input("Tip radius r_p (mm)", float(env["tip_radius_mm"]["min"]), float(env["tip_radius_mm"]["max"]), float(saved["tip_radius_mm"]), format="%.3f",
+                             help=range_help(env["tip_radius_mm"]["min"], env["tip_radius_mm"]["max"], "mm"))
+    length = c[1].number_input("Exposed length L (mm)", float(env["exposed_length_mm"]["min"]), float(env["exposed_length_mm"]["max"]), float(saved["exposed_length_mm"]),
+                             help=range_help(env["exposed_length_mm"]["min"], env["exposed_length_mm"]["max"], "mm"))
+    start = c[2].number_input("Sweep from (V)", float(env["sweep_start_v"]["min"]), float(env["sweep_start_v"]["max"]), float(saved["sweep_start_v"]),
+                            help=range_help(env["sweep_start_v"]["min"], env["sweep_start_v"]["max"], "V", "Must be below the end."))
+    end = c[3].number_input("Sweep to (V)", float(env["sweep_end_v"]["min"]), float(env["sweep_end_v"]["max"]), float(saved["sweep_end_v"]),
+                          help=range_help(env["sweep_end_v"]["min"], env["sweep_end_v"]["max"], "V"))
+    step = c[4].number_input("Step (V)", float(env["sweep_step_v"]["min"]), float(env["sweep_step_v"]["max"]), float(saved["sweep_step_v"]),
+                           help=range_help(env["sweep_step_v"]["min"], env["sweep_step_v"]["max"], "V"))
     d = st.columns(3)
     noise = d[0].number_input("Noise (% of electron current at V_p)", float(env["noise_percent_of_saturation"]["min"]),
-                              float(env["noise_percent_of_saturation"]["max"]), float(saved["noise_percent"]))
+                              float(env["noise_percent_of_saturation"]["max"]), float(saved["noise_percent"]),
+                              help=range_help(env["noise_percent_of_saturation"]["min"], env["noise_percent_of_saturation"]["max"], "%"))
     rf_on = d[1].checkbox("RF distortion (FR6.3)", value=saved["rf_amplitude_v"] > 0)
     rf = d[2].number_input("RF amplitude left after compensation Ṽ (V)", float(env["rf_amplitude_v"]["min"]), float(env["rf_amplitude_v"]["max"]),
-                           float(saved["rf_amplitude_v"]) or 5.0)
+                           float(saved["rf_amplitude_v"]) or 5.0,
+                           help=range_help(env["rf_amplitude_v"]["min"], env["rf_amplitude_v"]["max"], "V", "0 means fully compensated."))
     if st.form_submit_button("Generate I-V curve (FR6.5)"):
         candidate = ProbeSettings(radius, length, start, end, step, noise, rf if rf_on else 0.0)
         try:

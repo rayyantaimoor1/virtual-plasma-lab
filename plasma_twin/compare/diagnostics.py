@@ -18,12 +18,20 @@ RULES (BUILD_STEPS.md, Phase 5, fixed before this code):
 """
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from dataclasses import dataclass, field
 
 from plasma_twin.config.loader import load_envelope
 
+if TYPE_CHECKING:  # used in annotations only (MNT-3): nothing extra is imported at run time
+    from plasma_twin.oes.spectrum import SpectrometerSettings
+    from plasma_twin.probe.iv_model import ProbeSettings
+    from plasma_twin.stage1.global_model import Stage1Result
+
 
 def tolerance() -> float:
+    """The agreement tolerance (30 %) from envelope.toml, fixed before any comparison (ACC-4)."""
     return load_envelope()["validation"]["agreement_tolerance_fraction"]
 
 
@@ -44,6 +52,7 @@ class Entry:
 
     @property
     def counted(self) -> bool:
+        """Only independent, reliable diagnostics count towards agreement (FR7.3)."""
         return self.independent and self.reliable
 
 
@@ -56,10 +65,12 @@ class QuantityComparison:
 
     @property
     def compared(self) -> tuple[Entry, ...]:
+        """The entries that count towards the verdict."""
         return tuple(e for e in self.entries if e.counted)
 
     @property
     def max_deviation(self) -> float | None:
+        """The largest relative deviation among the counted entries, or None."""
         return max((abs(e.deviation) for e in self.compared), default=None)
 
     @property
@@ -81,17 +92,20 @@ class DiagnosticsReport:
 
     @property
     def verdict(self) -> str:
+        """A one-line summary of how many quantities agree within the tolerance (FR7.4)."""
         judged = [q for q in self.quantities if q.passes is not None]
         agree = sum(1 for q in judged if q.passes)
         return f"{agree} of {len(judged)} comparable quantities agree within ±{tolerance():.0%}"
 
 
 def entry(method: str, value: float, model: float, independent: bool = True, reliable: bool = True, note: str = "") -> Entry:
+    """One diagnostic value against the model, with its relative deviation and tolerance check."""
     deviation = (value - model) / model
     return Entry(method, value, deviation, within_tolerance(deviation), independent, reliable, note)
 
 
-def compare(result, probe_settings=None, spectrometer_settings=None, fit_oes_ne: bool = False) -> DiagnosticsReport:
+def compare(result: Stage1Result, probe_settings: ProbeSettings | None = None,
+            spectrometer_settings: SpectrometerSettings | None = None, fit_oes_ne: bool = False) -> DiagnosticsReport:
     """Run both virtual instruments on a solved global-model point and compare them with the model."""
     from plasma_twin.oes.boltzmann import fit as boltzmann_fit
     from plasma_twin.oes.boltzmann import integrated_intensities

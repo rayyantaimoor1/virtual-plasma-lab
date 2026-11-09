@@ -1,5 +1,5 @@
 """M4 Virtual OES (FR4.1-FR4.8): the emission spectrum of the open plasma."""
-from common import (PAGES, axis, cached_contributions, cached_spectrum, config_json, is_researcher, measured_spectrum,  # noqa: I001
+from common import (PAGES, axis, range_help, cached_contributions, cached_spectrum, config_json, is_researcher, measured_spectrum,  # noqa: I001
                     measured_store, need_result, page_setup, sci, status, svc)
 
 import json
@@ -20,14 +20,19 @@ env = load_envelope()["oes"]
 with st.form("instrument"):
     c = st.columns(5)
     fwhm = c[0].number_input("Resolution FWHM (nm)", float(env["resolution_fwhm_nm"]["min"]), float(env["resolution_fwhm_nm"]["max"]),
-                             float(st.session_state.get("oes_fwhm", env["resolution_fwhm_nm"]["default"])), format="%.3f")
+                             float(st.session_state.get("oes_fwhm", env["resolution_fwhm_nm"]["default"])), format="%.3f",
+                             help=range_help(env["resolution_fwhm_nm"]["min"], env["resolution_fwhm_nm"]["max"], "nm"))
     start = c[1].number_input("From λ (nm)", float(env["wavelength_start_nm"]["min"]), float(env["wavelength_start_nm"]["max"]),
-                              float(st.session_state.get("oes_start", env["wavelength_start_nm"]["default"])))
+                              float(st.session_state.get("oes_start", env["wavelength_start_nm"]["default"])),
+                              help=range_help(env["wavelength_start_nm"]["min"], env["wavelength_start_nm"]["max"], "nm", "Must be below the end."))
     end = c[2].number_input("To λ (nm)", float(env["wavelength_end_nm"]["min"]), float(env["wavelength_end_nm"]["max"]),
-                            float(st.session_state.get("oes_end", env["wavelength_end_nm"]["default"])))
+                            float(st.session_state.get("oes_end", env["wavelength_end_nm"]["default"])),
+                            help=range_help(env["wavelength_end_nm"]["min"], env["wavelength_end_nm"]["max"], "nm"))
     noise = c[3].number_input("Noise (% of peak)", float(env["noise_percent_of_peak"]["min"]), float(env["noise_percent_of_peak"]["max"]),
-                              float(st.session_state.get("oes_noise", env["noise_percent_of_peak"]["default"])))
-    integration = c[4].number_input("Integration time (ms)", 1.0, 60000.0, float(st.session_state.get("oes_integration_ms", 100.0)))
+                              float(st.session_state.get("oes_noise", env["noise_percent_of_peak"]["default"])),
+                              help=range_help(env["noise_percent_of_peak"]["min"], env["noise_percent_of_peak"]["max"], "% of the peak"))
+    integration = c[4].number_input("Integration time (ms)", 1.0, 60000.0, float(st.session_state.get("oes_integration_ms", 100.0)),
+                                    help=range_help(1, 60000, "ms"))
     st.caption("The model gives emitted power per volume, so the integration time only scales the counts: it is recorded "
                "with the export, and the noise setting stands for the signal-to-noise it would give.")
     if st.form_submit_button("Recompute spectrum"):

@@ -45,10 +45,12 @@ class Output:
     floor: float = 0.0
 
     def learned(self, values: np.ndarray) -> np.ndarray:
+        """Values on the scale the surrogate learns (log10 plus the floor for wide-range outputs)."""
         values = np.asarray(values, dtype=float)
         return np.log10(values + self.floor) if self.log else values
 
     def original(self, learned: np.ndarray) -> np.ndarray:
+        """Learned-scale values back in original units, never below zero."""
         learned = np.asarray(learned, dtype=float)
         return np.clip(10 ** learned - self.floor, 0.0, None) if self.log else learned
 
@@ -83,6 +85,7 @@ FIXED = {1: ("eedf", "spatial", "chamber_diameter_cm", "chamber_height_cm", "ele
 
 # ------------------------------------------------------------------------------------ configurations and the twin
 def training_defaults(stage: int) -> dict[str, Any]:
+    """The settings the surrogate's training runs held fixed (M15 warns when the open configuration differs)."""
     from plasma_twin.services import stage1, stage2
     if stage == 1:
         s1 = datasets.load_settings()["stage1"]
@@ -168,6 +171,7 @@ def training_table(stage: int, workers: int = 6, runs: int | None = None) -> pd.
 
 
 def learned_targets(stage: int, table: pd.DataFrame) -> np.ndarray:
+    """Every output of a training table on its learned scale, one column per output."""
     return np.column_stack([o.learned(table[o.name].to_numpy()) for o in OUTPUTS[stage]])
 
 
@@ -192,13 +196,16 @@ class Surrogate:
 
     @property
     def inputs(self) -> tuple[str, ...]:
+        """The surrogate's input names for its stage."""
         return INPUTS[self.stage]
 
     @property
     def outputs(self) -> tuple[Output, ...]:
+        """The surrogate's outputs for its stage."""
         return OUTPUTS[self.stage]
 
     def predict_learned(self, x: np.ndarray) -> np.ndarray:
+        """Every output on its learned scale, one row per configuration."""
         return np.asarray(self.model.predict(np.atleast_2d(x)), dtype=float).reshape(len(np.atleast_2d(x)), -1)
 
     def predict(self, x: np.ndarray) -> np.ndarray:
@@ -218,6 +225,7 @@ class Surrogate:
 
 
 def fit(stage: int, algorithm: str, x: np.ndarray, y_learned: np.ndarray, seed: int = BOOTSTRAP_SEED) -> Surrogate:
+    """Train one multi-output surrogate and record the training range of each input."""
     return Surrogate(stage, algorithm, _regressor(algorithm, seed).fit(x, y_learned), x.min(axis=0), x.max(axis=0))
 
 
@@ -322,6 +330,7 @@ def train(stage: int, algorithm: str, registry: Registry | None = None, table: p
 
 # ------------------------------------------------------------------------------------ twin check (FR15.3, E27)
 def tolerance() -> float:
+    """The surrogate-twin disagreement limit (E27) as a fraction, from envelope.toml."""
     return load_envelope()["ai"]["surrogate_twin_disagreement_percent"] / 100
 
 
